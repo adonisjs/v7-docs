@@ -1,0 +1,14 @@
+/*
+|--------------------------------------------------------------------------
+| Routes file
+|--------------------------------------------------------------------------
+|
+| The routes file is used for defining the HTTP routes.
+|
+*/
+
+import { controllers } from '#generated/controllers'
+import router from '@adonisjs/core/services/router'
+
+router.get('/', [controllers.Home]).as('home')
+router.get('/docs/*', [controllers.Docs]).as('docs')

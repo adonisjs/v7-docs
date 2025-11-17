@@ -1,0 +1,21 @@
+@layout()
+  @each(group in docs.all())
+    <h2>{{ group.category }}</h2>
+    <ul>
+      @each(doc in group.children)
+        <li><a href="">{{ doc.title }}</a></li>
+      @end
+    </ul>
+  @end
+
+  <main>
+    @let(doc = await $markdown.render({
+      file: docs.findByPermalink(request.param('*').join('/')).contentPath,
+    }))
+
+    <h1>{{{ doc.frontmatter.title }}}</h1>
+    <div>{{{ doc.content }}}</div>
+
+    <div>{{{ doc.toc }}}</div>
+  </main>
+@end
