@@ -60,6 +60,7 @@
     "@adonisjs/vite": "^5.1.0-next.1",
     "@github/tab-container-element": "^4.8.2",
     "@iconify-json/mynaui": "^1.2.16",
+    "@iconify-json/tabler": "^1.2.23",
     "@iconify-json/uiw": "^1.2.3",
     "@tailwindcss/vite": "^4.1.17",
     "@vinejs/vine": "^4.1.0",

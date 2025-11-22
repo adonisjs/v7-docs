@@ -4,6 +4,7 @@ import { edgeMarkdown } from 'edge-markdown'
 import { addCollection, edgeIconify } from 'edge-iconify'
 import { icons as mynauiIcons } from '@iconify-json/mynaui'
 import { icons as uiwIcons } from '@iconify-json/uiw'
+import { icons as tablerIcons } from '@iconify-json/tabler'
 
 edge.use(edgeIconify)
 edge.use(edgeMarkdown, {
@@ -22,4 +23,5 @@ edge.use(edgeMarkdown, {
 
 addCollection(mynauiIcons)
 addCollection(uiwIcons)
+addCollection(tablerIcons)
 edge.global('tv', tv)
