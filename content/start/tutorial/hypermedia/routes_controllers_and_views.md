@@ -1,33 +1,45 @@
 # Routes, Controllers and Views
 
-In this tutorial, you'll build the core functionality for displaying posts in your DevShow web-app. You'll create routes to list all posts and view individual posts, use controllers to fetch data from your database, and render that data using Edge templates with a shared layout. By the end, you'll understand the complete MVC flow in AdonisJS.
+In the previous chapter, we created the Post and Comment models with their database tables and relationships. Now we'll bring those models to life by building pages where users can actually see posts.
 
 ## Overview
 
-Right now, you have a `Post` model and a `Comment` model set up with your database, but no way to actually view them in a browser. Let's change that by building two pages: one that lists all posts, and another that shows a single post with its comments.
+Right now, your posts and comments exist only in the database. Let's build two pages: one that lists all posts, and another that shows a single post with its comments. 
 
-This is where the MVC (Model-View-Controller) pattern comes together. Your models handle data, controllers coordinate the logic, and views display everything to users. We'll see this flow in action as we build out these features.
+This is where you'll see the complete MVC (Model-View-Controller) pattern in action — **models handle data**, **controllers coordinate logic**, and **views display everything to users**.
 
-## Creating the posts controller
+Before we begin, make sure your development server is running:
 
-Let's start by creating a controller to handle posts-related requests. Run this command:
+```bash
+node ace serve --hmr
+```
+
+## Displaying the posts list
+
+Let's build the complete feature for displaying a list of posts. We'll create a controller, add a method to fetch posts, register a route, and create the view template.
+
+::::steps
+:::step{title="Creating the controller"}
+
+Start by creating a controller to handle posts-related requests. Run this command.
 
 ```bash
 node ace make:controller posts
 ```
 
-This creates a new file at `app/controllers/posts_controller.ts`. Open it up and you'll see a basic controller class. Let's add a method to list all posts:
+This creates a new file at `app/controllers/posts_controller.ts`. Open it up and you'll see a basic controller class. Let's add a method to list all posts.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
-import { HttpContext } from '@adonisjs/core/http'
+import { type HttpContext } from '@adonisjs/core/http'
 
 export default class PostsController {
-  /**
-   * Display a list of all posts
-   */
+  // [!code ++:8]
   async index({ view }: HttpContext) {
-    const posts = await Post.query().preload('user').orderBy('createdAt', 'desc')
+    const posts = await Post
+      .query()
+      .preload('user')
+      .orderBy('createdAt', 'desc')
 
     return view.render('posts/index', { posts })
   }
@@ -36,39 +48,55 @@ export default class PostsController {
 
 A few things to note here: we're preloading the `user` relationship so we can display the author's name without extra queries, ordering posts by creation date with newest first, and passing the posts to a view template called `posts/index`.
 
-## Defining the route
+:::
 
-Now we need to wire up a route that points to this controller method. Open your routes file and add:
+:::step{title="Defining the route"}
+
+Open your routes file and register a route.
 
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 
+router.on('/').render('pages/home').as('home')
 // [!code ++]
 router.get('/posts', [controllers.Posts, 'index'])
 ```
 
 The route definition connects the `/posts` URL to your controller's `index` method. When someone visits `/posts`, AdonisJS will call `PostsController.index()` and return whatever that method returns.
 
-## Creating the posts list view
+:::
 
-Time to create the view template. Create a new file at `resources/views/posts/index.edge`:
+:::step{title="Creating the view template"}
+
+Time to create the view template.
+
+```bash
+node ace make:view posts/index
+```
+
+This creates a new file at `resources/views/posts/index.edge`. Open it and add the following code inside it.
 
 ```edge title="resources/views/posts/index.edge"
 @layout()
   <div class="container">
-    <h1>
-      Posts
-    </h1>
+    <div class="posts-list-title">
+      <h1> Posts </h1>
+    </div>
 
     @each(post in posts)
       <div class="post-item">
-        <h2>
-          <a href="{{ urlFor('posts.show', post) }}">{{ post.title }} </a>
-        </h2>
-        <p>
-          By {{ post.user.fullName }}
-        </p>
+        <h2> {{ post.title }} </h2>
+
+        <div class="post-meta">
+          <div>By {{ post.user.fullName }}</div>
+
+          <span>.</span>
+          <div><a href="{{ post.url }}" target="_blank">{{post.url}}</a></div>
+
+          <span>.</span>
+          <div><a href="/posts/{{ post.id }}"> View comments </a></div>
+        </div>
       </div>
     @end
   </div>
@@ -77,19 +105,56 @@ Time to create the view template. Create a new file at `resources/views/posts/in
 
 This template uses the existing `layout` component that came with your starter kit. The layout handles the basic HTML structure, and you provide the main content by wrapping it in `@layout` tag.
 
-Inside, we loop through each post with `@each` and display its title as a link and the author's name. Notice the `urlFor` helper—this is AdonisJS's URL builder that generates the correct URL for a named route. Instead of hard-coding `/posts/123`, it builds the URL for you based on the route name and the post object.
+Inside, we loop through each post with `@each` and display its title, the author's name, and a link to view post comments. For now, we're hardcoding the link as `/posts/{{ post.id }}` — we'll improve this with named routes shortly.
 
-:::tip
-The `urlFor` helper is part of AdonisJS's URL builder and automatically generates correct URLs for your routes. When you pass `post` as the second argument, it uses the post's ID to fill in tthe dynamic route parameter.
+:::
+::::
+
+Visit [`/posts`](http://localhost:3333/posts) and you should see a list of all your posts!
+
+## Displaying a single post
+
+Now let's add the ability to view an individual post with its details. We'll implement the controller method, register the route with a dynamic parameter, and create the view template.
+
+::::steps
+:::step{title="Implementing the controller method"}
+
+Add the `show` method to your controller.
+
+```ts title="app/controllers/posts_controller.ts"
+import Post from '#models/post'
+import { HttpContext } from '@adonisjs/core/http'
+
+export default class PostsController {
+  async index({ view }: HttpContext) {
+    const posts = await Post
+      .query()
+      .preload('user')
+      .orderBy('createdAt', 'desc')
+
+    return view.render('posts/index', { posts })
+  }
+
+  // [!code ++:9]
+  async show({ params, view }: HttpContext) {
+    const post = await Post
+      .query()
+      .where('id', params.id)
+      .preload('user')
+      .firstOrFail()
+
+    return view.render('posts/show', { post })
+  }
+}
+```
+
+We're using `firstOrFail()` here, which will automatically throw a 404 error if no post exists with that ID. No need to manually check if the post exists—AdonisJS handles that for you.
+
 :::
 
-Start your development server with `node ace serve --hmr` and visit `http://localhost:3333/posts`. You should see a list of all your posts!
+:::step{title="Registering the route"}
 
-## Viewing a single post
-
-Now let's add the ability to view an individual post. This requires a route with a dynamic parameter—the post ID.
-
-Add this route:
+Now let's register the route for this controller method.
 
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
@@ -100,61 +165,53 @@ router.get('/posts', [controllers.Posts, 'index'])
 router.get('/posts/:id', [controllers.Posts, 'show'])
 ```
 
-The `:id` part is a route parameter. When someone visits `/posts/5`, AdonisJS captures that `5` and makes it available in your controller as `params.id`. You can name the parameter anything you want—`:id`, `:postId`, `:slug`—just be consistent when accessing it.
+- The `:id` part is a route parameter. 
+- When someone visits `/posts/5`, AdonisJS captures that `5` and makes it available in your controller as `params.id`. 
+- You can name the parameter anything you want, `:id`, `:postId`, `:slug` — just be consistent when accessing it.
 
-Now add the `show` method to your controller:
+:::
 
-```ts title="app/controllers/posts_controller.ts"
-import Post from '#models/post'
-import { HttpContext } from '@adonisjs/core/http'
+:::step{title="Creating the view template"}
 
-export default class PostsController {
-  async index({ view }: HttpContext) {
-    const posts = await Post.query().preload('user').orderBy('createdAt', 'desc')
+Create the view template for displaying a single post.
 
-    return view.render('posts/index', { posts })
-  }
-
-  // [!code ++:8]
-  /**
-   * Display a single post
-   */
-  async show({ params, view }: HttpContext) {
-    const post = await Post.query().where('id', params.id).preload('user').firstOrFail()
-
-    return view.render('posts/show', { post })
-  }
-}
+```bash
+node ace make:view posts/show
 ```
 
-We're using `firstOrFail()` here, which will automatically throw a 404 error if no post exists with that ID. No need to manually check if the post exists—AdonisJS handles that for you.
-
-## Creating the post detail view
-
-Create the view template for displaying a single post:
+This creates `resources/views/posts/show.edge`. Open it and add the following code.
 
 ```edge title="resources/views/posts/show.edge"
 @layout()
-  <div>
+  <div class="container">
     <h1>
       {{ post.title }}
     </h1>
-    <p>
-      By {{ post.user.fullName }}
-    </p>
 
-    <div>
-      {{ post.content }}
+    <div class="post">
+      <div class="post-meta">
+        <div>By {{ post.user.fullName }}</div>
+
+        <span>.</span>
+        <div><a href="{{ post.url }}" target="_blank">{{post.url}}</a></div>
+      </div>
+
+      <div class="post-summary">
+        {{ post.summary }}
+      </div>
     </div>
   </div>
 @end
 ```
 
-Try clicking on a post from your list page. You should now see the full post with its title, author, and content.
+Try clicking on a post from your [list page](http://localhost:3333/posts). You should now see the full post with its title, author, and content.
+
+:::
+::::
 
 ## Adding comments to the post view
 
-Finally, let's display the comments for each post. First, we need to preload the comments and their authors in the controller:
+Finally, let's display the comments for each post. First, we need to preload the comments and their authors in the controller.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -182,44 +239,44 @@ export default class PostsController {
 }
 ```
 
-We're preloading comments along with each comment's user (the author), and ordering them by creation date with oldest first. Now update the view to display them:
+We're preloading comments along with each comment's user (the author), and ordering them by creation date with oldest first. Now update the view to display them.
 
 ```edge title="resources/views/posts/show.edge"
 @layout()
-  <div>
+  <div class="container">
     <h1>
       {{ post.title }}
     </h1>
-    <p>
-      By {{ post.user.fullName }}
-    </p>
 
-    <div>
-      {{ post.content }}
-    </div>
+    <div class="post">
+      <div class="post-meta">
+        <div>By {{ post.user.fullName }}</div>
 
-    // [!code ++:22]
-    <div>
-      <h2>
-        Comments
-      </h2>
+        <span>.</span>
+        <div><a href="{{ post.url }}" target="_blank">{{post.url}}</a></div>
+      </div>
 
-      @if(post.comments.length === 0)
-        <p>
-          No comments yet.
-        </p>
-      @else
+      <div class="post-summary">
+        {{ post.summary }}
+      </div>
+
+      // [!code ++:20]
+      <div class="post-comments">
+        <h2>
+          Comments
+        </h2>
+
         @each(comment in post.comments)
-          <div>
-            <p>
-              {{ comment.content }}
-            </p>
-            <p>
+          <div class="comment-item">
+            <p> {{ comment.content }} </p>
+            <div class="comment-meta">
               By {{ comment.user.fullName }} on {{ comment.createdAt.toFormat('MMM dd, yyyy') }}
-            </p>
+            </div>
           </div>
+        @else
+          <p> No comments yet. </p>
         @end
-      @end
+      </div>
     </div>
   </div>
 @end
@@ -235,5 +292,3 @@ You've just completed the full MVC flow in AdonisJS:
 - **Controllers** that fetch data from your models and pass it to views
 - **Views** that display data using Edge templates
 - **Relationships** that let you eager load related data efficiently
-
-You created a posts listing page, a detail page with dynamic routing, and displayed related comments—all the core building blocks you'll use throughout your application.

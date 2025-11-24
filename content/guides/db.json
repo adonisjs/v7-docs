@@ -1,45 +1,5 @@
 [
   {
-    "category": "Preface",
-    "children": [
-      {
-        "title": "Introduction",
-        "permalink": "/introduction",
-        "contentPath": "./preface/introduction.md"
-      },
-      {
-        "title": "FAQs",
-        "permalink": "/faqs",
-        "contentPath": "./preface/faqs.md"
-      },
-      {
-        "title": "Releases",
-        "permalink": "/releases",
-        "contentPath": "./preface/releases.md"
-      }
-    ]
-  },
-  {
-    "category": "Getting Started",
-    "children": [
-      {
-        "title": "Installation",
-        "permalink": "getting-started/installation",
-        "contentPath": "./getting_started/installation.md"
-      },
-      {
-        "title": "Folder Structure",
-        "permalink": "getting-started/folder-structure",
-        "contentPath": "./getting_started/folder_structure.md"
-      },
-      {
-        "title": "Development Environment Setup",
-        "permalink": "getting-started/dev-environment",
-        "contentPath": "./getting_started/dev_environment.md"
-      }
-    ]
-  },
-  {
     "category": "HTTP",
     "children": [
       {

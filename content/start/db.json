@@ -63,6 +63,11 @@
         "contentPath": "./tutorial/hypermedia/forms_and_validation.md"
       },
       {
+        "title": "Styling and Cleanup",
+        "permalink": "tutorial/hypermedia/styling-and-cleanup",
+        "contentPath": "./tutorial/hypermedia/styling_and_cleanup.md"
+      },
+      {
         "title": "Authorization",
         "permalink": "tutorial/hypermedia/authorization",
         "contentPath": "./tutorial/hypermedia/authorization.md"

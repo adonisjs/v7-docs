@@ -80,14 +80,18 @@ const guides = await docsZones.guides.load()
 
 export function findDoc(permalink: string) {
   let doc = start.findByPermalink(permalink)
-  if (!doc) {
-    doc = guides.findByPermalink(permalink)
-  }
-
   if (doc) {
     return {
       doc,
       zone: start,
+    }
+  }
+
+  doc = guides.findByPermalink(permalink)
+  if (doc) {
+    return {
+      doc,
+      zone: guides,
     }
   }
 

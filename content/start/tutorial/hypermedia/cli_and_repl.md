@@ -1,18 +1,18 @@
 # Command line and REPL
 
-You might be wondering why we're starting the tutorial covering CLI and REPL instead of jumping straight into building features. Here's why: throughout this tutorial, you'll constantly use Ace commands to generate controllers, models, and other files. Learning these tools now prevents us from interrupting the flow later.
+You might be wondering why we're covering CLI and REPL instead of jumping straight into building features. Here's why: throughout this tutorial, you'll constantly use Ace commands to generate controllers, models, and other files. Getting familiar with the CLI now prevents us from interrupting the flow later.
 
-More importantly, the REPL will become our playground for experimenting with models and databases. When we explore database queries, filters, and relationships in later sections, we'll use the REPL to try things out. It's a throwaway environment that lets us focus on learning concepts without the ceremony of building complete features.
+More importantly, the [REPL]() will become our playground for experimenting with models and databases. When we explore database queries, filters, and relationships in later sections, we'll use the REPL to try things out. It's a throwaway environment that lets us focus on learning concepts without the ceremony of building complete features.
 
 ## Exploring available commands
 
-Let's start by seeing what commands AdonisJS gives us. Run this in your terminal:
+Let's start by seeing what commands AdonisJS gives us. Run this in your terminal.
 
 ```bash
 node ace list
 ```
 
-You'll see something like this:
+You should see something like this:
 
 :::media
 ![](./node_ace_list.png)
@@ -31,63 +31,78 @@ node ace make:controller --help
 
 ## Using the REPL
 
-Alright, now for the fun part - the REPL. This will be our experimentation playground throughout the tutorial. Let's fire it up:
+The REPL will be our experimentation playground throughout the tutorial. Let's explore how to use it by creating and querying users for our DevShow web-app.
+
+### Start the REPL and load models
+
+First, start the REPL:
 
 ```bash
 node ace repl
-
-# Type ".ls" to a view list of available context methods/properties
-# > (js)
 ```
 
-You should see a prompt pop up, letting you know the REPL is ready for your commands. The cool thing about the REPL is that it comes with some handy helper functions. The one we'll use most is `loadModels()`, which brings in all your application's models.
+Once the REPL starts, load all your models using the following helper method. This will make all your models available under the `models` namespace.
 
-Let's create a new user that we can also use to login in our app. In the REPL, type:
-
-```bash
+```ts
 await loadModels()
 
-# recursively reading models from "app/models"
-# Loaded models module. You can access it using the "models" variable
+// Access user model
+models.user
 ```
 
-This loads all your models and makes them available under the `models` object. Now let's create our first user:
+### Create users
 
-```typescript
+Let's use the `User` model to create a couple of users that we can use to log into our app later. The `create` method accepts the model properties as an object, persists them to the database and returns a model instance.
+
+```ts
 await models.user.create({ fullName: 'Harminder Virk', email: 'virk@adonisjs.com', password: 'secret' })
 ```
 
-You should see the newly created user object pop up, complete with an `id`, all the properties you provided, and some timestamps. Let's add another one:
+Let's create another user.
+
 ```typescript
 await models.user.create({ fullName: 'Jane Doe', email: 'jane@example.com', password: 'secret' })
 ```
 
-Now let's see all the users we've created:
+### Fetch all users
+
+Now that you have created a couple of users, let's fetch them using the `all` method. This method will execute a `SELECT *` query and returns an array containing both users. Each user is a User model instance, not a plain JavaScript object.
+
 ```typescript
 await models.user.all()
 ```
 
-There they are - both users in an array! You can also grab a specific user by their id and access the model properties using the `user` variable.
+### Find and delete a user
+
+You can find a user with a given ID using the `find` method. The return value is an instance of the User model or `null` (if no user was found).
+
 ```typescript
 const user = await models.user.find(1)
 
-// > (js) user.id
+user.id
 // 1
-// > (js) user.email
+
+user.email
 // 'virk@adonisjs.com'
 ```
 
-This gives you back the user with id 1. Now let's clean up by deleting this user:
-```typescript
+You can delete this user by simply calling the `delete` method on the User instance.
+
+```ts
 await user.delete()
+
+user.$isDeleted // true
 ```
 
-If you list all users again, you'll see only Jane remains:
-```typescript
+If you list all users again, you should see only Jane remains:
+
+```ts
 await models.user.all()
 ```
 
-When you're done playing around in the REPL, just press `Ctrl+D` or type `.exit` to get back to your regular terminal.
+### Exit the REPL
+
+When you're done exploring, type `.exit` or press `Ctrl+D` to leave the REPL and return to your terminal.
 
 ## What you learned
 
