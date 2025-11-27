@@ -2,13 +2,11 @@
 
 import 'unpoly'
 import Alpine from 'alpinejs'
+import '@github/tab-container-element'
 import collapse from '@alpinejs/collapse'
 
-import '@github/tab-container-element'
-
-import.meta.glob('../content/**/*.png')
-import.meta.glob('../content/**/*.jpg')
-import.meta.glob('../content/**/*.jpeg')
+import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
+import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
 
 Alpine.data('ctc', function () {
   return {

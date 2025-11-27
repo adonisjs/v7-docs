@@ -1,6 +1,5 @@
 import edge from 'edge.js'
 import { dirname } from 'node:path'
-import { Vite } from '@adonisjs/vite'
 import { inject } from '@adonisjs/core'
 import { Router } from '@adonisjs/core/http'
 import { type Infer } from '@vinejs/vine/types'
@@ -10,41 +9,40 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
 import { RequestFactory } from '@adonisjs/core/factories/http'
 
-export default class CompileDocs extends BaseCommand {
-  static commandName = 'compile:docs'
-  static description = 'Compile docs to static HTML files'
+export default class BuildStatic extends BaseCommand {
+  static commandName = 'build:static'
+  static description = 'Converts the entire website to a static build'
 
   static options: CommandOptions = {
     startApp: true,
   }
 
-  async #compileDoc(doc: Infer<typeof singleDoc>) {
-    const { DocService } = await import('#services/doc_service')
-    const docsService = await this.app.container.make(DocService)
+  #createView(url: string) {
     const request = new RequestFactory().create()
-    request.request.url = `/${doc.permalink}`
+    request.request.url = url
+    return edge.share({ request })
+  }
 
-    const html = await docsService.renderDoc(
-      doc.permalink,
-      edge.share({
-        request,
-      })
-    )
-
-    const outputPath = this.app.makePath('build/public', `${doc.permalink}.html`)
+  async #writeOutput(uri: string, html: string) {
+    const outputPath = this.app.makePath('build/public', `${uri}.html`)
     await mkdir(dirname(outputPath), { recursive: true })
     await writeFile(outputPath, html)
   }
 
-  @inject()
-  async prepare(vite: Vite, router: Router) {
-    router.commit()
-    await vite.createDevServer()
+  async #compileDoc(doc: Infer<typeof singleDoc>) {
+    const { DocService } = await import('#services/doc_service')
+    const docsService = await this.app.container.make(DocService)
+    const html = await docsService.renderDoc(doc.permalink, this.#createView(`/${doc.permalink}`))
+    await this.#writeOutput(doc.permalink, html)
+  }
+
+  async #createHomePage() {
+    await this.#writeOutput('index', await this.#createView('/').render('pages/home'))
   }
 
   @inject()
-  async completed(vite: Vite) {
-    await vite.stopDevServer()
+  async prepare(router: Router) {
+    router.commit()
   }
 
   async run() {
@@ -53,6 +51,8 @@ export default class CompileDocs extends BaseCommand {
     const start = await docsSections.start.load()
     const reference = await docsSections.reference.load()
 
+    await this.#createHomePage()
+
     for (const group of [...guides.all(), ...start.all(), ...reference.all()]) {
       for (const doc of group.children) {
         const action = this.logger.action(`Compiling ${doc.permalink}`)
@@ -60,7 +60,7 @@ export default class CompileDocs extends BaseCommand {
           await this.#compileDoc(doc)
           action.succeeded()
         } catch (error) {
-          action.failed(error)
+          action.failed(error.message)
         }
       }
     }
