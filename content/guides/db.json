@@ -90,6 +90,16 @@
         "contentPath": "./frontend/transformers.md"
       },
       {
+        "title": "Tuyau",
+        "permalink": "guides/frontend/tuyau",
+        "contentPath": "./frontend/tuyau.md"
+      },
+      {
+        "title": "TanStack Query",
+        "permalink": "guides/frontend/tanstack-query",
+        "contentPath": "./frontend/tanstack_query.md"
+      },
+      {
         "title": "Vite",
         "permalink": "guides/frontend/vite",
         "oldUrls": ["guides/basics/vite"],
