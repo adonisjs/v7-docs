@@ -175,7 +175,15 @@ The key part here is `bouncer.with(PostPolicy).authorize('edit', post)`. This li
 
 Notice we check authorization in both methods. Even though `edit` checks permissions, someone could bypass the form and send a PUT request directly to the `update` route. Always verify permissions before performing sensitive actions.
 
-You'll also notice `session.flash('success', 'Post updated successfully')` in the `update` method. [Flash messages](../../../guides/basics/session.md#flash-messages) are temporary messages stored in the session that are available on the next request and then automatically removed. This is perfect for showing success or error messages after form submissions. The message will be displayed on the page the user is redirected to.
+:::
+
+:::step{title="Understanding flash messages"}
+
+You'll notice `session.flash('success', 'Post updated successfully')` in the `update` method. This is our first use of **flash messages** in DevShow, so let's understand what they do.
+
+[Flash messages](../../../guides/basics/session.md#flash-messages) are temporary messages stored in the session. They're available on the next request only, then automatically removed. This makes them perfect for showing success or error messages after form submissions.
+
+We'll use flash messages throughout the rest of this chapter whenever we want to confirm that an action (like updating or deleting) was successful.
 
 :::
 
