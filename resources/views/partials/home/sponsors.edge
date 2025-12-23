@@ -1,10 +1,10 @@
 <div class="space-y-5">
     <div class="md:p-9.5 mt-7 md:mt-0 md:border border-woodsmoke-900 rounded-md bg-woodsmoke-950">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Active sponsors</span>
-        <div class="grid grid-cols-5 md:grid-cols-12 gap-2 sm:gap-4 xl:pr-28">
+        <div class="flex flex-wrap gap-2 sm:gap-4 xl:pr-28">
             @each(sponsor in sponsors.filterd())
                 <div class="border border-woodsmoke-900 rounded-md overflow-hidden">
-                    <img src="{{sponsor.sponsorAvatarUrl}}" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title="{{sponsor.sponsorName || sponsor.sponsorLogin}}">
+                    <img src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title="{{sponsor.sponsorName || sponsor.sponsorLogin}}">
                 </div>
             @end
         </div>
@@ -12,10 +12,10 @@
 
     <div class="md:p-9.5 mt-12 md:mt-0 md:border border-woodsmoke-900 rounded-md bg-woodsmoke-950">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Past sponsors</span>
-        <div class="grid grid-cols-5 md:grid-cols-12 gap-2 sm:gap-4 xl:pr-28">
+        <div class="flex flex-wrap gap-2 sm:gap-4 xl:pr-28">
             @each(sponsor in sponsors.filterd())
                 <div class="border border-woodsmoke-900 rounded-md overflow-hidden">
-                    <img src="{{sponsor.sponsorAvatarUrl}}" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title={{sponsor.sponsorName || sponsor.sponsorLogin}}>
+                    <img src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title={{sponsor.sponsorName || sponsor.sponsorLogin}}>
                 </div>
             @end
         </div>

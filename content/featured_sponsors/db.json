@@ -1,22 +1,27 @@
 [
   {
     "logo": "./logos/route4me.svg",
+    "name": "Route4Me",
     "url": "https://route4me.com/"
   },
   {
     "logo": "./logos/galaxy.svg",
+    "name": "Galaxy Cloud",
     "url": "https://galaxycloud.app/"
   },
   {
     "logo": "./logos/ezycourse.svg",
+    "name": "Ezycourse",
     "url": "https://ezycourse.com/"
   },
   {
     "logo": "./logos/relancer.svg",
+    "name": "Relancer",
     "url": "https://relancer.com/"
   },
   {
     "logo": "./logos/lambdatest.svg",
+    "name": "Lambda Test",
     "url": "https://www.lambdatest.com/"
   }
 ]

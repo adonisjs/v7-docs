@@ -9,6 +9,7 @@ export const featuredSponsors = Collection.create({
   schema: vine.array(
     vine.object({
       logo: vine.string().toAbsolutePath().toContents(),
+      name: vine.string(),
       url: vine.string(),
     })
   ),
