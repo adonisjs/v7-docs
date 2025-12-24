@@ -290,10 +290,10 @@
 }
 
 .prose .tabs .tab {
-  padding: 12px 0;
+  padding: 4px 0;
   cursor: pointer;
   font-weight: 500;
-  margin-right: 24px;
+  margin-right: 14px;
   @apply text-woodsmoke-400;
 }
 
