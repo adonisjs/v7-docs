@@ -42,7 +42,7 @@
 
   {{-- Section menu --}}
   @each(group in section.menu())
-    @let(isExpanded = group.isChild(doc.permalink))
+    @let(isExpanded = true)
     <nav
       class="menu-group {{ isExpanded ? 'expanded' : '' }}"
       x-data="{ expanded: {{ isExpanded }} }"
