@@ -1,8 +1,9 @@
 @let(filePath = $renderingContext.vFile.path)
 @let(hrefParts = href.split('#'))
+@let(isExternal = href.startsWith('http://') || href.startsWith('https://'))
 
 {{-- Reverse mapping markdown files to their permalink --}}
-@if(hrefParts[0].endsWith('.md') || hrefParts[0].endsWith('.mdc'))
+@if(!isExternal && (hrefParts[0].endsWith('.md') || hrefParts[0].endsWith('.mdc')))
   @let(transformedPath = await resolveLink(filePath, hrefParts[0]))
 
   @if(transformedPath)
