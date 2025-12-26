@@ -23,9 +23,24 @@ const noDashCase = vine.createRule((value, _, field) => {
 
 export const singleDoc = vine.object({
   title: vine.string(),
-  permalink: vine.string().use(noSnakeCase()),
+  permalink: vine.string().use(noSnakeCase()).optional().requiredIfMissing('variations'),
+  variations: vine
+    .array(
+      vine.object({
+        name: vine.string(),
+        permalink: vine.string().use(noSnakeCase()),
+        contentPath: vine.string().use(noDashCase()).toAbsolutePath(),
+      })
+    )
+    .optional()
+    .requiredIfMissing('permalink'),
   oldUrls: vine.array(vine.string()).optional(),
-  contentPath: vine.string().use(noDashCase()).toAbsolutePath(),
+  contentPath: vine
+    .string()
+    .use(noDashCase())
+    .toAbsolutePath()
+    .optional()
+    .requiredIfMissing('variations'),
 })
 
 export const categoryDocs = vine.object({
@@ -42,21 +57,43 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
     cache: app.inProduction,
     loader: loaders.jsonLoader(app.makePath('content', section, 'db.json')),
     views: {
-      menu(data: Infer<typeof menuSchema>) {
+      menu(data: Infer<typeof menuSchema>, variation?: string) {
         return data.map((node) => {
           return {
             category: node.category,
             isChild(permalink: string): boolean {
               return !!node.children.find((child) => child.permalink === permalink)
             },
-            children: node.children,
+            children: node.children.map((child) => {
+              if (child.permalink) {
+                return child
+              }
+              const matchingVariant =
+                child.variations!.find((variant) => variant.name === variation) ??
+                child.variations?.[0]
+
+              return {
+                ...child,
+                permalink: matchingVariant?.permalink,
+                contentPath: matchingVariant?.contentPath,
+              }
+            }),
           }
         })
       },
       permalinksTree(data: Infer<typeof menuSchema>) {
         return data.reduce<Record<string, Infer<typeof singleDoc>>>((result, node) => {
           node.children.forEach((doc) => {
-            result[doc.permalink] = doc
+            if (doc.permalink) {
+              result[doc.permalink] = doc
+            }
+            doc.variations?.forEach((variation) => {
+              result[variation.permalink] = {
+                ...doc,
+                permalink: variation.permalink,
+                contentPath: variation.contentPath,
+              }
+            })
           })
           return result
         }, {})
@@ -64,7 +101,16 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
       contentPathsTree(data: Infer<typeof menuSchema>) {
         return data.reduce<Record<string, Infer<typeof singleDoc>>>((result, node) => {
           node.children.forEach((doc) => {
-            result[doc.contentPath] = doc
+            if (doc.contentPath) {
+              result[doc.contentPath] = doc
+            }
+            doc.variations?.forEach((variation) => {
+              result[variation.contentPath] = {
+                ...doc,
+                permalink: variation.permalink,
+                contentPath: variation.contentPath,
+              }
+            })
           })
           return result
         }, {})

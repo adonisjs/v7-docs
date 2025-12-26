@@ -166,3 +166,6 @@ Views live in the `resources/views` directory. AdonisJS uses Edge as its templat
 The `@layout()` tag wraps the page content with a common layout (header, footer, CSS). The `@form()` and `@field.root()` tags are components that come with the starter kit. They render standard HTML form elements with built-in features like CSRF protection and validation error display.
 
 When you visit `/signup`, the route calls the controller's `create` method, which renders this view, and Edge converts it to HTML that your browser displays.
+
+## Try creating an account
+Before we move forward, start your development server with `node ace serve --hmr` and try creating an account. Get comfortable with how the starter kit works. We'll be building on this foundation.

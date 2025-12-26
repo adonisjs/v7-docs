@@ -50,7 +50,11 @@ export default class PostsController {
 }
 ```
 
-A few things to note here: we're preloading the `user` relationship so we can display the author's name without extra queries, ordering posts by creation date with newest first, and passing the posts to a view template called `posts/index`.
+A few things to note here: 
+
+- We're preloading the `user` relationship so we can display the author's name without extra queries
+- We're ordering posts by creation date with newest first
+- And passing the posts to a view template called `posts/index`.
 
 :::
 
@@ -131,7 +135,7 @@ Add the `show` method to your controller.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
-import { HttpContext } from '@adonisjs/core/http'
+import type { HttpContext } from '@adonisjs/core/http'
 
 export default class PostsController {
   async index({ view }: HttpContext) {

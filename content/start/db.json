@@ -46,47 +46,127 @@
     ]
   },
   {
-    "category": "Tutorial",
+    "category": "Tutorial (Hypermedia)",
     "children": [
       {
         "title": "Overview",
-        "permalink": "tutorial/hypermedia/overview",
-        "contentPath": "./tutorial/hypermedia/overview.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/overview",
+            "contentPath": "./tutorial/hypermedia/overview.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/overview",
+            "contentPath": "./tutorial/react/overview.md"
+          }
+        ]
       },
       {
         "title": "Commandline and REPL",
-        "permalink": "tutorial/hypermedia/cli-and-repl",
-        "contentPath": "./tutorial/hypermedia/cli_and_repl.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/cli-and-repl",
+            "contentPath": "./tutorial/hypermedia/cli_and_repl.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/cli-and-repl",
+            "contentPath": "./tutorial/react/cli_and_repl.md"
+          }
+        ]
       },
       {
         "title": "Database and models",
-        "permalink": "tutorial/hypermedia/database-and-models",
-        "contentPath": "./tutorial/hypermedia/database_and_models.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/database-and-models",
+            "contentPath": "./tutorial/hypermedia/database_and_models.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/database-and-models",
+            "contentPath": "./tutorial/react/database_and_models.md"
+          }
+        ]
       },
       {
         "title": "Routes, Controllers and Views",
-        "permalink": "tutorial/hypermedia/routes-controller-views",
-        "contentPath": "./tutorial/hypermedia/routes_controllers_and_views.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/routes-controller-views",
+            "contentPath": "./tutorial/hypermedia/routes_controllers_and_views.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/routes-controller-views",
+            "contentPath": "./tutorial/react/routes_controllers_and_views.md"
+          }
+        ]
       },
       {
         "title": "Forms and Validation",
-        "permalink": "tutorial/hypermedia/forms-and-validation",
-        "contentPath": "./tutorial/hypermedia/forms_and_validation.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/forms-and-validation",
+            "contentPath": "./tutorial/hypermedia/forms_and_validation.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/forms-and-validation",
+            "contentPath": "./tutorial/react/forms_and_validation.md"
+          }
+        ]
       },
       {
         "title": "Styling and Cleanup",
-        "permalink": "tutorial/hypermedia/styling-and-cleanup",
-        "contentPath": "./tutorial/hypermedia/styling_and_cleanup.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/styling-and-cleanup",
+            "contentPath": "./tutorial/hypermedia/styling_and_cleanup.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/styling-and-cleanup",
+            "contentPath": "./tutorial/react/styling_and_cleanup.md"
+          }
+        ]
       },
       {
         "title": "Authorization",
-        "permalink": "tutorial/hypermedia/authorization",
-        "contentPath": "./tutorial/hypermedia/authorization.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/authorization",
+            "contentPath": "./tutorial/hypermedia/authorization.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/authorization",
+            "contentPath": "./tutorial/react/authorization.md"
+          }
+        ]
       },
       {
         "title": "Deployment",
-        "permalink": "tutorial/hypermedia/deployment",
-        "contentPath": "./tutorial/hypermedia/deployment.md"
+        "variations": [
+          {
+            "name": "Hypermedia",
+            "permalink": "tutorial/hypermedia/deployment",
+            "contentPath": "./tutorial/hypermedia/deployment.md"
+          },
+          {
+            "name": "React",
+            "permalink": "tutorial/react/deployment",
+            "contentPath": "./tutorial/react/deployment.md"
+          }
+        ]
       }
     ]
   },
