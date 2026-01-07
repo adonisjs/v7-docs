@@ -9435,13 +9435,6 @@
     },
     {
       "repo": "content",
-<<<<<<< HEAD
-      "name": "Release 1.5.0",
-      "tagName": "v1.5.0",
-      "publishedAt": "2025-12-27T10:06:57Z",
-      "url": "https://github.com/adonisjs/content/releases/tag/v1.5.0",
-      "description": "# [1.5.0](https://github.com/adonisjs/content/compare/v1.4.0...v1.5.0) (2025-12-27)\n\n\n### Features\n\n* add support for custom sources ([c2abc7c](https://github.com/adonisjs/content/commit/c2abc7c4b4c6fc2f18d82cc5ae9aafa49371767c))"
-=======
       "name": "Add support for fetching inactive sponsors",
       "tagName": "v1.6.0",
       "publishedAt": "2026-01-05T06:38:31Z",
@@ -9455,7 +9448,6 @@
       "publishedAt": "2025-12-27T10:06:57Z",
       "url": "https://github.com/adonisjs/content/releases/tag/v1.5.0",
       "description": "# [1.5.0](https://github.com/adonisjs/content/compare/v1.4.0...v1.5.0) (2025-12-27)\r\n\r\n\r\n### Features\r\n\r\n* add support for custom sources ([c2abc7c](https://github.com/adonisjs/content/commit/c2abc7c4b4c6fc2f18d82cc5ae9aafa49371767c))\r\n\r\n**Full Changelog**: https://github.com/adonisjs/content/compare/v1.4.0...v1.5.0"
->>>>>>> 70962b5 (feat: pack container doc)
     },
     {
       "repo": "content",

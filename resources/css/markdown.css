@@ -51,8 +51,10 @@
   margin-top: 56px;
 }
 .prose h2 code {
-  font-size: 22px;
+  font-size: 24px;
   background: transparent;
+  color: inherit;
+  padding: 0;
 }
 
 .prose h3 {
@@ -63,8 +65,10 @@
   margin-top: 36px;
 }
 .prose h3 code {
-  font-size: 18px;
+  font-size: 20px;
   background: transparent;
+  color: inherit;
+  padding: 0;
 }
 
 .prose h2 + .prose h3 {
