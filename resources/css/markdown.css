@@ -398,7 +398,7 @@
 }
 
 .menu-group li a.up-current {
-  @apply text-white before:content-[''] before:absolute before:-left-3 lg:before:-left-8 before:top-0 before:bottom-0 before:w-0.5 before:bg-indigo-400;
+  @apply text-white before:content-[''] before:absolute before:-left-4 lg:before:-left-8 before:top-0 before:bottom-0 before:w-0.5 before:bg-indigo-400;
 }
 
 .doc-right-nav > ul {

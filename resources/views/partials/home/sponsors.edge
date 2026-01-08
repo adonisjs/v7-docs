@@ -3,7 +3,7 @@
 @let(aggregates = sponsors.aggregates())
 
 <div class="space-y-5">
-    <div class="md:p-9.5 mt-7 md:mt-0 md:border border-woodsmoke-900 rounded-md bg-woodsmoke-950">
+    <div class="md:p-9.5 mt-7 md:mt-0 md:border border-woodsmoke-900 rounded-md md:bg-woodsmoke-950">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Active sponsors ({{aggregates.active}})</span>
         <div class="flex flex-wrap gap-2 sm:gap-4 xl:pr-28">
             @each(sponsor in activeSponsors)
@@ -14,7 +14,7 @@
         </div>
     </div>
 
-    <div class="md:p-9.5 mt-12 md:mt-0 md:border border-woodsmoke-900 rounded-md bg-woodsmoke-950">
+    <div class="md:p-9.5 mt-12 md:mt-0 md:border border-woodsmoke-900 rounded-md md:bg-woodsmoke-950">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Past sponsors ({{aggregates.past}})</span>
         <div class="flex flex-wrap gap-2 sm:gap-4 xl:pr-28">
             @each(sponsor in pastSponsors)
