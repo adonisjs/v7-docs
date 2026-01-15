@@ -39,7 +39,7 @@
 )
 
 <div data-pf-theme="dark">
-  <pagefind-modal-trigger></pagefind-modal-trigger>
+  <pagefind-modal-trigger placeholder="Search"></pagefind-modal-trigger>
   <pagefind-modal>
     <pagefind-modal-header>
       <pagefind-input></pagefind-input>
@@ -67,7 +67,7 @@
               <ul class="pf-heading-chips">
                 {{#each sub_results as sub}}
                 <li class="pf-heading-chip">
-                  <a class="pf-heading-link" href="{{ sub.url | safeUrl }}">{{ sub.title }}</a>
+                  <a class="pf-heading-link" href="{{ sub.url | safeUrl | replace('.html', '') }}">{{ sub.title }}</a>
                   <p class="pf-heading-excerpt">{{+ sub.excerpt +}}</p>
                 </li>
                 {{/each}}
@@ -82,14 +82,4 @@
       <pagefind-keyboard-hints></pagefind-keyboard-hints>
     </pagefind-modal-footer>
   </pagefind-modal>
-  {{-- <button {{ $props.except(['text', 'size', 'color', 'radius', 'class']).merge({ class: searchClasses }).toAttrs() }} @click="open">
-    @svg('mynaui:search', { width: 'auto', height: 'auto', class: searchIconClasses })
-    <span>
-      @if(slotContent)
-        {{{ slotContent }}}
-      @else
-      {{ text }}
-      @end
-    </span>
-  </button> --}}
 </div>
