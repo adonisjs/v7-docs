@@ -557,6 +557,30 @@ const posts = await tuyau.posts.index({
 })
 ```
 
+## Retrieving typings
+
+Tuyau provides two type helper namespaces, `Path` and `Route`, that let you extract request and response types from your API definition. This is useful when you need to type a variable, a function parameter, or a return type based on your API schema.
+
+Both helpers are imported from `@tuyau/core/types` and expose the same utilities: `Request`, `Response`, `Params`, `Body`, and `Query`. `Route` extracts types by route name, while `Path` extracts types by HTTP method and URL pattern.
+
+```ts
+import type { Route, Path } from '@tuyau/core/types'
+
+// By route name
+type StoreRequest = Route.Request<'posts.store'>
+type StoreResponse = Route.Response<'posts.store'>
+type ShowParams = Route.Params<'posts.show'>
+type StoreBody = Route.Body<'posts.store'>
+type IndexQuery = Route.Query<'posts.index'>
+
+// By HTTP method + URL pattern
+type LoginRequest = Path.Request<'POST', '/auth/login'>
+type LoginResponse = Path.Response<'POST', '/auth/login'>
+type UserParams = Path.Params<'GET', '/users/:id'>
+type LoginBody = Path.Body<'POST', '/auth/login'>
+type PostsQuery = Path.Query<'GET', '/posts'>
+```
+
 ## File uploads
 
 Tuyau automatically handles file uploads by detecting File objects in your request body and switching to FormData encoding. You don't need to manually construct FormData or change content types.
