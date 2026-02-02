@@ -109,14 +109,6 @@ The environment variable must be validated in `start/env.ts` to ensure only conf
 
 All storage backends accept the following options:
 
-| Option | Description |
-|--------|-------------|
-| `keyPrefix` | Prefix for keys in storage. The database store ignores this since separate tables provide isolation. |
-| `execEvenly` | Adds artificial delay to spread requests evenly across the time window. See [smooth out traffic peaks](https://github.com/animir/node-rate-limiter-flexible/wiki/Smooth-out-traffic-peaks) for details. |
-| `inMemoryBlockOnConsumed` | Number of requests after which to block the key in memory, reducing database queries from abusive users. |
-| `inMemoryBlockDuration` | How long to block keys in memory. Reduces database load by checking memory first. |
-
-The `inMemoryBlockOnConsumed` option is useful when users continue making requests after exhausting their quota. Instead of querying the database for every rejected request, you can block them in memory:
 
 ```ts title="config/limiter.ts"
 {
@@ -132,6 +124,34 @@ The `inMemoryBlockOnConsumed` option is useful when users continue making reques
 }
 ```
 
+::::options
+
+:::option{name="keyPrefix"}
+
+Prefix for keys in storage. The database store ignores this since separate tables provide isolation.
+
+:::
+
+:::option{name="execEvenly"}
+
+Adds artificial delay to spread requests evenly across the time window. See [smooth out traffic peaks](https://github.com/animir/node-rate-limiter-flexible/wiki/Smooth-out-traffic-peaks) for details.
+
+:::
+
+:::option{name="inMemoryBlockOnConsumed"}
+
+Number of requests after which to block the key in memory, reducing database queries from abusive users.
+
+:::
+
+:::option{name="inMemoryBlockDuration"}
+
+How long to block keys in memory. Reduces database load by checking memory first. The `inMemoryBlockOnConsumed` option is useful when users continue making requests after exhausting their quota. Instead of querying the database for every rejected request, you can block them in memory:
+
+:::
+
+::::
+
 ### Redis store
 
 The Redis store requires the `@adonisjs/redis` package to be configured first.
@@ -145,10 +165,22 @@ The Redis store requires the `@adonisjs/redis` package to be configured first.
 }
 ```
 
-| Option | Description |
-|--------|-------------|
-| `connectionName` | The Redis connection from `config/redis.ts`. We recommend using a separate database for the limiter. |
-| `rejectIfRedisNotReady` | When `true`, rejects rate-limiting requests if Redis connection status is not `ready`. |
+::::options
+
+:::option{name="connectionName"}
+
+The Redis connection from `config/redis.ts`. We recommend using a separate database for the limiter.
+
+:::
+
+:::option{name="rejectIfRedisNotReady"}
+
+When `true`, rejects rate-limiting requests if Redis connection status is not `ready`.
+
+:::
+
+::::
+
 
 ### Database store
 
@@ -170,15 +202,42 @@ The database store only supports MySQL, PostgreSQL, and SQLite. Other databases 
 }
 ```
 
-| Option | Description |
-|--------|-------------|
-| `connectionName` | The database connection from `config/database.ts`. Uses the default connection if not specified. |
-| `dbName` | The database name for SQL queries. Inferred from connection config, but required when using a connection string. |
-| `tableName` | The table for storing rate limit data. |
-| `schemaName` | The schema for SQL queries (PostgreSQL only). |
-| `clearExpiredByTimeout` | When `true`, clears expired keys every 5 minutes. Only keys expired for more than 1 hour are removed. |
+:::options
 
-## Basic: Throttling HTTP requests
+:::option{name="connectionName"}
+
+The database connection from `config/database.ts`. Uses the default connection if not specified.
+
+:::
+
+:::option{name="dbName"}
+
+The database name for SQL queries. Inferred from connection config, but required when using a connection string.
+
+:::
+
+:::option{name="tableName"}
+
+The table for storing rate limit data.
+
+:::
+
+:::option{name="schemaName"}
+
+The schema for SQL queries (PostgreSQL only).
+
+:::
+
+:::option{name="clearExpiredByTimeout"}
+
+When `true`, clears expired keys every 5 minutes. Only keys expired for more than 1 hour are removed.
+
+:::
+
+:::
+
+
+## Throttling HTTP requests
 
 The most common use case is throttling HTTP requests with middleware. The `limiter.define` method creates reusable throttle middleware that you can apply to routes.
 
@@ -245,7 +304,7 @@ limiter
   .blockFor('30 mins')
 ```
 
-## Intermediate: Dynamic rate limiting
+## Dynamic rate limiting
 
 Different users often need different rate limits. Authenticated users might get higher limits than guests, or premium subscribers might get unlimited access while free users are restricted.
 
@@ -360,7 +419,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
 }
 ```
 
-## Intermediate: Direct usage
+## Direct usage
 
 Beyond HTTP middleware, you can use the limiter directly in any part of your application. This is useful for protecting login forms from brute-force attacks, limiting background job execution, or controlling access to expensive operations.
 
@@ -477,7 +536,7 @@ export default class SessionController {
 }
 ```
 
-## Advanced: Manual request consumption
+## Manual request consumption
 
 For fine-grained control, you can manually check and consume requests instead of using `attempt` or `penalize`.
 
@@ -511,7 +570,7 @@ export async function handleApiRequest(userId: number) {
 }
 ```
 
-## Advanced: Blocking keys
+## Blocking keys
 
 You can extend the lockout period for users who continue making requests after exhausting their quota. This is more punitive than standard rate limiting and discourages abuse.
 
@@ -541,7 +600,7 @@ You can also block a key manually:
 await requestsLimiter.block('a_unique_key', '30 mins')
 ```
 
-## Advanced: Resetting attempts
+## Resetting attempts
 
 Sometimes you need to restore requests to a user. For example, if a background job completes, you might want to let the user queue another one.
 
@@ -610,7 +669,7 @@ return () => limiter.clear()
 When using Redis, the `clear` method flushes the entire database. Use a separate Redis database for the rate limiter to avoid clearing application data. Configure this in `config/redis.ts` by creating a dedicated connection.
 :::
 
-## Advanced: Creating a custom storage provider
+## Creating a custom storage provider
 
 You can create custom storage providers by implementing the `LimiterStoreContract` interface. This is useful when you need to use a database not supported by the built-in stores.
 

@@ -4,13 +4,20 @@ summary: Add distributed tracing and observability to your AdonisJS application 
 
 # OpenTelemetry
 
-This guide covers OpenTelemetry integration in AdonisJS applications. You will learn how to install and configure the `@adonisjs/otel` package, understand OpenTelemetry concepts like traces and spans, use automatic instrumentation for HTTP requests and database queries, create custom spans with helpers and decorators, propagate trace context across services, and configure sampling and exporters for production environments.
+This guide covers OpenTelemetry integration in AdonisJS applications. You will learn how to:
+
+- Install and configure the `@adonisjs/otel` package
+- Understand traces, spans, and attributes
+- Use automatic instrumentation for HTTP, database, and Redis
+- Create custom spans with helpers and decorators
+- Propagate trace context across services
+- Test your setup locally with Jaeger
 
 ## Overview
 
-OpenTelemetry is an open standard for collecting telemetry data from your applications: traces, metrics, and logs. The `@adonisjs/otel` package provides a seamless integration between AdonisJS and OpenTelemetry, giving you distributed tracing and automatic instrumentation with sensible defaults and zero-config setup.
+OpenTelemetry is an open standard for collecting telemetry data from your applications: traces, metrics, and logs. The `@adonisjs/otel` package provides a seamless integration between AdonisJS and OpenTelemetry, giving you distributed tracing and automatic instrumentation with sensible defaults.
 
-Observability is essential for understanding what happens inside your application, especially in production. When a user reports that "the checkout page is slow," tracing lets you see exactly where time is spent: was it the database query? An external API call? A slow service? Without tracing, you're left guessing.
+Observability is essential for understanding what happens inside your application, especially in production. When a user reports that "the checkout page is slow," tracing lets you see exactly where time is spent. Was it the database query? An external API call? A slow service? Without tracing, you're left guessing.
 
 :::media
 ![alt text](./tracing.png)
@@ -30,73 +37,54 @@ A **span** is a single unit of work within a trace. Each database query, HTTP re
 
 ## Installation
 
-Install and configure the package using the following command:
+Install and configure the package using the following command.
 
 ```sh
 node ace add @adonisjs/otel
 ```
 
-This command creates `bin/otel.ts` with the OpenTelemetry initialization, adds the import at the top of `bin/server.ts`, registers the provider and middleware, and sets up environment variables.
+:::disclosure{title="See steps performed by the add command"}
+
+1. Installs the `@adonisjs/otel` package using the detected package manager.
+
+2. Registers the following service provider inside the `adonisrc.ts` file.
+
+   ```ts
+   {
+     providers: [
+       // ...other providers
+       () => import('@adonisjs/otel/otel_provider')
+     ]
+   }
+   ```
+
+3. Registers the following middleware inside the `start/kernel.ts` file.
+
+   ```ts
+   router.use([
+     () => import('@adonisjs/otel/otel_middleware')
+   ])
+   ```
+
+4. Creates the `config/otel.ts` file.
+
+5. Creates the `bin/otel.ts` file with OpenTelemetry initialization.
+
+6. Adds the import statement at the top of `bin/server.ts` file.
+
+7. Defines the following environment variables and their validation rules.
+
+   ```dotenv
+   OTEL_EXPORTER_OTLP_ENDPOINT=
+   OTEL_EXPORTER_OTLP_HEADERS=
+   ```
+:::
 
 That's it. Your application now has automatic tracing for HTTP requests, database queries, and more.
 
-:::warning
-
-**The import order is critical**
-
-OpenTelemetry must initialize before any other code loads. The SDK needs to patch libraries like `http`, `pg`, and `redis` before they're imported. That's why `bin/otel.ts` is imported as the very first line in `bin/server.ts`.
-
-If you move or remove the `import './otel.js'` line, auto-instrumentation will not work. You'll still be able to create manual spans, but automatic tracing of HTTP requests and database queries won't be captured.
-
-:::
-
-## Manual setup
-
-If you prefer not to use `node ace add`, here's what it configures.
-
-First, create a file at `bin/otel.ts` with the OpenTelemetry initialization:
-
-```ts title="bin/otel.ts"
-import { init } from '@adonisjs/otel/init'
-
-await init(import.meta.dirname)
-```
-
-Then update `bin/server.ts` to import it as the very first line:
-
-```ts title="bin/server.ts"
-/**
- * OpenTelemetry initialization - MUST be the first import
- */
-import './otel.js'
-
-import { Ignitor } from '@adonisjs/core'
-// ... rest of your server setup
-```
-
-Add the provider in `adonisrc.ts` to hook into AdonisJS's exception handler and record errors in spans:
-
-```ts title="adonisrc.ts"
-{
-  providers: [
-    // ... other providers
-    () => import('@adonisjs/otel/otel_provider'),
-  ]
-}
-```
-
-Finally, add the middleware as the first router middleware in `start/kernel.ts` to enrich HTTP spans with route information:
-
-```ts title="start/kernel.ts"
-router.use([
-  () => import('@adonisjs/otel/otel_middleware'),
-  // ... other middlewares
-])
-```
-
 ## Configuration
 
-The configuration file is located at `config/otel.ts`:
+The configuration file is located at `config/otel.ts`.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -111,19 +99,53 @@ export default defineConfig({
 
 ### Service identification
 
-The package resolves service metadata from multiple sources:
+The package resolves service metadata from multiple sources.
 
-| Option           | Environment Variable              | Default           |
-| ---------------- | --------------------------------- | ----------------- |
-| `serviceName`    | `OTEL_SERVICE_NAME` or `APP_NAME` | `unknown_service` |
-| `serviceVersion` | `APP_VERSION`                     | `0.0.0`           |
-| `environment`    | `APP_ENV`                         | `development`     |
+::::options
+
+:::option{name="serviceName" dataType="string"}
+
+The name of your service. This value is resolved from `OTEL_SERVICE_NAME` or `APP_NAME` environment variables.
+
+```ts
+export default defineConfig({
+  serviceName: 'my-api'
+})
+```
+
+:::
+
+:::option{name="serviceVersion" dataType="string"}
+
+The version of your service. This value is resolved from the `APP_VERSION` environment variable and defaults to `0.0.0`.
+
+```ts
+export default defineConfig({
+  serviceVersion: '1.2.3'
+})
+```
+
+:::
+
+:::option{name="environment" dataType="string"}
+
+The environment where your service is running. This value is resolved from the `APP_ENV` environment variable and defaults to `development`.
+
+```ts
+export default defineConfig({
+  environment: 'production'
+})
+```
+
+:::
+
+::::
 
 ### Exporters
 
 By default, the package exports traces using OTLP over gRPC to `localhost:4317`. This is the standard OpenTelemetry Collector endpoint. If you're running an OpenTelemetry Collector locally or in your infrastructure, traces will be sent there automatically.
 
-You can configure the exporter endpoint using environment variables without changing any code:
+You can configure the exporter endpoint using environment variables without changing any code.
 
 ```dotenv
 # title: .env
@@ -141,7 +163,7 @@ See the [OpenTelemetry environment variable specification](https://opentelemetry
 
 ### Debug mode
 
-Enable debug mode to print spans to the console during development:
+Enable debug mode to print spans to the console during development.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -156,7 +178,7 @@ This adds a `ConsoleSpanExporter` that outputs spans to your terminal, helping y
 
 ### Enabling and disabling
 
-OpenTelemetry is automatically disabled when `NODE_ENV === 'test'` to avoid noise during tests. You can override this behavior:
+OpenTelemetry is automatically disabled when `NODE_ENV === 'test'` to avoid noise during tests. You can override this behavior.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -178,7 +200,7 @@ export default defineConfig({
 
 ### Sampling
 
-In high-traffic production environments, tracing every single request generates enormous amounts of data. Sampling controls what percentage of traces are collected:
+In high-traffic production environments, tracing every single request generates enormous amounts of data. Sampling controls what percentage of traces are collected.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -208,21 +230,17 @@ If you provide a custom `sampler` option, `samplingRatio` is ignored.
 
 :::
 
-## Automatic instrumentation
+### Customizing instrumentations
 
-The package automatically instruments common libraries without any code changes. Out of the box, you get tracing for HTTP requests (incoming and outgoing), Lucid database queries (via Knex), Redis operations, and more.
+The package automatically instruments common libraries without any code changes. Out of the box, you get tracing for HTTP requests (incoming and outgoing), Lucid database queries (via Knex), and Redis operations.
 
-### Default ignored URLs
-
-To reduce noise, the following endpoints are excluded from tracing by default:
+To reduce noise, the following endpoints are excluded from tracing by default.
 
 - `/health`, `/healthz`, `/ready`, `/readiness`
 - `/metrics`, `/internal/metrics`, `/internal/healthz`
 - `/favicon.ico`
 
-### Customizing instrumentations
-
-You can configure individual instrumentations or add custom ignored URLs:
+You can configure individual instrumentations or add custom ignored URLs.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -247,6 +265,69 @@ export default defineConfig({
 })
 ```
 
+## Testing locally with Jaeger
+
+Jaeger is a popular open-source distributed tracing platform that implements the OpenTelemetry standard. It provides a web UI for visualizing traces, making it perfect for local development.
+
+::::steps
+
+:::step{title="Start Jaeger using Docker"}
+
+Run Jaeger in a Docker container. The all-in-one image includes the collector, query service, and UI.
+
+```sh
+docker run -d --name jaeger \
+  -e COLLECTOR_OTLP_ENABLED=true \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  jaegertracing/all-in-one:latest
+```
+
+This command exposes:
+- Port `16686` for the Jaeger UI
+- Port `4317` for OTLP gRPC (the default endpoint)
+- Port `4318` for OTLP HTTP
+
+:::
+
+:::step{title="Start your application"}
+
+Your AdonisJS application is already configured to send traces to `localhost:4317` by default, so no additional configuration is needed.
+
+```sh
+node ace serve --hmr
+```
+
+:::
+
+:::step{title="Generate some traces"}
+
+Make requests to your application to generate traces. You can use curl, your browser, or any HTTP client.
+
+```sh
+curl http://localhost:3333/users
+curl http://localhost:3333/posts/1
+```
+
+:::
+
+:::step{title="View traces in Jaeger"}
+
+Open the Jaeger UI at http://localhost:16686. You should see your service listed in the dropdown. Select your service and click "Find Traces" to see all captured traces.
+
+Click on any trace to see the complete timeline of operations: the HTTP request, database queries, and any custom spans you've created.
+
+:::
+
+::::
+
+:::tip
+
+Keep Jaeger running during development. It accumulates traces over time, making it easy to compare slow and fast requests or spot patterns in your application's behavior.
+
+:::
+
 ## Creating custom spans
 
 While automatic instrumentation covers most common operations, you'll often want to trace custom business logic. The package provides helpers and decorators for this purpose.
@@ -263,6 +344,7 @@ export default class OrderService {
     /**
      * Wrap synchronous or asynchronous code in a span
      */
+     // [!code highlight:6]
     const result = await record('order.process', async () => {
       const order = await Order.findOrFail(orderId)
       await this.validateInventory(order)
@@ -277,6 +359,7 @@ export default class OrderService {
     /**
      * Access the span to add custom attributes
      */
+     // [!code highlight:8]
     await record('order.validate_inventory', async (span) => {
       span.setAttributes({
         'order.id': order.id,
@@ -291,7 +374,7 @@ export default class OrderService {
 
 ### Using decorators
 
-For class methods, decorators provide a cleaner syntax:
+For class methods, decorators provide a cleaner syntax.
 
 ```ts title="app/services/user_service.ts"
 import { span, spanAll } from '@adonisjs/otel/decorators'
@@ -300,6 +383,7 @@ export default class UserService {
   /**
    * Creates a span named "UserService.findById"
    */
+  // [!code highlight]
   @span()
   async findById(id: string) {
     return User.find(id)
@@ -308,6 +392,7 @@ export default class UserService {
   /**
    * Custom span name and attributes
    */
+  // [!code highlight]
   @span({ name: 'user.create', attributes: { operation: 'create' } })
   async create(data: UserData) {
     return User.create(data)
@@ -315,14 +400,15 @@ export default class UserService {
 }
 ```
 
-To automatically trace all methods of a class, use the `@spanAll` decorator:
+To automatically trace all methods of a class, use the `@spanAll` decorator.
 
 ```ts title="app/services/payment_service.ts"
 import { spanAll } from '@adonisjs/otel/decorators'
 
 /**
- * All methods get spans: "PaymentService.charge", "PaymentService.refund", etc.
+ * All methods get spans.
  */
+// [!code highlight]
 @spanAll()
 export default class PaymentService {
   async charge(amount: number) {
@@ -345,7 +431,7 @@ export default class PaymentService {
 
 ### Setting attributes on the current span
 
-Use `setAttributes` to add metadata to the currently active span without creating a new one:
+Use `setAttributes` to add metadata to the currently active span without creating a new one.
 
 ```ts title="app/controllers/orders_controller.ts"
 import { setAttributes } from '@adonisjs/otel/helpers'
@@ -370,25 +456,29 @@ export default class OrdersController {
 
 ### Recording events
 
-Events are time-stamped annotations within a span. Use them to mark significant moments:
+Events are time-stamped annotations within a span. Use them to mark significant moments.
 
 ```ts title="app/services/checkout_service.ts"
 import { recordEvent } from '@adonisjs/otel/helpers'
 
 export default class CheckoutService {
   async process(cart: Cart) {
+    // [!code highlight]
     recordEvent('checkout.started')
     
     await this.validateCart(cart)
+    // [!code highlight]
     recordEvent('checkout.cart_validated')
     
     const payment = await this.processPayment(cart)
+    // [!code highlight:4]
     recordEvent('checkout.payment_processed', {
       'payment.method': payment.method,
       'payment.amount': payment.amount,
     })
     
     await this.fulfillOrder(cart)
+    // [!code highlight]
     recordEvent('checkout.completed')
   }
 }
@@ -400,7 +490,7 @@ When your application calls other services or processes background jobs, you nee
 
 ### Propagating to HTTP calls
 
-Inject trace context into outgoing HTTP request headers:
+Inject trace context into outgoing HTTP request headers.
 
 ```ts title="app/services/external_api_service.ts"
 import { injectTraceContext } from '@adonisjs/otel/helpers'
@@ -412,8 +502,10 @@ export default class ExternalApiService {
     }
     
     /**
-     * Adds traceparent and tracestate headers
+     * Adds traceparent and tracestate headers.
+     * Mutates the original object
      */
+     // [!code highlight]
     injectTraceContext(headers)
     
     const response = await fetch(`https://api.example.com/users/${userId}`, {
@@ -427,7 +519,7 @@ export default class ExternalApiService {
 
 ### Propagating to queue jobs
 
-When dispatching background jobs, include the trace context:
+When dispatching background jobs, include the trace context.
 
 ```ts title="app/controllers/orders_controller.ts"
 import { injectTraceContext } from '@adonisjs/otel/helpers'
@@ -440,6 +532,7 @@ export default class OrdersController {
      * Include trace context in job metadata
      */
     const traceHeaders: Record<string, string> = {}
+    // [!code highlight]
     injectTraceContext(traceHeaders)
     
     await queue.dispatch('process-order', {
@@ -452,7 +545,7 @@ export default class OrdersController {
 }
 ```
 
-In your queue worker, extract the context and continue the trace:
+In your queue worker, extract the context and continue the trace.
 
 ```ts title="app/jobs/process_order_job.ts"
 import { extractTraceContext, record } from '@adonisjs/otel/helpers'
@@ -463,11 +556,13 @@ export default class ProcessOrderJob {
     /**
      * Extract the trace context from the job payload
      */
+    // [!code highlight]
     const extractedContext = extractTraceContext(payload.traceContext)
     
     /**
      * Run the job within the extracted context
      */
+    // [!code highlight]
     await context.with(extractedContext, async () => {
       await record('job.process_order', async () => {
         /**
@@ -485,7 +580,7 @@ export default class ProcessOrderJob {
 
 When `@adonisjs/auth` is installed, the middleware automatically sets user attributes on spans if a user is authenticated. This includes `user.id`, `user.email` (if available), and `user.roles` (if available).
 
-You can customize this behavior or add additional user attributes:
+You can customize this behavior or add additional user attributes.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -503,7 +598,9 @@ export default defineConfig({
    */
   userContext: {
     resolver: async (ctx) => {
-      if (!ctx.auth.user) return null
+      if (!ctx.auth.user) {
+        return null
+      }
       
       return {
         id: ctx.auth.user.id,
@@ -515,7 +612,7 @@ export default defineConfig({
 })
 ```
 
-You can also manually set user context anywhere in your code:
+You can also manually set user context anywhere in your code.
 
 ```ts title="app/middleware/auth_middleware.ts"
 import { setUser } from '@adonisjs/otel/helpers'
@@ -539,12 +636,12 @@ export default class AuthMiddleware {
 
 The package automatically injects trace context into Pino logs, adding `trace_id` and `span_id` to each log entry. This lets you correlate logs with traces in your observability platform.
 
-When using `pino-pretty` for development, you can hide these fields for cleaner output:
+When using `pino-pretty` for development, you can hide these fields for cleaner output.
 
 ```ts title="config/logger.ts"
-import { defineConfig, targets } from '@adonisjs/core/logger'
 import app from '@adonisjs/core/services/app'
 import { otelLoggingPreset } from '@adonisjs/otel/helpers'
+import { defineConfig, targets } from '@adonisjs/core/logger'
 
 export default defineConfig({
   default: 'app',
@@ -560,7 +657,7 @@ export default defineConfig({
 })
 ```
 
-To keep specific fields visible:
+To keep specific fields visible.
 
 ```ts
 otelLoggingPreset({ keep: ['trace_id', 'span_id'] })
@@ -568,7 +665,7 @@ otelLoggingPreset({ keep: ['trace_id', 'span_id'] })
 
 ## Advanced configuration
 
-The `defineConfig` function accepts all options from the [OpenTelemetry Node SDK](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/), giving power users full control:
+The `defineConfig` function accepts all options from the [OpenTelemetry Node SDK](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/), giving power users full control.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -624,7 +721,7 @@ See also: [OpenTelemetry Sampling documentation](https://opentelemetry.io/docs/c
 
 ## Helpers reference
 
-All helpers are available from `@adonisjs/otel/helpers`:
+All helpers are available from `@adonisjs/otel/helpers`.
 
 | Helper                           | Description                                               |
 | -------------------------------- | --------------------------------------------------------- |
