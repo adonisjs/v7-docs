@@ -278,10 +278,9 @@
         "contentPath": "./digging_deeper/i18n.md"
       },
       {
-        "title": "Locks",
+        "title": "Atomic Locks",
         "permalink": "guides/digging-deeper/locks",
-        "contentPath": "./digging_deeper/locks.md",
-        "draft": true
+        "contentPath": "./digging_deeper/locks.md"
       },
       {
         "title": "Logger",
