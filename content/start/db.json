@@ -17,7 +17,7 @@
       {
         "title": "Installation",
         "permalink": "installation",
-        "oldUrls": ["guides/getting-started/installation"],
+        "oldUrls": ["guides/getting-started/installation", "guides/concepts/hot-module-replacement"],
         "contentPath": "./installation.md"
       },
       {
@@ -37,14 +37,15 @@
         "permalink": "configuration",
         "oldUrls": [
           "guides/getting-started/configuration",
-          "guides/getting-started/environment-variables"
+          "guides/getting-started/environment-variables",
+          "guides/concepts/config-providers"
         ],
         "contentPath": "./configuration.md"
       },
       {
         "title": "Deployment",
         "permalink": "deployment",
-        "oldUrls": ["guides/getting-started/deployment"],
+        "oldUrls": ["guides/getting-started/deployment", "guides/concepts/typescript-build-process"],
         "contentPath": "./deployment.md"
       },
       {

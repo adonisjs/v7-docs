@@ -15,7 +15,7 @@
       {
         "title": "HTTP context",
         "permalink": "guides/basics/http-context",
-        "oldUrls": ["guides/concepts/http-context"],
+        "oldUrls": ["guides/concepts/http-context", "guides/concepts/async-local-storage", "guides/concepts/http-overview"],
         "contentPath": "./basics/http_context.md"
       },
       {
@@ -26,6 +26,7 @@
       {
         "title": "Request",
         "permalink": "guides/basics/request",
+        "oldUrls": ["guides/basics/cookies"],
         "contentPath": "./basics/request.md"
       },
       {
@@ -119,6 +120,7 @@
       {
         "title": "SQL ORM",
         "permalink": "guides/database/lucid",
+        "oldUrls": ["guides/database/introduction"],
         "contentPath": "./database/lucid.md"
       },
       {

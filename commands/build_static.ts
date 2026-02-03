@@ -83,7 +83,9 @@ export default class BuildStatic extends BaseCommand {
 
     await this.#createHomePage()
 
-    for (const group of [...guides.all(), ...start.all(), ...reference.all()]) {
+    const allGroups = [...guides.all(), ...start.all(), ...reference.all()]
+
+    for (const group of allGroups) {
       for (const doc of group.children) {
         const action = doc.permalink
           ? this.logger.action(`Compiling ${doc.permalink}`)
@@ -97,5 +99,28 @@ export default class BuildStatic extends BaseCommand {
         }
       }
     }
+
+    await this.#createRedirects(allGroups)
+  }
+
+  async #createRedirects(
+    groups: Array<{ children: Array<Infer<typeof singleDoc> & { variant?: string }> }>
+  ) {
+    const redirects: string[] = []
+
+    for (const group of groups) {
+      for (const doc of group.children) {
+        if (doc.oldUrls && doc.permalink) {
+          for (const oldUrl of doc.oldUrls) {
+            redirects.push(`/${oldUrl} /${doc.permalink} 301`)
+          }
+        }
+      }
+    }
+
+    const outputPath = this.app.makePath('build/public/_redirects')
+    const action = this.logger.action('Generating _redirects file')
+    await writeFile(outputPath, redirects.join('\n') + '\n')
+    action.succeeded(`${redirects.length} redirects written`)
   }
 }
