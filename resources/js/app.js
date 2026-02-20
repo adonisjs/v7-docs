@@ -8,8 +8,8 @@ import '@pagefind/component-ui'
 import '@pagefind/component-ui/css'
 import '../css/app.css'
 
-await import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
-await import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg|json)')
+import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
+import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
 
 Alpine.data('ctc', function () {
   return {
