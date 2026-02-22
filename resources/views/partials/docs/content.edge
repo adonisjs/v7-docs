@@ -1,5 +1,5 @@
 <div class="prose pt-8 pb-12 lg:py-17 mx-auto relative" up-main>
   @include('partials/docs/markdown_errors')
   <div data-pagefind-body>{{{ markdownDocument.content }}}</div>
-  @!docNextPrevious()
+  @include('partials/docs/paginator')
 </div>

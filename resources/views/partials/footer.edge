@@ -1,114 +1,119 @@
 @let(footerSections = [{
-    mainTitle: "VSCode Extensions",
-    items: [
-        {
-            title: "AdonisJS",
-            url: "https://marketplace.visualstudio.com/items?itemName=jripouteau.adonis-vscode-extension"
-        },
-        {
-            title: "Edge",
-            url: "https://marketplace.visualstudio.com/items?itemName=AdonisJS.vscode-edge"
-        },
-        {
-            title: "Japa",
-            url: "https://marketplace.visualstudio.com/items?itemName=jripouteau.japa-vscode"
-        }
-    ]
+  mainTitle: "VSCode Extensions",
+  items: [
+    {
+      title: "AdonisJS",
+      url: "https://marketplace.visualstudio.com/items?itemName=jripouteau.adonis-vscode-extension"
+    },
+    {
+      title: "Edge",
+      url: "https://marketplace.visualstudio.com/items?itemName=AdonisJS.vscode-edge"
+    },
+    {
+      title: "Japa",
+      url: "https://marketplace.visualstudio.com/items?itemName=jripouteau.japa-vscode"
+    }
+  ]
 },
 {
-    mainTitle: "Community",
-    items: [
-        {
-            title: "Discord",
-            url: "https://discord.com/invite/vDcEjq6"
-        },
-        {
-            title: "Twitter",
-            url: "https://x.com/adonisframework"
-        },
-        {
-            title: "GitHub",
-            url: "https://github.com/adonisjs"
-        },
-        {
-            title: "Forum",
-            url: "https://github.com/orgs/adonisjs/discussions"
-        }
-    ]
+  mainTitle: "Community",
+  items: [
+    {
+      title: "Discord",
+      url: "https://discord.com/invite/vDcEjq6"
+    },
+    {
+      title: "Twitter",
+      url: "https://x.com/adonisframework"
+    },
+    {
+      title: "GitHub",
+      url: "https://github.com/adonisjs"
+    },
+    {
+      title: "Forum",
+      url: "https://github.com/orgs/adonisjs/discussions"
+    }
+  ]
 },
 {
-    mainTitle: "Resources",
-    items: [
-        {
-            title: "About",
-            url: "https://adonisjs.com/about"
-        },
-        {
-            title: "Insiders",
-            url: "https://adonisjs.com/insiders"
-        },
-        {
-            title: "Blog",
-            url: "https://adonisjs.com/blog"
-        },
-        {
-            title: "Packages",
-            url: "https://adonisjs.com/packages"
-        },
-        {
-            title: "Contributors",
-            url: "https://adonisjs.com/contributors"
-        },
-        {
-            title: "Support",
-            url: "https://adonisjs.com/support"
-        }
-    ]
+  mainTitle: "Resources",
+  items: [
+    {
+      title: "About",
+      url: "https://adonisjs.com/about"
+    },
+    {
+      title: "Insiders",
+      url: "https://adonisjs.com/insiders"
+    },
+    {
+      title: "Blog",
+      url: "https://adonisjs.com/blog"
+    },
+    {
+      title: "Packages",
+      url: "https://adonisjs.com/packages"
+    },
+    {
+      title: "Contributors",
+      url: "https://adonisjs.com/contributors"
+    },
+    {
+      title: "Support",
+      url: "https://adonisjs.com/support"
+    }
+  ]
 }])
 
 <div class="border-t border-woodsmoke-900">
-    <div class="container mx-auto px-5 lg:px-10 pt-15 md:pt-30 lg:border-x border-woodsmoke-900">
-        <div class="lg:px-22.5 mb-30 md:mb-52 space-y-7 sm:space-y-5">
-            @each(footer in footerSections)
-            <div class="flex flex-col sm:flex-row gap-1.5 sm:gap-3">
-                <label class="text-14 text-woodsmoke-50 tracking-wide">
-                    {{ footer.mainTitle }}
-                </label>
-                <div class="flex-1 border-b border-dashed border-woodsmoke-800 sm:mb-1.5">
-                </div>
-                <div class="flex flex-wrap gap-5.5 text-14">
-                    @each(subItem in footer.items)
-                    <a href="{{ subItem.url }}" target="_blank"
-                        class="relative hover:text-woodsmoke-50 transition-colors not-last:after:content-['/'] after:pointer-events-none after:text-woodsmoke-400 after:absolute after:-right-3.5">
-                        {{ subItem.title }}
-                    </a>
-                    @end
-                </div>
-            </div>
-            @end
+  <div class="container mx-auto px-5 lg:px-10 pt-15 md:pt-30 lg:border-x border-woodsmoke-900">
+    <div class="lg:px-22.5 mb-30 md:mb-52 space-y-7 sm:space-y-5">
+      @each(footer in footerSections)
+        <div class="flex flex-col sm:flex-row gap-1.5 sm:gap-3">
+          <label class="text-14 text-woodsmoke-50 tracking-wide">
+            {{ footer.mainTitle }}
+          </label>
+
+          <div class="flex-1 border-b border-dashed border-woodsmoke-800 sm:mb-1.5">
+          </div>
+
+          <div class="flex flex-wrap gap-5.5 text-14">
+            @each(subItem in footer.items)
+              @!link({
+                href: subItem.url,
+                target: '_blank',
+                text: subItem.title,
+                class: "relative hover:text-woodsmoke-50 transition-colors not-last:after:content-['/'] after:pointer-events-none after:text-woodsmoke-400 after:absolute after:-right-3.5"
+              })
+              @end
+          </div>
         </div>
-        <div>
-            <svg class="w-full" xmlns="http://www.w3.org/2000/svg" width="1248" viewBox="0 0 1248 277" fill="none">
-                <mask id="b" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="1248" height="281">
-                    <g clip-path="url(#a)" fill="#282832">
-                        <path
-                            d="M1162.91 280.9c-28.36 0-50.9-5.698-67.62-17.094-16.71-11.395-25.83-27.096-27.35-47.102h50.9c1.27 8.61 5.58 15.195 12.92 19.753 7.6 4.305 17.98 6.457 31.15 6.457 11.9 0 20.51-1.646 25.83-4.938 5.57-3.545 8.36-8.483 8.36-14.814 0-4.812-1.65-8.483-4.94-11.016-3.04-2.785-8.74-5.064-17.09-6.837l-31.15-6.458c-23.05-4.811-40.02-12.028-50.91-21.651-10.89-9.876-16.33-22.538-16.33-37.985 0-18.74 7.22-33.301 21.65-43.684 14.44-10.635 34.57-15.953 60.4-15.953 25.58 0 45.97 5.191 61.16 15.574 15.2 10.129 23.55 24.31 25.07 42.543h-50.9c-1.01-6.584-4.56-11.522-10.64-14.814-6.08-3.545-14.69-5.318-25.83-5.318-10.13 0-17.73 1.519-22.79 4.558-4.81 2.786-7.22 6.837-7.22 12.155 0 4.559 2.03 8.231 6.08 11.016 4.05 2.532 10.76 4.812 20.13 6.837l34.95 7.218c19.5 4.051 34.19 11.649 44.07 22.791 10.13 10.889 15.19 23.804 15.19 38.745 0 18.992-7.47 33.807-22.41 44.443-14.69 10.382-35.58 15.574-62.68 15.574ZM983.38 281.091V87.366h56.98v193.725h-56.98Zm-1.9-219.555V0h60.78v61.536h-60.78ZM750.413 281.101V87.376h55.84v45.582h1.14v148.143h-56.98Zm134.853 0V161.068c0-10.636-2.785-18.613-8.357-23.931-5.318-5.318-13.169-7.977-23.552-7.977-8.863 0-16.841 2.026-23.931 6.078-6.838 4.051-12.283 9.622-16.335 16.713-3.799 7.091-5.698 15.447-5.698 25.07l-4.938-46.722c6.331-14.181 15.574-25.45 27.73-33.806 12.409-8.61 27.604-12.915 45.585-12.915 21.526 0 37.987 6.077 49.383 18.233 11.396 11.902 17.094 27.982 17.094 48.241v131.049h-56.981ZM613.1 280.9c-21.272 0-40.013-4.179-56.22-12.536-15.955-8.61-28.491-20.512-37.608-35.706-8.863-15.447-13.295-33.174-13.295-53.179 0-20.006 4.432-37.479 13.295-52.42 9.117-14.941 21.653-26.589 37.608-34.946 16.207-8.357 34.948-12.535 56.22-12.535 21.526 0 40.267 4.178 56.221 12.535 16.208 8.357 28.744 20.005 37.607 34.946 8.864 14.941 13.296 32.414 13.296 52.42 0 20.005-4.559 37.732-13.676 53.179-8.863 15.194-21.399 27.096-37.607 35.706-15.954 8.357-34.568 12.536-55.841 12.536Zm0-44.823c8.864 0 16.841-2.279 23.932-6.837 7.344-4.559 13.169-11.016 17.474-19.373 4.305-8.61 6.458-18.866 6.458-30.768 0-17.473-4.685-30.895-14.055-40.264-9.117-9.623-20.387-14.435-33.809-14.435-13.422 0-24.818 4.812-34.188 14.435-9.117 9.623-13.675 23.044-13.675 40.264 0 11.902 2.152 22.158 6.458 30.768 4.305 8.357 10.003 14.814 17.094 19.373 7.344 4.558 15.448 6.837 24.311 6.837ZM419.774 280.902v-46.721l3.799.759c-2.533 13.928-10.13 25.07-22.793 33.427-12.409 8.357-27.35 12.535-44.824 12.535-17.728 0-33.176-4.051-46.345-12.155-12.915-8.357-22.918-20.005-30.009-34.946-7.091-14.941-10.637-32.541-10.637-52.8 0-20.512 3.672-38.365 11.017-53.559 7.344-15.194 17.6-26.969 30.769-35.326 13.422-8.357 28.997-12.535 46.724-12.535 18.487 0 33.429 4.305 44.825 12.915 11.649 8.61 18.487 20.385 20.513 35.326l-4.179.38V3.61h56.981v277.292h-55.841Zm-45.585-45.582c13.422 0 24.312-4.685 32.669-14.054 8.357-9.623 12.536-23.298 12.536-41.024 0-17.727-4.305-31.275-12.916-40.645-8.357-9.623-19.373-14.434-33.048-14.434-13.169 0-24.059 4.811-32.669 14.434-8.357 9.623-12.536 23.298-12.536 41.024 0 17.727 4.179 31.275 12.536 40.645 8.61 9.369 19.753 14.054 33.428 14.054ZM0 281.104 98.007 7.61h50.142L58.12 281.104H0Zm200.572 0L110.922 7.61h52.422l98.007 273.494h-60.779ZM51.662 175.125H205.13v45.583H51.662v-45.583Z">
-                        </path>
-                    </g>
-                </mask>
-                <g mask="url(#b)">
-                    <path fill="url(#c)" d="M0 0h1248v282H0z"></path>
-                </g>
-                <defs>
-                    <linearGradient id="c" x1="662.5" y1="-55.5" x2="668.5" y2="282" gradientUnits="userSpaceOnUse">
-                        <stop stop-color="#4D4D5F"></stop>
-                        <stop offset="1" stop-color="#0D0D10"></stop>
-                    </linearGradient>
-                    <clipPath id="a">
-                        <path fill="#fff" d="M0 0h1248v281H0z"></path>
-                    </clipPath>
-                </defs>
-            </svg>
-        </div>
+      @end
     </div>
+
+    <div>
+      <svg class="w-full" xmlns="http://www.w3.org/2000/svg" width="1248" viewBox="0 0 1248 277" fill="none">
+        <mask id="b" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="1248" height="281">
+          <g clip-path="url(#a)" fill="#282832">
+            <path
+                d="M1162.91 280.9c-28.36 0-50.9-5.698-67.62-17.094-16.71-11.395-25.83-27.096-27.35-47.102h50.9c1.27 8.61 5.58 15.195 12.92 19.753 7.6 4.305 17.98 6.457 31.15 6.457 11.9 0 20.51-1.646 25.83-4.938 5.57-3.545 8.36-8.483 8.36-14.814 0-4.812-1.65-8.483-4.94-11.016-3.04-2.785-8.74-5.064-17.09-6.837l-31.15-6.458c-23.05-4.811-40.02-12.028-50.91-21.651-10.89-9.876-16.33-22.538-16.33-37.985 0-18.74 7.22-33.301 21.65-43.684 14.44-10.635 34.57-15.953 60.4-15.953 25.58 0 45.97 5.191 61.16 15.574 15.2 10.129 23.55 24.31 25.07 42.543h-50.9c-1.01-6.584-4.56-11.522-10.64-14.814-6.08-3.545-14.69-5.318-25.83-5.318-10.13 0-17.73 1.519-22.79 4.558-4.81 2.786-7.22 6.837-7.22 12.155 0 4.559 2.03 8.231 6.08 11.016 4.05 2.532 10.76 4.812 20.13 6.837l34.95 7.218c19.5 4.051 34.19 11.649 44.07 22.791 10.13 10.889 15.19 23.804 15.19 38.745 0 18.992-7.47 33.807-22.41 44.443-14.69 10.382-35.58 15.574-62.68 15.574ZM983.38 281.091V87.366h56.98v193.725h-56.98Zm-1.9-219.555V0h60.78v61.536h-60.78ZM750.413 281.101V87.376h55.84v45.582h1.14v148.143h-56.98Zm134.853 0V161.068c0-10.636-2.785-18.613-8.357-23.931-5.318-5.318-13.169-7.977-23.552-7.977-8.863 0-16.841 2.026-23.931 6.078-6.838 4.051-12.283 9.622-16.335 16.713-3.799 7.091-5.698 15.447-5.698 25.07l-4.938-46.722c6.331-14.181 15.574-25.45 27.73-33.806 12.409-8.61 27.604-12.915 45.585-12.915 21.526 0 37.987 6.077 49.383 18.233 11.396 11.902 17.094 27.982 17.094 48.241v131.049h-56.981ZM613.1 280.9c-21.272 0-40.013-4.179-56.22-12.536-15.955-8.61-28.491-20.512-37.608-35.706-8.863-15.447-13.295-33.174-13.295-53.179 0-20.006 4.432-37.479 13.295-52.42 9.117-14.941 21.653-26.589 37.608-34.946 16.207-8.357 34.948-12.535 56.22-12.535 21.526 0 40.267 4.178 56.221 12.535 16.208 8.357 28.744 20.005 37.607 34.946 8.864 14.941 13.296 32.414 13.296 52.42 0 20.005-4.559 37.732-13.676 53.179-8.863 15.194-21.399 27.096-37.607 35.706-15.954 8.357-34.568 12.536-55.841 12.536Zm0-44.823c8.864 0 16.841-2.279 23.932-6.837 7.344-4.559 13.169-11.016 17.474-19.373 4.305-8.61 6.458-18.866 6.458-30.768 0-17.473-4.685-30.895-14.055-40.264-9.117-9.623-20.387-14.435-33.809-14.435-13.422 0-24.818 4.812-34.188 14.435-9.117 9.623-13.675 23.044-13.675 40.264 0 11.902 2.152 22.158 6.458 30.768 4.305 8.357 10.003 14.814 17.094 19.373 7.344 4.558 15.448 6.837 24.311 6.837ZM419.774 280.902v-46.721l3.799.759c-2.533 13.928-10.13 25.07-22.793 33.427-12.409 8.357-27.35 12.535-44.824 12.535-17.728 0-33.176-4.051-46.345-12.155-12.915-8.357-22.918-20.005-30.009-34.946-7.091-14.941-10.637-32.541-10.637-52.8 0-20.512 3.672-38.365 11.017-53.559 7.344-15.194 17.6-26.969 30.769-35.326 13.422-8.357 28.997-12.535 46.724-12.535 18.487 0 33.429 4.305 44.825 12.915 11.649 8.61 18.487 20.385 20.513 35.326l-4.179.38V3.61h56.981v277.292h-55.841Zm-45.585-45.582c13.422 0 24.312-4.685 32.669-14.054 8.357-9.623 12.536-23.298 12.536-41.024 0-17.727-4.305-31.275-12.916-40.645-8.357-9.623-19.373-14.434-33.048-14.434-13.169 0-24.059 4.811-32.669 14.434-8.357 9.623-12.536 23.298-12.536 41.024 0 17.727 4.179 31.275 12.536 40.645 8.61 9.369 19.753 14.054 33.428 14.054ZM0 281.104 98.007 7.61h50.142L58.12 281.104H0Zm200.572 0L110.922 7.61h52.422l98.007 273.494h-60.779ZM51.662 175.125H205.13v45.583H51.662v-45.583Z">
+            </path>
+          </g>
+        </mask>
+        <g mask="url(#b)">
+          <path fill="url(#c)" d="M0 0h1248v282H0z"></path>
+        </g>
+        <defs>
+          <linearGradient id="c" x1="662.5" y1="-55.5" x2="668.5" y2="282" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#4D4D5F"></stop>
+            <stop offset="1" stop-color="#0D0D10"></stop>
+          </linearGradient>
+          <clipPath id="a">
+            <path fill="#fff" d="M0 0h1248v281H0z"></path>
+          </clipPath>
+        </defs>
+      </svg>
+    </div>
+  </div>
 </div>

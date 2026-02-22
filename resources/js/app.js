@@ -2,14 +2,32 @@
 
 import 'unpoly'
 import Alpine from 'alpinejs'
-import '@github/tab-container-element'
-import collapse from '@alpinejs/collapse'
 import '@pagefind/component-ui'
 import '@pagefind/component-ui/css'
+import '@github/tab-container-element'
+import collapse from '@alpinejs/collapse'
 import '../css/app.css'
 
 import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
 import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
+
+function closeSearchModal() {
+  const modal = document.querySelector('pagefind-modal')
+  if (modal && modal.isOpen) {
+    modal.close()
+    scrollToActiveDoc()
+  }
+}
+
+function scrollToActiveDoc() {
+  const activeSidebarItem = document.querySelector('[up-section-sidebar] a.up-current')
+  if (activeSidebarItem) {
+    activeSidebarItem.scrollIntoView({
+      block: 'center',
+    })
+  }
+}
+scrollToActiveDoc()
 
 Alpine.data('ctc', function () {
   return {
@@ -26,9 +44,45 @@ Alpine.data('ctc', function () {
   }
 })
 
+Alpine.data('copyDocToClipboard', function (docPath) {
+  return {
+    state: 'idle',
+    docPath: docPath,
+    async copy() {
+      try {
+        const response = await fetch(this.docPath)
+        const markdown = await response.text()
+        await navigator.clipboard.writeText(markdown)
+        this.state = 'copied'
+        setTimeout(() => {
+          this.state = 'idle'
+        }, 1500)
+      } catch {
+        this.state = 'idle'
+      }
+    },
+  }
+})
+
+Alpine.data('openInAI', function (aiBaseUrl, docPath) {
+  return {
+    open() {
+      const docUrl = `${window.location.origin}/${docPath}`
+      const message = `Read from ${docUrl} and let me know when you are ready for questions.`
+      const url = new URL(aiBaseUrl)
+      url.searchParams.append('q', message)
+      window.open(url.toString(), '_blank')
+    },
+  }
+})
+
 up.viewport.config.revealPadding = 55
 up.on('up:location:changed', function () {
   window.dispatchEvent(new CustomEvent('hide-mobile-nav'))
+  closeSearchModal()
+})
+up.on('up:fragment:offline', function (event) {
+  window.location.reload()
 })
 
 /**

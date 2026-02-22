@@ -4,15 +4,15 @@
       <div
         class="sticky top-22 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto pt-12 pb-6"
       >
-        @!docActionsDropdown()
+        @include('partials/docs/actions')
 
         <div
           class="doc-right-nav mt-6 min-h-54"
           x-data="trackScroll"
         >
-          <label class="block font-medium text-white text-xs uppercase tracking-tight pt-2.5 mb-4 font-mono">
+          <p class="block font-medium text-white text-xs uppercase tracking-tight pt-2.5 mb-4 font-mono">
             On this page
-          </label>
+          </p>
           {{{ markdownDocument.toc }}}
         </div>
       </div>

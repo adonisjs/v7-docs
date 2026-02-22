@@ -59,6 +59,10 @@
   outline: none;
 }
 
+[x-cloak] {
+  display: none !important;
+}
+
 * :focus-visible {
   outline-width: 2px;
   outline-style: solid;

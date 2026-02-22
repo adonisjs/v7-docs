@@ -1,0 +1,109 @@
+@let(actions = [
+  {
+    type: 'copyMarkdown',
+  },
+  {
+    type: 'openInAI',
+    aiBaseUrl: 'https://chat.openai.com/?hints=search',
+    iconAsComponent: 'components/icons/openai',
+    label: 'Open in ChatGPT',
+  },
+  {
+    type: 'openInAI',
+    aiBaseUrl: 'https://claude.ai/new',
+    iconAsComponent: 'components/icons/claude',
+    label: 'Open in Claude',
+  },
+  {
+    type: 'link',
+    href: doc.editSource,
+    icon: 'mynaui:edit-one',
+    label: 'Edit on Github',
+    target: '_blank'
+  }
+])
+
+<div class="relative hidden sm:inline-block z-1" x-data="{ open: false }">
+  <button
+    @click="open = !open"
+    class="group relative flex gap-1.5 border border-woodsmoke-800/60 bg-woodsmoke-900/38 backdrop-blur-xl pl-3 py-2 pr-8 rounded-md text-woodsmoke-400 hover:text-woodsmoke-300 transition-colors"
+  >
+    @svg('tabler:settings', { class: 'w-5 h-5' })
+    <span class="text-13 font-medium">Actions</span>
+    <span>
+      @svg('mynaui:chevron-down', {
+        class: 'absolute w-5 h-5 text-woodsmoke-400 right-2 transition-transform',
+        'x-bind:class': "{\'rotate-180\': open}"
+      })
+    </span>
+  </button>
+
+  <div
+    x-show="open"
+    x-cloak
+    @click.outside="open=false"
+    class="absolute left-0 border border-woodsmoke-800/60 bg-woodsmoke-950/38 backdrop-blur-md px-4 py-2.5 rounded-md text-13 w-44 mt-0.5"
+  >
+    @each(action in actions)
+      <div class="group">
+        @if(action.type === 'copyMarkdown')
+          <button
+            class="py-1.5 rounded-md w-full text-left flex items-center gap-1.5 hover:text-woodsmoke-50 transition-colors"
+            {{
+              html.attrs({
+                'x-data': `copyDocToClipboard('/${doc.permalink}.md')`,
+                '@click': 'copy()'
+              })
+            }}
+          >
+            @svg('tabler:copy', {
+              width: '16px',
+              height: '16px',
+              'x-show': `state === 'idle'`,
+              'x-cloak': true,
+              class: 'text-woodsmoke-400 hover:text-woodsmoke-200'
+            })
+            @svg('tabler:check', {
+              width: '16px',
+              height: '16px',
+              'x-show': `state === 'copied'`,
+              'x-cloak': true,
+              class: 'text-green-400'
+            })
+            <span>Copy as markdown</span>
+          </button>
+        @elseif(action.type === 'openInAI')
+          <button
+            class="py-1.5 rounded-md w-full text-left flex items-center gap-1.5 hover:text-woodsmoke-50 transition-colors"
+            {{
+              html.attrs({
+                'x-data': `openInAI('${action.aiBaseUrl}', '/${doc.permalink}.md')`,
+                '@click': 'open()'
+              })
+            }}
+          >
+            <span class="size-4">
+              @!component(action.iconAsComponent)
+            </span>
+            {{ action.label }}
+          </button>
+        @elseif(action.type === 'link')
+          @link({
+            href: action.href,
+            class: 'py-1.5 rounded-md w-full text-left flex items-center gap-1.5 text-inherit! hover:text-woodsmoke-50! transition-colors',
+            target: action.target,
+          })
+            @if(action.icon)
+              @svg(action.icon, { class: 'w-4 h-4' })
+            @else
+              <span class="size-4">
+                @!component(action.iconAsComponent)
+              </span>
+            @endif
+            {{ action.label }}
+          @end
+        @endif
+      </div>
+    @endeach
+  </div>
+</div>

@@ -2,7 +2,8 @@
   file: doc.contentPath,
   toc: {
     enabled: doc.toc !== false,
-    maxDepth: 3
+    maxDepth: 2,
+    minDepth: 2,
   }
 }))
 
@@ -32,6 +33,7 @@
         @toggle-mobile-nav.window="isOpen = !isOpen"
         @hide-mobile-nav.window="isOpen = false"
         x-show="isOpen"
+        x-cloak
         class="fixed lg:hidden inset-0 z-2 bg-woodsmoke-950/45 backdrop-blur-3xl overflow-auto p-7 flex items-start"
       >
         <div class="flex-1">

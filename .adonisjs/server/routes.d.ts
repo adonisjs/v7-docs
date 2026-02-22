@@ -5,17 +5,14 @@ type ParamValue = string | number | bigint | boolean
 export type ScannedRoutes = {
   ALL: {
     'home': { paramsTuple?: []; params?: {} }
-    'llm.docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
     'docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
   }
   GET: {
     'home': { paramsTuple?: []; params?: {} }
-    'llm.docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
     'docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
   }
   HEAD: {
     'home': { paramsTuple?: []; params?: {} }
-    'llm.docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
     'docs': { paramsTuple: [...ParamValue[]]; params: {'*': ParamValue[]} }
   }
 }

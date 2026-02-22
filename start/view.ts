@@ -30,10 +30,6 @@ edge.use(edgeMarkdown, {
     theme: 'github-dark',
   },
   allowHTML: true,
-  toc: {
-    enabled: true,
-    maxDepth: 2,
-  },
 })
 
 addCollection(mynauiIcons)

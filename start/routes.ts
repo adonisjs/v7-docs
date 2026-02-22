@@ -11,5 +11,4 @@ import { controllers } from '#generated/controllers'
 import router from '@adonisjs/core/services/router'
 
 router.get('/', [controllers.Home]).as('home')
-router.get('llm/*', [controllers.LlmDocs]).as('llm.docs')
 router.get('/*', [controllers.Docs]).as('docs')

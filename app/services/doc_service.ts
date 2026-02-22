@@ -27,6 +27,6 @@ export class DocService {
     if (!doc) {
       throw new errors.E_ROUTE_NOT_FOUND(['GET', permalink])
     }
-    return doc.doc.contentPath!.replace('.md', '.llm.md')
+    return doc.doc.contentPath!
   }
 }

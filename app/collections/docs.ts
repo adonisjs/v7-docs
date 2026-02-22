@@ -6,6 +6,8 @@ import { type Infer } from '@vinejs/vine/types'
 import vite from '@adonisjs/vite/services/main'
 import { loaders } from '@adonisjs/content/loaders'
 
+let GITHUB_REPO_URL = 'https://github.com/adonisjs/v7-docs'
+
 const noSnakeCase = vine.createRule((value, _, field) => {
   if ((value as string).includes('_')) {
     field.report(
@@ -30,6 +32,9 @@ export const singleDoc = vine.object({
         name: vine.string(),
         permalink: vine.string().use(noSnakeCase()),
         contentPath: vine.string().use(noDashCase()).toAbsolutePath(),
+        editSource: vine.string().parse((_, field) => {
+          return `${GITHUB_REPO_URL}/${field.parent.contentPath.replace(app.makePath(), '')}`
+        }),
       })
     )
     .optional()
@@ -41,6 +46,15 @@ export const singleDoc = vine.object({
     .string()
     .use(noDashCase())
     .toAbsolutePath()
+    .optional()
+    .requiredIfMissing('variations'),
+  editSource: vine
+    .string()
+    .parse((_, field) => {
+      if (field.parent.contentPath) {
+        return `${GITHUB_REPO_URL}/${field.parent.contentPath.replace(app.makePath(), '')}`
+      }
+    })
     .optional()
     .requiredIfMissing('variations'),
 })
@@ -59,6 +73,23 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
     cache: app.inProduction,
     loader: loaders.jsonLoader(app.makePath('content', section, 'db.json')),
     views: {
+      peek(data: Infer<typeof menuSchema>, permalink: string, variation?: string) {
+        const flatList = this.flatten(data, variation)
+        let previous: Infer<typeof singleDoc> | undefined
+        let next: Infer<typeof singleDoc> | undefined
+
+        for (const [index, child] of flatList.entries()) {
+          if (child.permalink === permalink) {
+            next = flatList[index + 1]
+            previous = flatList[index - 1]
+            break
+          }
+        }
+        return { next, previous }
+      },
+      flatten(data: Infer<typeof menuSchema>, variation?: string): Infer<typeof singleDoc>[] {
+        return this.menu(data, variation).flatMap((node) => node.children)
+      },
       menu(data: Infer<typeof menuSchema>, variation?: string) {
         return data.map((node) => {
           return {
@@ -82,6 +113,7 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
                   ...child,
                   permalink: matchingVariant?.permalink,
                   contentPath: matchingVariant?.contentPath,
+                  editSource: matchingVariant?.editSource,
                   variant: matchingVariant?.name,
                 }
               }),
