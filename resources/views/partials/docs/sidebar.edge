@@ -1,19 +1,19 @@
 @let(docsSections = [
   {
     href: '/introduction',
-    title: 'Start',
+    title: sections.start.getName(),
     icon: 'mynaui:play-square',
     active: sections.start.has(doc.permalink),
   },
   {
     href: '/guides/basics/routing',
-    title: 'Guides',
+    title: sections.guides.getName(),
     icon: 'mynaui:book',
     active: sections.guides.has(doc.permalink),
   },
   {
     href: '/reference/application',
-    title: 'Reference',
+    title: sections.reference.getName(),
     icon: 'mynaui:code',
     active: sections.reference.has(doc.permalink),
   }

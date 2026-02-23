@@ -11,9 +11,12 @@
   <div class="container-full mx-auto lg:px-10 relative" x-data>
     <button @click.prevent="$dispatch('toggle-mobile-nav')" class="w-full lg:hidden py-3 backdrop-blur-3xl bg-woodsmoke-950/60 border-b border-woodsmoke-900 flex items-center justify-between sticky top-18 z-1 px-5">
       <div class="text-13 flex items-center gap-2.5 text-white font-medium">
-        <span class="text-woodsmoke-500">HTTP</span>
+        <span class="text-woodsmoke-500">
+          {{ section.getName() }}
+          / {{ doc.category }}
+        </span>
         @svg('mynaui:chevron-right', {class: 'size-4'})
-        <span>Controllers</span>
+        <span> {{ doc.title }} </span>
       </div>
       <div>
         @svg('mynaui:menu', { class: 'size-6 text-woodsmoke-200' })

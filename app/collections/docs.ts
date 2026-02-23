@@ -73,6 +73,16 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
     cache: app.inProduction,
     loader: loaders.jsonLoader(app.makePath('content', section, 'db.json')),
     views: {
+      getName() {
+        switch (section) {
+          case 'guides':
+            return 'Guides'
+          case 'reference':
+            return 'Reference'
+          case 'start':
+            return 'Start'
+        }
+      },
       peek(data: Infer<typeof menuSchema>, permalink: string, variation?: string) {
         const flatList = this.flatten(data, variation)
         let previous: Infer<typeof singleDoc> | undefined
@@ -121,46 +131,52 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
         })
       },
       permalinksTree(data: Infer<typeof menuSchema>) {
-        return data.reduce<Record<string, Infer<typeof singleDoc> & { variant?: string }>>(
-          (result, node) => {
-            node.children.forEach((doc) => {
-              if (doc.permalink) {
-                result[doc.permalink] = doc
+        return data.reduce<
+          Record<string, Infer<typeof singleDoc> & { variant?: string; category: string }>
+        >((result, node) => {
+          node.children.forEach((doc) => {
+            if (doc.permalink) {
+              result[doc.permalink] = {
+                ...doc,
+                category: node.category,
               }
-              doc.variations?.forEach((variation) => {
-                result[variation.permalink] = {
-                  ...doc,
-                  permalink: variation.permalink,
-                  variant: variation.name,
-                  contentPath: variation.contentPath,
-                }
-              })
+            }
+            doc.variations?.forEach((variation) => {
+              result[variation.permalink] = {
+                ...doc,
+                category: node.category,
+                permalink: variation.permalink,
+                variant: variation.name,
+                contentPath: variation.contentPath,
+              }
             })
-            return result
-          },
-          {}
-        )
+          })
+          return result
+        }, {})
       },
       contentPathsTree(data: Infer<typeof menuSchema>) {
-        return data.reduce<Record<string, Infer<typeof singleDoc> & { variant?: string }>>(
-          (result, node) => {
-            node.children.forEach((doc) => {
-              if (doc.contentPath) {
-                result[doc.contentPath] = doc
+        return data.reduce<
+          Record<string, Infer<typeof singleDoc> & { variant?: string; category: string }>
+        >((result, node) => {
+          node.children.forEach((doc) => {
+            if (doc.contentPath) {
+              result[doc.contentPath] = {
+                ...doc,
+                category: node.category,
               }
-              doc.variations?.forEach((variation) => {
-                result[variation.contentPath] = {
-                  ...doc,
-                  permalink: variation.permalink,
-                  variant: variation.name,
-                  contentPath: variation.contentPath,
-                }
-              })
+            }
+            doc.variations?.forEach((variation) => {
+              result[variation.contentPath] = {
+                ...doc,
+                category: node.category,
+                permalink: variation.permalink,
+                variant: variation.name,
+                contentPath: variation.contentPath,
+              }
             })
-            return result
-          },
-          {}
-        )
+          })
+          return result
+        }, {})
       },
       findByPermalink(data: Infer<typeof menuSchema>, permalink: string) {
         return this.permalinksTree(data)[permalink] ?? this.permalinksTree(data)[`/${permalink}`]

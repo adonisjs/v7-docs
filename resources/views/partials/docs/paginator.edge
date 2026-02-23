@@ -1,7 +1,7 @@
 @let(paginationLinks = section.peek(doc.permalink, doc.variant))
 
 <div class="bg-woodsmoke-950 p-1 rounded-2xl mt-14">
-  <div class="w-full rounded-lg flex text-sm">
+  <div class="w-full rounded-lg flex text-sm h-16">
     @if(paginationLinks.previous)
       @link({
         route: 'docs',
@@ -33,6 +33,12 @@
         'up-preload': true,
         'up-target': 'main',
       })
+        @let(nextDocMarkdown = await $markdown.render({
+          file: paginationLinks.next.contentPath,
+          toc: {
+            enabled: false,
+          }
+        }))
         <div
           class="flex items-center justify-end h-16 bg-woodsmoke-900 hover:ring-1 hover:ring-woodsmoke-800/50 rounded-xl"
         >
@@ -41,7 +47,7 @@
               {{ paginationLinks.next.title }}
             </span>
             <span class="hidden text-right text-woodsmoke-600 sm:block w-full truncate sm:w-72">
-              Example section for showcasing API endpoints
+              {{ nextDocMarkdown.frontmatter.description }}
             </span>
           </div>
 
