@@ -10,7 +10,7 @@
 @layout({
   title: doc.title,
   meta: {
-    ogImage: doc.permalink.replace(/\//g, '-'),
+    ogImage: `resources/assets/og/docs/${doc.permalink.replace(/\//g, '-')}.jpg`,
     ogType: 'article',
     description: markdownDocument.frontmatter.description,
   }
