@@ -7,7 +7,14 @@
   }
 }))
 
-@layout()
+@layout({
+  title: doc.title,
+  meta: {
+    ogImage: doc.permalink.replace(/\//g, '-'),
+    ogType: 'article',
+    description: markdownDocument.frontmatter.description,
+  }
+})
   <div class="container-full mx-auto lg:px-10 relative" x-data>
     <div up-docs-nav>
       <button @click.prevent="$dispatch('toggle-mobile-nav')"

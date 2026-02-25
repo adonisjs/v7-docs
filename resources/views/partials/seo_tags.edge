@@ -1,0 +1,18 @@
+@let(pageIdentifier = request.url() === '/' ? '/index' : request.url())
+<meta name="description" content="{{ meta.description }}">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ meta.description }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@adonisframework">
+<meta name="twitter:creator" content="@adonisframework">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ meta.description }}">
+@if(meta.ogImage)
+  @let(ogImagePath = meta.ogImage === true
+    ? `resources/assets/og${pageIdentifier}.jpg`
+    : meta.ogImage
+  )
+  <meta name="twitter:image" content="{{ asset(ogImagePath) }}">
+  <meta property="og:image" content="{{ asset(ogImagePath) }}">
+@end
+<meta property="og:type" content="{{ meta.ogType ?? 'website' }}">
