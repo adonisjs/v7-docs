@@ -22,7 +22,7 @@ export const adonisJsReleases = Collection.create({
     org: 'adonisjs',
     refresh: 'weekly',
     filters: {
-      nameDoesntInclude: ['Update dependencies'],
+      nameDoesntInclude: ['Update dependencies', 'Tag as latest'],
     },
   }),
   schema: releases,
