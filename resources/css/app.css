@@ -143,3 +143,13 @@
 .header-search span {
   @apply hidden sm:block;
 }
+
+:root {
+  --footer-gradient-start: #4d4d5f;
+  --footer-gradient-end: #0d0d10;
+}
+
+html:not(.dark) {
+  --footer-gradient-start: #c0c0cc;
+  --footer-gradient-end: #ffffff;
+}
