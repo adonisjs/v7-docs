@@ -18,8 +18,8 @@
   <div class="container-full mx-auto lg:px-10 relative" x-data>
     <div up-docs-nav>
       <button @click.prevent="$dispatch('toggle-mobile-nav')"
-        class="w-full lg:hidden py-3 backdrop-blur-3xl bg-woodsmoke-950/60 border-b border-woodsmoke-900 flex items-center justify-between sticky top-18 z-1 px-5">
-        <div class="text-13 flex items-center gap-2.5 text-white font-medium w-10/12">
+        class="w-full lg:hidden py-3 backdrop-blur-3xl bg-white/80 dark:bg-woodsmoke-950/60 border-b border-woodsmoke-200 dark:border-woodsmoke-900 flex items-center justify-between sticky top-18 z-1 px-5">
+        <div class="text-13 flex items-center gap-2.5 text-woodsmoke-900 dark:text-white font-medium w-10/12">
           <span class="text-woodsmoke-500 inline-block truncate max-w-3/5">
             {{ section.getName() }}
             / {{ doc.category }}
@@ -33,7 +33,7 @@
       </button>
     </div>
 
-    <div class="px-5 lg:px-0 lg:border-l lg:border-r border-woodsmoke-900 bg-docs-hero bg-no-repeat bg-top-bottom lg:grid xl:grid-cols-[230px_1fr_230px] lg:grid-cols-[270px_1fr] gap-4">
+    <div class="px-5 lg:px-0 dark:border-woodsmoke-900 dark:bg-docs-hero bg-no-repeat bg-top-bottom lg:grid xl:grid-cols-[230px_1fr_230px] lg:grid-cols-[270px_1fr] gap-4">
       {{-- webview --}}
       <div class="pl-8 pr-3 hidden lg:block sticky top-23 pt-10 pb-11 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto">
         @include('partials/docs/sidebar')
@@ -47,7 +47,7 @@
         @hide-mobile-nav.window="isOpen = false"
         x-show="isOpen"
         x-cloak
-        class="fixed lg:hidden inset-0 z-2 bg-woodsmoke-950/45 backdrop-blur-3xl overflow-auto p-7 flex items-start"
+        class="fixed lg:hidden inset-0 z-2 bg-white/95 dark:bg-woodsmoke-950/45 backdrop-blur-3xl overflow-auto p-7 flex items-start"
       >
         <div class="flex-1">
           @include('partials/docs/sidebar')

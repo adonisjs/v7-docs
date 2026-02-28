@@ -1,4 +1,4 @@
-<header class="sticky inset-x-0 top-0 border-b border-woodsmoke-900 z-2 backdrop-blur-3xl bg-woodsmoke-950/60" up-fixed="top">
+<header class="sticky inset-x-0 top-0 dark:border-woodsmoke-900 z-2 backdrop-blur-3xl bg-white/80 dark:bg-woodsmoke-950/60" up-fixed="top">
   <div class="container-full mx-auto px-5 lg:px-10 py-4 flex md:grid grid-cols-3 lg:grid-cols-[270px_2fr_1fr] xl:grid-cols-[260px_1fr_230px] items-center justify-between h-18 gap-1 sm:gap-8">
     <div class="flex text-white flex-1 sm:flex-none">
       <a
@@ -13,7 +13,7 @@
     </div>
 
     <div class="header-search page-search sm:flex-1 md:max-w-154 mx-auto md:w-full">
-      @!search({ text: 'Search', color: 'primary', radius: 'full', size: 'md', class: 'header-search px-2 sm:px-4 border-0 sm:border bg-transparent sm:bg-woodsmoke-900/60' })
+      @!search({ text: 'Search', color: 'primary', radius: 'full', size: 'md', class: 'header-search px-2 sm:px-4 border-0 sm:border bg-transparent sm:bg-woodsmoke-100/60 dark:sm:bg-woodsmoke-900/60' })
     </div>
 
     <div class="flex items-center justify-end">
@@ -32,10 +32,27 @@
           <li>
             <a href="https://github.com/adonisjs/core" target="_blank" class="block">
               @svg('uiw:github', {
-                class: 'size-4.5 md:size-6 text-woodsmoke-400 hover:text-white transition-colors'
+                class: 'size-4.5 md:size-6 text-woodsmoke-400 hover:text-woodsmoke-900 dark:hover:text-white transition-colors'
               })
               <span class="sr-only">Github repository</span>
             </a>
+          </li>
+
+          <li x-data="theme">
+            <button
+              @click="toggle()"
+              class="block text-woodsmoke-500 dark:text-woodsmoke-400 hover:text-woodsmoke-900 dark:hover:text-white transition-colors"
+              :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+            >
+              {{-- Sun: visible in dark mode, click to go light --}}
+              <span x-show="isDark">
+                @svg('mynaui:sun', { class: 'size-4.5 md:size-6' })
+              </span>
+              {{-- Moon: hidden initially (light mode not default), click to go dark --}}
+              <span x-show="!isDark" style="display:none">
+                @svg('mynaui:moon', { class: 'size-4.5 md:size-6' })
+              </span>
+            </button>
           </li>
         </ul>
       </nav>

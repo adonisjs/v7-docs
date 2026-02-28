@@ -143,4 +143,29 @@ Alpine.data('trackScroll', function () {
 })
 
 Alpine.plugin(collapse)
+
+/**
+ * Theme toggle: persists light/dark preference in localStorage.
+ * The `.dark` class on <html> is set by the anti-FOUC inline script
+ * in layout.edge; here we keep Alpine state in sync and handle toggling.
+ */
+Alpine.data('theme', function () {
+  return {
+    isDark: true,
+    init() {
+      // Sync with the class already applied by the anti-FOUC script
+      this.isDark = document.documentElement.classList.contains('dark')
+    },
+    toggle() {
+      this.isDark = !this.isDark
+      document.documentElement.classList.toggle('dark', this.isDark)
+      localStorage.setItem('theme', this.isDark ? 'dark' : 'light')
+      // Keep pagefind search modal in sync
+      document.querySelectorAll('[data-pf-theme]').forEach((el) => {
+        el.setAttribute('data-pf-theme', this.isDark ? 'dark' : 'light')
+      })
+    },
+  }
+})
+
 Alpine.start()

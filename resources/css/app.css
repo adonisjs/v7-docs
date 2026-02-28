@@ -1,9 +1,12 @@
 @import 'tailwindcss';
 @source "../views";
 
+@variant dark (&:where(.dark, .dark *));
+
 @import './font.css';
 @import './markdown.css';
 @import './search.css';
+@import './theme.css';
 
 @theme {
   /* --color-woodsmoke-50: oklch(81.144% 0.0167 286.02);

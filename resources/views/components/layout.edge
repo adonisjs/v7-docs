@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-us" class="bg-woodsmoke-1000" >
+<html lang="en-us" class="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,10 +8,18 @@
     </title>
     @include('partials/seo_tags')
     @include('partials/favicons')
+    {{-- Anti-FOUC: read localStorage before CSS loads to set the correct theme class --}}
+    <script>
+      (function () {
+        var stored = localStorage.getItem('theme')
+        var isDark = stored !== null ? stored === 'dark' : true
+        document.documentElement.classList.toggle('dark', isDark)
+      })()
+    </script>
     @vite(['resources/js/app.js'])
     @stack('dumper')
   </head>
-  <body class="font-sans antialiased tracking-wide text-woodsmoke-300 relative">
+  <body class="font-sans antialiased tracking-wide text-woodsmoke-700 dark:text-woodsmoke-300 relative bg-white dark:bg-woodsmoke-1000">
     @include('partials/header')
     <main>
       {{{ await $slots.main() }}}

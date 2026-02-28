@@ -1,7 +1,7 @@
 @let(slotContent = await $slots.main())
 @let(
   searchClasses = tv({
-    base: 'flex gap-2 items-center w-full px-4 py-2 mx-auto bg-woodsmoke-950 text-woodsmoke-400 border border-woodsmoke-900 hover:border-woodsmoke-800/70 group hover:text-woodsmoke-100 transition-colors',
+    base: 'flex gap-2 items-center w-full px-4 py-2 mx-auto bg-woodsmoke-100/60 dark:bg-woodsmoke-950 text-woodsmoke-500 dark:text-woodsmoke-400 border border-woodsmoke-200 dark:border-woodsmoke-900 hover:border-woodsmoke-400/70 dark:hover:border-woodsmoke-800/70 group hover:text-woodsmoke-800 dark:hover:text-woodsmoke-100 transition-colors',
 
     variants: {
       color: {
@@ -26,7 +26,7 @@
 
 @let(
   searchIconClasses = tv({
-    base: 'text-woodsmoke-400 group-hover:text-woodsmoke-100 transition-colors',
+    base: 'text-woodsmoke-400 group-hover:text-woodsmoke-800 dark:group-hover:text-woodsmoke-100 transition-colors',
 
     variants: {
       size: {
@@ -38,7 +38,7 @@
   })($props.only(['size']))
 )
 
-<div data-pf-theme="dark" x-data="" x-cloak>
+<div :data-pf-theme="$el.ownerDocument.documentElement.classList.contains('dark') ? 'dark' : 'light'" x-data x-cloak>
   <pagefind-modal-trigger placeholder="Search"></pagefind-modal-trigger>
   <pagefind-modal>
     <pagefind-modal-header>

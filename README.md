@@ -26,6 +26,12 @@ node ace generate:key
 
 Copy the output and set it as the `APP_KEY` value in your `.env` file.
 
+Before starting the development server for the first time, you need to run the build process.
+
+```sh
+npm run build
+```
+
 Start the development server.
 
 ```sh

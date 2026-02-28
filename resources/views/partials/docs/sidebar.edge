@@ -24,7 +24,7 @@
   <nav>
     <ul class="flex flex-col gap-2.5 mb-10 text-16">
       @each(section in docsSections)
-        <li class="{{ section.active ? 'text-white' : '' }}">
+        <li class="{{ section.active ? 'text-woodsmoke-900 dark:text-white' : '' }}">
           <a
           href="{{ section.href }}"
           class="flex items-center gap-2"
@@ -50,7 +50,7 @@
     >
       @if(group.category !== 'Root')
         <button
-          class="text-15 leading-5 mb-4 flex text-white items-center gap-1.5 whitespace-nowrap"
+          class="text-15 leading-5 mb-4 flex text-woodsmoke-800 dark:text-white items-center gap-1.5 whitespace-nowrap"
           @click="expanded = !expanded"
         >
           <span class="inline-block">{{ group.category }}</span>
