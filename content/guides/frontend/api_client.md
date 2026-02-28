@@ -766,6 +766,70 @@ const url2 = urlFor.get('users.posts.show', ['123', '456'])
 
 Positional parameters can be convenient when parameter names are obvious from context.
 
+## Route introspection
+
+Tuyau provides two methods for inspecting routes at runtime: `has()` to check if a route exists in the registry, and `current()` to determine which route matches the current page URL.
+
+### Checking if a route exists
+
+The `has()` method checks whether a route name exists in the registry:
+
+```ts
+tuyau.has('users.show')   // true
+tuyau.has('auth.login')   // true
+tuyau.has('nope')         // false
+```
+
+This is useful for conditionally rendering UI elements based on whether a route is available in the current application.
+
+### Getting the current route
+
+The `current()` method uses `window.location` to determine which route the user is currently on. It only matches navigable routes (GET or HEAD).
+
+**Without arguments**, it returns the current route name, or `undefined` if no route matches (or when running server-side):
+
+```ts
+// On /users/42
+tuyau.current() // 'users.show'
+
+// On /unknown/path
+tuyau.current() // undefined
+```
+
+**With a route name**, it returns `true` if the current URL matches that route:
+
+```ts
+// On /users/42
+tuyau.current('users.show') // true
+tuyau.current('auth.login') // false
+```
+
+**With wildcard patterns**, you can match groups of routes using `*`:
+
+```ts
+// On /users/42
+tuyau.current('users.*')    // true
+tuyau.current('posts.*')    // false
+```
+
+**With options**, you can additionally verify that the current URL params and/or query string match expected values:
+
+```ts
+// On /users/42?foo=bar
+tuyau.current('users.show', { params: { id: 42 } })           // true
+tuyau.current('users.show', { params: { id: 99 } })           // false
+tuyau.current('users.show', { query: { foo: 'bar' } })        // true
+tuyau.current('users.show', { query: { foo: 'baz' } })        // false
+```
+
+:::note
+Both `has()` and `current()` provide autocomplete for known route names. `current()` also accepts arbitrary strings for wildcard patterns like `'users.*'`.
+:::
+
+:::note
+`current()` returns `undefined` (no args) or `false` (with route name) when running server-side since `window.location` is not available.
+:::
+
 ## Type-level serialization
 
 An important concept to understand when working with Tuyau is type-level serialization. This refers to how types are automatically transformed to match what actually gets sent over the network as JSON.
@@ -842,6 +906,19 @@ const post = await tuyau.posts.show({ params: { id: '1' } })
 // post.title is string
 // post.author.name is string
 // Full autocomplete and type safety
+```
+
+## Response parsing
+
+By default, Tuyau parses responses based on the `Content-Type` header: JSON for `application/json`, `ArrayBuffer` for `application/octet-stream`, and text for everything else.
+
+You can override this per-request with the `responseType` option (`'json'`, `'text'`, `'arrayBuffer'`, or `'blob'`):
+
+```ts
+const blob = await tuyau.files.download({
+  params: { id: '123' },
+  responseType: 'blob',
+})
 ```
 
 ## Configuration reference
