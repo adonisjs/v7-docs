@@ -3,22 +3,22 @@
 @let(aggregates = sponsors.aggregates())
 
 <div class="space-y-20 mt-20">
-    <div class="mt-7 md:mt-0 px-5 lg:px-15 border-b border-woodsmoke-900 pb-25">
+    <div class="mt-7 md:mt-0 px-5 lg:px-15 pb-25">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Active sponsors ({{aggregates.active}})</span>
         <div class="flex flex-wrap gap-2 sm:gap-4">
             @each(sponsor in activeSponsors)
-                <div class="border border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
+                <div class=" rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
                     <img class="opacity-60 rounded-sm" src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title="{{sponsor.sponsorName || sponsor.sponsorLogin}}">
                 </div>
             @end
         </div>
     </div>
 
-    <div class="mt-12 md:mt-0 px-5 lg:px-15 border-woodsmoke-900">
+    <div class="mt-12 md:mt-0 px-5 lg:px-15">
         <span class="uppercase font-mono text-woodsmoke-500 tracking-tight mb-6 block">Past sponsors ({{aggregates.past}})</span>
         <div class="flex flex-wrap gap-2 sm:gap-4">
             @each(sponsor in pastSponsors)
-                <div class="border border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
+                <div class=" rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
                     <img class="opacity-60 rounded-sm" src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title={{sponsor.sponsorName || sponsor.sponsorLogin}}>
                 </div>
             @end
