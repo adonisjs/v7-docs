@@ -192,7 +192,7 @@ Configure your backend `package.json` to export the generated Tuyau files so you
   "private": true,
   "type": "module",
   "exports": { // [!code highlight]
-    "./registry": "./.adonisjs/client/registry.ts", // [!code highlight]
+    "./registry": "./.adonisjs/client/registry/index.ts", // [!code highlight]
     "./data": "./.adonisjs/client/data.d.ts" // [!code highlight]
   } // [!code highlight]
 }
