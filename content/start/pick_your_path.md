@@ -221,7 +221,8 @@ This gives you a **"flexible but not on your own"** experience. You get to choos
 - [Hypermedia starter kit](https://github.com/adonisjs/starter-kits/tree/main/hypermedia)
 - [React starter kit](https://github.com/adonisjs/starter-kits/tree/main/inertia-react)
 - [Vue starter kit](https://github.com/adonisjs/starter-kits/tree/main/inertia-vue)
-- [API monorepo](https://github.com/adonisjs/starter-kits/tree/main/api)
+- [API-only](https://github.com/adonisjs/starter-kits/tree/main/api)
+- [API monorepo](https://github.com/adonisjs/starter-kits/tree/main/api-monorepo)
 
 ## Next steps
 
