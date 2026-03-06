@@ -22,7 +22,8 @@ url: request.url().replace(pattern, '/vue/'),
     class: [
     'text-12', 'px-3.5', 'py-1.5', 'border', 'rounded-full',
     {
-    'text-woodsmoke-300! border-woodsmoke-800/70 bg-woodsmoke-900/40': !variant.active,
+    'text-woodsmoke-300! dark:text-woodsmoke-300! border-woodsmoke-100 dark:border-woodsmoke-800/70 dark:bg-woodsmoke-900/40': !variant.active,
+    'border-indigo-500': variant.active,
     }
     ],
     'up-target': '[up-main], [up-section-toc], [up-section-sidebar]',

@@ -1,7 +1,7 @@
 <div class="flex flex-col md:flex-row gap-9 md:items-center">
     <div class="flex-1">
         <div class="max-w-4xl px-5 lg:px-15">
-            <h2 class="font-display text-2xl md:text-4xl font-medium text-white mb-4 tracking-tight">
+            <h2 class="font-display text-2xl md:text-4xl font-medium dark:text-white mb-4 tracking-tight">
                 Our sponsors
             </h2>
 
@@ -19,8 +19,8 @@
             })
         </div>
         
-        <div class="border-t border-b border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
-            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-woodsmoke-900 border-l border-r border-woodsmoke-900">
+        <div class="mt-10.5 px-5 lg:px-15">
+            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-woodsmoke-900">
                 @each(sponsor in featuredSponsors.all())
                     <a 
                         href={{ sponsor.url }} 

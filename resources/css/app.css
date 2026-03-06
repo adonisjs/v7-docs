@@ -1,9 +1,12 @@
 @import 'tailwindcss';
 @source "../views";
 
+@variant dark (&:where(.dark, .dark *));
+
 @import './font.css';
 @import './markdown.css';
 @import './search.css';
+@import './theme.css';
 
 @theme {
   /* --color-woodsmoke-50: oklch(81.144% 0.0167 286.02);
@@ -139,4 +142,14 @@
 
 .header-search span {
   @apply hidden sm:block;
+}
+
+:root {
+  --footer-gradient-start: #4d4d5f;
+  --footer-gradient-end: #0d0d10;
+}
+
+html:not(.dark) {
+  --footer-gradient-start: #c0c0cc;
+  --footer-gradient-end: #ffffff;
 }
