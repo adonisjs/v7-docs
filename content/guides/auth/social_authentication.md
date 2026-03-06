@@ -474,4 +474,4 @@ spotify: services.spotify({
 
 ## Creating a custom driver
 
-If you need to integrate with a provider not included in Ally, you can create a custom driver. Anthropic provides a [starter kit](https://github.com/adonisjs-community/ally-driver-boilerplate) for building and publishing custom drivers. See the starter kit README for implementation details.
+If you need to integrate with a provider not included in Ally, you can create a custom driver. AdonisJS provides a [boilerplate](https://github.com/adonisjs-community/ally-driver-boilerplate) for building and publishing custom drivers. See the boilerplate README for implementation details.
