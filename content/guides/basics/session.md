@@ -67,9 +67,9 @@ import { defineConfig, stores } from '@adonisjs/session'
 export default defineConfig({
   age: '2 hours',
   clearWithBrowser: true,
-  
+  cookieName: 'adonis-session',
+
   cookie: {
-    name: 'adonis-session',
     domain: '',
     path: '/',
     httpOnly: true,
@@ -128,6 +128,15 @@ clearWithBrowser: true
 
 :::
 
+:::option{name="cookieName" dataType="string"}
+
+The name of the cookie that stores the session ID. Only change this if it conflicts with other cookies in your application.
+```ts
+cookieName: 'adonis-session'
+```
+
+:::
+
 :::option{name="store" dataType="string"}
 
 Determines which session driver to use. Set this using the `SESSION_DRIVER` environment variable in your `.env` file. The value must match one of the keys defined in the `stores` object.
@@ -139,7 +148,7 @@ SESSION_DRIVER=cookie
 
 :::option{name="cookie" type="object"}
 
-Cookie configuration object that controls how the session cookie behaves. This includes settings for cookie name, domain, path, and security options. See the [Cookie configuration](#cookie-configuration) section for detailed options.
+Cookie configuration object that controls how the session cookie behaves. This includes settings for domain, path, and security options. See the [Cookie configuration](#cookie-configuration) section for detailed options.
 
 :::
 
@@ -156,17 +165,6 @@ An object defining all available session stores. Each key represents a driver na
 Sessions use cookies to store the session ID (or the entire session data for the cookie driver). Configure cookie behavior with these options:
 
 ::::options
-
-:::option{name="cookie.name" dataType="string"}
-
-The name of the cookie that stores the session ID. Only change this if it conflicts with other cookies in your application.
-```ts
-cookie: {
-  name: 'adonis-session'
-}
-```
-
-:::
 
 :::option{name="cookie.domain" dataType="string"}
 
