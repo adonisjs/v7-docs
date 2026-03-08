@@ -154,6 +154,10 @@ export default class extends BaseSchema {
 }
 ```
 
+:::warning
+Schema generation currently does not support primary keys which are not named `id`, without using additional [schema rules](https://lucid.adonisjs.com/docs/schema-classes#customizing-types-with-schema-rules).
+:::
+
 Run the migration to create the table:
 
 ```bash
