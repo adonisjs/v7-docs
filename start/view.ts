@@ -10,6 +10,7 @@ import { addCollection, edgeIconify } from 'edge-iconify'
 import { icons as mynauiIcons } from '@iconify-json/mynaui'
 import { icons as tablerIcons } from '@iconify-json/tabler'
 import vite from '@adonisjs/vite/services/main'
+import { appUrl } from '#config/app'
 
 edge.use(edgeIconify)
 edge.use(edgeMarkdown, {
@@ -42,6 +43,7 @@ addCollection(tablerIcons)
 edge.global('tv', tv)
 edge.global('hastToText', toText)
 edge.global('DateTime', DateTime)
+edge.global('appUrl', appUrl)
 edge.global('ogImageAsset', function (ogImage: string | boolean | undefined, requestUrl: string) {
   if (!ogImage) {
     return null

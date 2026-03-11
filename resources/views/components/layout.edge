@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>
-      {{ title ? title + ' - AdonisJS' : 'AdonisJS Documentation' }}
+      {{ title ? (category ? title + ' (' + category + ') - AdonisJS Documentation' : title + ' - AdonisJS Documentation') : 'AdonisJS Documentation' }}
     </title>
     @include('partials/seo_tags')
     @include('partials/favicons')
