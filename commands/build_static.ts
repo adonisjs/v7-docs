@@ -7,6 +7,7 @@ import { IncomingMessage } from 'node:http'
 import { type Infer } from '@vinejs/vine/types'
 import { BaseCommand } from '@adonisjs/core/ace'
 import { type singleDoc } from '#collections/docs'
+import { appUrl } from '#config/app'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
 import { RequestFactory } from '@adonisjs/core/factories/http'
@@ -105,6 +106,35 @@ export default class BuildStatic extends BaseCommand {
     }
 
     await this.#createRedirects(allGroups)
+    await this.#createSitemap(allGroups)
+  }
+
+  async #createSitemap(
+    groups: Array<{ children: Array<Infer<typeof singleDoc> & { variant?: string }> }>
+  ) {
+    const urls: string[] = []
+
+    urls.push(`  <url>\n    <loc>${appUrl}/</loc>\n  </url>`)
+
+    for (const group of groups) {
+      for (const doc of group.children) {
+        if (doc.permalink) {
+          urls.push(`  <url>\n    <loc>${appUrl}/${doc.permalink}</loc>\n  </url>`)
+        }
+        if (doc.variations) {
+          for (const variation of doc.variations) {
+            urls.push(`  <url>\n    <loc>${appUrl}/${variation.permalink}</loc>\n  </url>`)
+          }
+        }
+      }
+    }
+
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`
+
+    const outputPath = this.app.makePath('build/public/sitemap.xml')
+    const action = this.logger.action('Generating sitemap.xml')
+    await writeFile(outputPath, sitemap)
+    action.succeeded()
   }
 
   async #createRedirects(
