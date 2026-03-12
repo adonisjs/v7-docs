@@ -88,7 +88,7 @@ export default defineConfig({
     idleDelay: '2s',
   },
 
-  locations: ['./app/jobs/**/*.ts'],
+  locations: ['./app/jobs/**/*.{ts,js}'],
 })
 ```
 
@@ -111,7 +111,7 @@ An array of glob patterns that point to your job files. The queue system uses th
 
 ```ts title="config/queue.ts"
 {
-  locations: ['./app/jobs/**/*.ts'],
+  locations: ['./app/jobs/**/*.{ts,js}'],
 }
 ```
 :::
