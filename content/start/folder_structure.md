@@ -251,6 +251,10 @@ The frontend can still rely on shared TypeScript types automatically generated b
 
 This approach allows frontend code to remain strongly typed without compromising the separation between the client and the server.
 
+:::tip
+You should commit the `.adonisjs` directory to version control. The framework relies on these generated files for import resolution (e.g. `#generated/controllers`) and TypeScript type checking. Without them, production builds and CI pipelines will fail.
+:::
+
 We recommend reading the [types generation docs](../guides/frontend/transformers.md#step-4-understanding-the-generated-types) to understand how AdonisJS creates shared types.
 
 ## `start/`
