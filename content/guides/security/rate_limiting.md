@@ -544,7 +544,7 @@ For fine-grained control, you can manually check and consume requests instead of
 Calling `remaining` and `increment` separately creates a race condition where multiple concurrent requests might both pass the check before either increments the counter. Use the `consume` method instead, which performs an atomic check-and-increment.
 :::
 
-The `consume` method increments the counter and throws an exception if the limit has been reached:
+The `consume` method increments the counter and throws an exception if the limit has been reached. You can optionally pass an **amount** as the second argument to consume multiple slots at once (useful for "weighted" rate limiting).
 
 ```ts title="app/services/api_service.ts"
 import { errors } from '@adonisjs/limiter'
@@ -559,7 +559,10 @@ export async function handleApiRequest(userId: number) {
   const key = `api_user_${userId}`
 
   try {
-    await requestsLimiter.consume(key)
+    /**
+     * Consume 5 slots at once for a heavy operation
+     */
+    await requestsLimiter.consume(key, 5)
     return await performAction()
   } catch (error) {
     if (error instanceof errors.E_TOO_MANY_REQUESTS) {
@@ -569,6 +572,35 @@ export async function handleApiRequest(userId: number) {
   }
 }
 ```
+
+## Incrementing without throwing
+
+The `increment` method works like `consume` but does not throw an exception when the limit is exceeded, it also accepts an optional amount. Instead of throwing an exception, it returns the limiter response object, allowing you to check the remaining requests and decide how to handle the situation:
+
+```ts title="app/services/api_service.ts"
+import limiter from '@adonisjs/limiter/services/main'
+
+const requestsLimiter = limiter.use({
+  requests: 10,
+  duration: '1 minute'
+})
+
+export async function handleApiRequest(userId: number) {
+  const key = `api_user_${userId}`
+  const response = await requestsLimiter.increment(key, 5)
+
+  if (response.remainingPoints < 0) {
+    throw new Error('Rate limit exceeded')
+  }
+
+  return await performAction()
+}
+```
+
+:::info
+Validation of the amount parameter
+The amount parameter must be a positive integer. To prevent logic errors or security bypasses, if you provide a value less than or equal to `0`, the limiter will automatically fallback to `1`.
+:::
 
 ## Blocking keys
 
@@ -604,13 +636,13 @@ await requestsLimiter.block('a_unique_key', '30 mins')
 
 Sometimes you need to restore requests to a user. For example, if a background job completes, you might want to let the user queue another one.
 
-The `decrement` method reduces the request count by 1:
+The decrement method reduces the request count. By default, it decrements by 1, but you can specify a custom amount as the second argument.
 
 ```ts title="app/jobs/process_report.ts"
 import limiter from '@adonisjs/limiter/services/main'
 
 const jobsLimiter = limiter.use({
-  requests: 2,
+  requests: 10,
   duration: '5 mins',
 })
 
@@ -624,10 +656,14 @@ export async function processReportJob(userId: number) {
      * Job completed - give the slot back so
      * another job can be queued.
      */
-    await jobsLimiter.decrement(key)
+    await jobsLimiter.decrement(key, 5)
   })
 }
 ```
+
+:::info
+Just like increment and consume, providing an amount `<= 0` will cause the method to fallback to `1`.
+:::
 
 :::tip
 The `decrement` method is not atomic. Under high concurrency, the request count might briefly go to `-1`. Use the `delete` method if you need to completely reset a key.
@@ -701,17 +737,17 @@ export class MongoDbLimiterStore implements LimiterStoreContract {
    * Consume one request for the key. Throws an error
    * when all requests have been consumed.
    */
-  async consume(key: string | number): Promise<LimiterResponse> {}
+  async consume(key: string | number, amount?: number): Promise<LimiterResponse> {}
 
   /**
    * Consume one request without throwing when exhausted.
    */
-  async increment(key: string | number): Promise<LimiterResponse> {}
+  async increment(key: string | number, amount?: number): Promise<LimiterResponse> {}
 
   /**
    * Restore one request to the key.
    */
-  async decrement(key: string | number): Promise<LimiterResponse> {}
+  async decrement(key: string | number, amount?: number): Promise<LimiterResponse> {}
 
   /**
    * Block a key for the specified duration.
