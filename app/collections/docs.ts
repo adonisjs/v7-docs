@@ -6,7 +6,7 @@ import { type Infer } from '@vinejs/vine/types'
 import vite from '@adonisjs/vite/services/main'
 import { loaders } from '@adonisjs/content/loaders'
 
-let GITHUB_REPO_URL = 'https://github.com/adonisjs/v7-docs'
+let GITHUB_REPO_URL = 'https://github.com/adonisjs/v7-docs/blob/main'
 
 const noSnakeCase = vine.createRule((value, _, field) => {
   if ((value as string).includes('_')) {
@@ -33,7 +33,8 @@ export const singleDoc = vine.object({
         permalink: vine.string().use(noSnakeCase()),
         contentPath: vine.string().use(noDashCase()).toAbsolutePath(),
         editSource: vine.string().parse((_, field) => {
-          return `${GITHUB_REPO_URL}/${field.parent.contentPath.replace(app.makePath(), '')}`
+          const contentAbsolutePath = resolve(field.meta.menuFileRoot, field.parent.contentPath)
+          return `${GITHUB_REPO_URL}/${contentAbsolutePath.replace(app.makePath(), '')}`
         }),
       })
     )
@@ -52,7 +53,8 @@ export const singleDoc = vine.object({
     .string()
     .parse((_, field) => {
       if (field.parent.contentPath) {
-        return `${GITHUB_REPO_URL}/${field.parent.contentPath.replace(app.makePath(), '')}`
+        const contentAbsolutePath = resolve(field.meta.menuFileRoot, field.parent.contentPath)
+        return `${GITHUB_REPO_URL}/${contentAbsolutePath.replace(app.makePath(), '')}`
       }
     })
     .optional()
@@ -147,6 +149,7 @@ export const docsSections = Collection.multi(sectionsNames, (section) => {
                 category: node.category,
                 permalink: variation.permalink,
                 variant: variation.name,
+                editSource: variation.editSource,
                 contentPath: variation.contentPath,
               }
             })
