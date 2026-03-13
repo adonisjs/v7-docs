@@ -157,20 +157,35 @@ Alpine.data('trackScroll', function () {
   }
 })
 
-Alpine.store('colorMode', { effective: 'dark' })
+const initialEffectiveColorMode = (() => {
+  try {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+  } catch (e) {
+    return 'light'
+  }
+})()
+
+Alpine.store('colorMode', { effective: initialEffectiveColorMode })
 
 Alpine.data('themeSwitcher', function () {
+  const storedTheme = (() => {
+    try {
+      return window.localStorage.getItem('theme')
+    } catch (e) {
+      return null
+    }
+  })()
+
+  const initialCurrent =
+    storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'system'
+
   return {
-    current: 'system',
+    current: initialCurrent,
 
     init() {
-      const stored = window.localStorage.getItem('theme')
-
-      if (stored === 'light' || stored === 'dark') {
-        this.current = stored
-        this.applyExplicitTheme(stored)
+      if (storedTheme === 'light' || storedTheme === 'dark') {
+        this.applyExplicitTheme(storedTheme)
       } else {
-        this.current = 'system'
         this.applySystemTheme()
       }
     },
