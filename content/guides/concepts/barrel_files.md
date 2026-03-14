@@ -97,6 +97,10 @@ import { listeners } from '#generated/listeners'
 The `.adonisjs` directory contains auto-generated files managed by the framework. You should not manually edit files in this directory, as your changes will be overwritten when the dev server regenerates them.
 :::
 
+:::tip
+You should commit the `.adonisjs` directory to version control. These files are required for TypeScript to resolve imports like `#generated/controllers`, and without them your production builds and CI pipelines will fail.
+:::
+
 ## Performance and lazy loading
 
 You might wonder if importing all controllers at once hurts performance. The answer is no, because barrel files use **lazy imports**.
