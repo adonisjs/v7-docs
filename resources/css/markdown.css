@@ -128,7 +128,7 @@
   border-radius: 50%;
   top: 11px;
   left: 2px;
-  @apply bg-gray-700 dark:bg-woodsmoke-400;
+  @apply bg-gray-700;
 }
 
 .prose ul li {
@@ -486,7 +486,11 @@ html.dark .code_snippet pre code span {
   left: 5px;
   top: 34px;
   bottom: 0;
-  @apply border-l border-gray-300 dark:border-woodsmoke-800/70;
+  @apply border-l border-gray-300;
+}
+  
+.prose .steppers > li {
+  @apply dark:before:border-woodsmoke-800/70;
 }
 
 .prose .steppers > li::after {
@@ -502,7 +506,11 @@ html.dark .code_snippet pre code span {
   justify-content: center;
   font-size: var(--text-sm);
   font-weight: 500;
-  @apply bg-gray-200 dark:bg-woodsmoke-800;
+  @apply bg-gray-200;
+}
+
+.prose .steppers > li {
+  @apply dark:after:bg-woodsmoke-800
 }
 
 .prose .code_snippet span.line span {
