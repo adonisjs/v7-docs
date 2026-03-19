@@ -240,9 +240,10 @@ Every stub has access to these built-in variables:
 Beyond configure hooks, you can use stubs in your own Ace commands. This is useful for creating scaffolding commands like `make:resource` or `make:service`.
 
 ```ts title="commands/make_resource.ts"
+import { join } from 'node:path'
 import { BaseCommand, args } from '@adonisjs/core/ace'
 
-const STUBS_ROOT = new URL('../stubs', import.meta.url).pathname
+const STUBS_ROOT = join(import.meta.dirname, '../stubs')
 
 export default class MakeResource extends BaseCommand {
   static commandName = 'make:resource'
