@@ -53,7 +53,7 @@ export default dbConfig
 
 The configuration specifies which database connection to use by default (typically set via environment variables), and defines the connection details for each database. Each connection includes the client library (like `pg` for PostgreSQL or `mysql2` for MySQL), connection credentials, and paths to migration files.
 
-You can explore all available configuration options, connection pooling settings, and advanced features like read-write replicas in the [Lucid configuration documentation](https://lucid.adonisjs.com/docs/configuration).
+You can explore all available configuration options, connection pooling settings, and advanced features like read-write replicas in the [Lucid configuration documentation](https://lucid.adonisjs.com/docs/installation#configuration).
 
 ## Using the query builder directly
 
