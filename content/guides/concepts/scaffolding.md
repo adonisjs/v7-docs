@@ -242,7 +242,7 @@ Beyond configure hooks, you can use stubs in your own Ace commands. This is usef
 ```ts title="commands/make_resource.ts"
 import { BaseCommand, args } from '@adonisjs/core/ace'
 
-const STUBS_ROOT = new URL('../stubs', import.meta.url)
+const STUBS_ROOT = new URL('../stubs', import.meta.url).pathname
 
 export default class MakeResource extends BaseCommand {
   static commandName = 'make:resource'
