@@ -42,7 +42,7 @@ npm create adonisjs@latest [project-name] -- --kit=vue
 npm create adonisjs@latest [project-name] -- --kit=api
 ```
 
-### Available starter kits
+### Official starter kits
 
 AdonisJS offers four official starter kits. Each kit sets up a different type of application, depending on how you want to build your user interface and manage interactivity.
 
@@ -55,6 +55,14 @@ AdonisJS offers four official starter kits. Each kit sets up a different type of
 - [**API Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/api). A monorepo setup with two apps: an AdonisJS backend and an empty frontend project where you can configure any frontend framework of your choice (TanStack Start, Nuxt, Next.js, or others). End-to-end type-safety and shared transformer types are already configured between the backend and frontend.
 
 All starter kits come pre-configured with sensible defaults, streamlined development workflows, and ready-to-use authentication features. For a detailed comparison and usage guidance, see the [Pick your path](./pick_your_path.md) guide.
+
+### Community starter kits
+
+In addition to the official kits, the AdonisJS community also maintains starter kits for specific use cases.
+
+- [**Slim Starter Kit**](https://github.com/batosai/adonisjs-slim-starter-kit). A minimal AdonisJS v7 setup with the framework core and Japa test runner, designed for teams that want to start from a lightweight foundation.
+
+- [**MCP Starter Kit**](https://github.com/batosai/adonisjs-mcp-starter-kit). A minimal AdonisJS v7 setup with built-in MCP support, useful when you want to expose MCP tools, resources, and prompts in your application.
 
 ## Project defaults
 
