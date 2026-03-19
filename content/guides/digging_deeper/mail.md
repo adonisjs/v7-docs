@@ -249,7 +249,7 @@ Configuration options are sent to SparkPost's [`/transmissions`](https://develop
 SES configuration options are forwarded to Nodemailer. You must install the AWS SDK separately.
 
 ```sh
-npm i @aws-sdk/client-ses
+npm i @aws-sdk/client-sesv2
 ```
 
 See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses/)
