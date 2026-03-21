@@ -7,7 +7,7 @@ description: Learn how to use test doubles in AdonisJS, including built-in fakes
 This guide covers test doubles in AdonisJS applications. You will learn how to:
 
 - Use built-in fakes for Mail, Hash, Emitter, and Drive services
-- Swap container bindings to fake dependencies in your application
+- Swap container bindings to fake dependencies using `swap` and `useFake`
 - Freeze and travel through time when testing time-sensitive code
 - Integrate Sinon.js for additional stubbing and mocking needs
 
@@ -290,7 +290,75 @@ export default class FakePaymentGateway extends PaymentGateway {
 }
 ```
 
-Use `container.swap` to replace the real service with your fake during tests.
+### Swapping bindings in tests
+
+The test context provides a `swap` method that replaces a container binding with a fake for the duration of the test. The original binding is automatically restored after the test completes, so you don't need to manage cleanup yourself.
+
+```ts title="tests/functional/orders/checkout.spec.ts"
+import { test } from '@japa/runner'
+import PaymentGateway from '#services/payment_gateway'
+import FakePaymentGateway from '#services/fake_payment_gateway'
+
+test.group('Checkout', () => {
+  test('charges the customer on checkout', async ({ client, swap }) => {
+    /**
+     * Swap the real payment gateway with the fake.
+     * The original binding is restored when the test ends.
+     */
+    const fakePayment = swap(PaymentGateway, new FakePaymentGateway())
+
+    await client.post('/checkout').json({ cartId: 'cart_123', paymentToken: 'tok_visa' })
+
+    fakePayment.assertCharged(9999)
+  })
+})
+```
+
+The `swap` method accepts either a direct instance or a factory function. Use a factory function when you need a fresh instance each time the binding is resolved.
+
+```ts title="tests/functional/orders/checkout.spec.ts"
+// Pass a factory function instead of an instance
+swap(PaymentGateway, () => new FakePaymentGateway())
+```
+
+### The `useFake` helper
+
+The `useFake` helper provides the same functionality as `swap` but as a standalone function. This is useful when you want to extract swap logic into reusable test helpers outside of the test callback.
+
+```ts title="tests/helpers/fakes.ts"
+import { useFake } from '@japa/plugin-adonisjs/helpers'
+import PaymentGateway from '#services/payment_gateway'
+import FakePaymentGateway from '#services/fake_payment_gateway'
+
+/**
+ * Reusable helper that swaps the payment gateway
+ * and returns the fake for assertions
+ */
+export function useFakePaymentGateway() {
+  return useFake(PaymentGateway, new FakePaymentGateway())
+}
+```
+
+```ts title="tests/functional/orders/checkout.spec.ts"
+import { test } from '@japa/runner'
+import { useFakePaymentGateway } from '#tests/helpers/fakes'
+
+test.group('Checkout', () => {
+  test('charges the customer on checkout', async ({ client }) => {
+    const fakePayment = useFakePaymentGateway()
+
+    await client.post('/checkout').json({ cartId: 'cart_123', paymentToken: 'tok_visa' })
+
+    fakePayment.assertCharged(9999)
+  })
+})
+```
+
+Like `swap`, `useFake` automatically restores the original binding when the test completes. Both `swap` and `useFake` can only be called within a running Japa test.
+
+### Manual swap with `container.swap`
+
+You can also call `container.swap` and `container.restore` directly on the application container. This gives you full control over when the binding is restored, which can be useful in group-level setup hooks or when you need to restore a binding before the test ends.
 
 ```ts title="tests/functional/orders/checkout.spec.ts"
 import { test } from '@japa/runner'
@@ -303,16 +371,13 @@ test.group('Checkout', () => {
     const fakePayment = new FakePaymentGateway()
 
     /**
-     * Swap the real payment gateway with the fake
+     * Swap the binding and register cleanup manually
      */
     app.container.swap(PaymentGateway, () => fakePayment)
     cleanup(() => app.container.restore(PaymentGateway))
 
     await client.post('/checkout').json({ cartId: 'cart_123', paymentToken: 'tok_visa' })
 
-    /**
-     * Assert the charge was made with the correct amount
-     */
     fakePayment.assertCharged(9999)
   })
 })
