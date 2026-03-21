@@ -8,7 +8,7 @@
     "start": "node bin/server.js",
     "build": "node ace build && node ace build:static && npm run build:search:index",
     "build:search:index": "pagefind --site build/public",
-    "dev:search:index": "pagefind --site build/public --output-path=public/pagefind",
+    "dev:search:index": "mkdir -p build/public && pagefind --site build/public --output-path=public/pagefind || true",
     "predev": "npm run dev:search:index",
     "dev": "node ace serve --hmr",
     "lint": "eslint .",
