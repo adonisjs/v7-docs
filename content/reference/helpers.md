@@ -629,6 +629,37 @@ if (safeEqual(trustedValue, userInput)) {
 }
 ```
 
+## safeTiming
+
+Ensure a callback takes at least a minimum amount of time to execute. This prevents [timing attacks](https://en.wikipedia.org/wiki/Timing_attack) where an attacker measures response times to infer sensitive information (for example, user enumeration via password reset).
+
+The first argument is the minimum execution time in milliseconds. If the callback finishes early, `safeTiming` waits for the remaining duration. If it throws, the error is re-thrown after the delay.
+
+```ts
+import { safeTiming } from '@adonisjs/core/helpers'
+
+// Both paths (user exists or not) take the same minimum time
+return safeTiming(200, async () => {
+  const user = await User.findBy('email', email)
+  if (user) await sendResetEmail(user)
+  return { message: 'If this email exists, you will receive a reset link.' }
+})
+```
+
+The callback receives a `timing` object with a `returnEarly` method to skip the delay. This is useful when you want constant time on failure, but fast responses on success.
+
+```ts
+import { safeTiming } from '@adonisjs/core/helpers'
+
+return safeTiming(200, async (timing) => {
+  const token = await Token.findBy('value', request.header('x-api-key'))
+  if (token) {
+    timing.returnEarly()
+    return token.owner
+  }
+  throw new UnauthorizedException()
+})
+
 ## cuid
 Create a secure, collision-resistant ID optimized for horizontal scaling and performance. This method uses the [@paralleldrive/cuid2](https://github.com/paralleldrive/cuid2) package under the hood.
 
