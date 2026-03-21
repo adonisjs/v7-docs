@@ -111,7 +111,7 @@ Real-world apps are usually not accessed directly, but behind reverse proxy and 
 
 By default, Node.js closes idle connections after 5 seconds, but Nginx may try to keep them open for 60+ seconds. When Nginx tries to reuse an old connection it thinks is open, but Node.js has already silently closed it, Nginx throws `502 Bad Gateway` errors.
 
-To avoid this issue, you need to enlarge AdonisJS server's `keepAliveTimeout`.
+To avoid this issue, you need to change AdonisJS server's `keepAliveTimeout` to larger than Nginx's `proxy_read_timeout` (50s by default).
 
 ```ts title="config/app.ts"
 {
