@@ -23,6 +23,8 @@ The framework provides built-in fakes for common services that interact with ext
 
 AdonisJS provides fake implementations for services that typically interact with external systems. Each fake intercepts calls to the real service and captures them for assertions.
 
+All built-in fakes support [Explicit Resource Management](https://github.com/tc39/proposal-explicit-resource-management) via the `using` keyword. When the variable goes out of scope (at the end of the test function), the fake is automatically restored. If you prefer manual control, you can still call `.restore()` directly or use the `cleanup` hook.
+
 ### Emitter fake
 
 The emitter fake prevents event listeners from executing while capturing emitted events for assertions. This is useful when testing code that emits events without triggering side effects like sending notifications or updating external systems.
@@ -33,13 +35,14 @@ import emitter from '@adonisjs/core/services/emitter'
 import { events } from '#generated/events'
 
 test.group('User registration', () => {
-  test('emits registration event on signup', async ({ client, cleanup }) => {
+  test('emits registration event on signup', async ({ client }) => {
     /**
      * Fake the emitter to capture events without
-     * executing listeners
+     * executing listeners. The `using` keyword automatically
+     * restores the emitter when the test ends.
      */
-    const fakeEmitter = emitter.fake()
-    cleanup(() => emitter.restore())
+    // [!code highlight]
+    using fakeEmitter = emitter.fake()
 
     await client.post('/signup').form({
       email: 'jane@example.com',
@@ -89,18 +92,17 @@ import { test } from '@japa/runner'
 import hash from '@adonisjs/core/services/hash'
 import { UserFactory } from '#database/factories/user_factory'
 
-test.group('Users list', (group) => {
-  group.each.setup(() => {
+test.group('Users list', () => {
+  test('paginates users correctly', async ({ client }) => {
     /**
      * Fake the hash service to make user creation instant.
      * Without this, creating 50 users with bcrypt takes ~5 seconds.
+     * The `using` keyword automatically restores the real
+     * implementation when the test ends.
      */
-    hash.fake()
+    // [!code highlight]
+    using _hash = hash.fake()
 
-    return () => hash.restore()
-  })
-
-  test('paginates users correctly', async ({ client }) => {
     await UserFactory.createMany(50)
 
     const response = await client.get('/users')
@@ -122,30 +124,32 @@ import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
 import VerifyEmailNotification from '#mails/verify_email'
 
-test.group('User registration', (group) => {
-  group.each.setup(() => {
-    return () => mail.restore()
-  })
-
+test.group('User registration', () => {
   test('sends verification email on signup', async ({ client }) => {
-    const { mails } = mail.fake()
+    /**
+     * Fake the mailer. The `using` keyword automatically
+     * restores the real mailer when the test ends.
+     */
+    // [!code highlight]
+    using fake = mail.fake()
 
     await client.post('/register').form({ email: 'user@example.com', password: 'secret123' })
 
     /**
      * Assert the email was sent with correct recipient and subject
      */
-    mails.assertSent(VerifyEmailNotification, ({ message }) => {
+    fake.mails.assertSent(VerifyEmailNotification, ({ message }) => {
       return message.hasTo('user@example.com').hasSubject('Please verify your email address')
     })
   })
 
   test('does not send reset email for unknown user', async ({ client }) => {
-    const { mails } = mail.fake()
+    // [!code highlight]
+    using fake = mail.fake()
 
     await client.post('/forgot-password').form({ email: 'unknown@example.com' })
 
-    mails.assertNotSent(PasswordResetNotification)
+    fake.mails.assertNotSent(PasswordResetNotification)
   })
 })
 ```
@@ -202,12 +206,14 @@ import fileGenerator from '@poppinss/file-generator'
 import { UserFactory } from '#database/factories/user_factory'
 
 test.group('User avatar upload', () => {
-  test('uploads avatar to storage', async ({ client, cleanup }) => {
+  test('uploads avatar to storage', async ({ client }) => {
     /**
-     * Fake the spaces disk to avoid uploading to real S3
+     * Fake the spaces disk to avoid uploading to real S3.
+     * The `using` keyword automatically restores the real
+     * disk when the test ends.
      */
-    const fakeDisk = drive.fake('spaces')
-    cleanup(() => drive.restore('spaces'))
+    // [!code highlight]
+    using fakeDisk = drive.fake('spaces')
 
     const user = await UserFactory.create()
 

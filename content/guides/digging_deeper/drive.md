@@ -730,19 +730,15 @@ import drive from '@adonisjs/drive/services/main'
 import { UserFactory } from '#database/factories/user_factory'
 
 test.group('Profile | update avatar', () => {
-  test('user can upload an avatar', async ({ client, cleanup }) => {
+  test('user can upload an avatar', async ({ client }) => {
     /**
      * Fake the default disk. All file operations will now
      * use a temporary local directory instead of the
-     * configured storage service.
+     * configured storage service. The `using` keyword
+     * automatically restores the real disk when the test ends.
      */
-    const fakeDisk = drive.fake()
-
-    /**
-     * Restore the real disk after the test completes.
-     * This ensures other tests are not affected.
-     */
-    cleanup(() => drive.restore())
+    // [!code highlight]
+    using fakeDisk = drive.fake()
 
     const user = await UserFactory.create()
 
@@ -768,9 +764,9 @@ test.group('Profile | update avatar', () => {
     fakeDisk.assertExists(`${user.id}.png`)
   })
 
-  test('rejects invalid file types', async ({ client, cleanup }) => {
-    const fakeDisk = drive.fake()
-    cleanup(() => drive.restore())
+  test('rejects invalid file types', async ({ client }) => {
+    // [!code highlight]
+    using fakeDisk = drive.fake()
 
     const user = await UserFactory.create()
 
@@ -801,17 +797,14 @@ You can also fake a specific disk:
 
 ```ts title="tests/functional/uploads.spec.ts"
 // Fake a specific disk
-const fakeDisk = drive.fake('s3')
-cleanup(() => drive.restore('s3'))
+using fakeDisk = drive.fake('s3')
 
 // Fake multiple disks
-drive.fake('s3')
-drive.fake('gcs')
-cleanup(() => {
-  drive.restore('s3')
-  drive.restore('gcs')
-})
+using _s3 = drive.fake('s3')
+using _gcs = drive.fake('gcs')
 ```
+
+You can also call `drive.restore()` manually if you need more control over when the real disk is restored.
 
 ## Troubleshooting
 

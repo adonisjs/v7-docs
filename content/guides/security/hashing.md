@@ -461,22 +461,17 @@ import { test } from '@japa/runner'
 import hash from '@adonisjs/core/services/hash'
 import { UserFactory } from '#database/factories/user_factory'
 
-test.group('Users list', (group) => {
-  group.each.setup(() => {
+test.group('Users list', () => {
+  test('lists all users', async ({ client }) => {
     /**
      * Replace the hash service with a fake that performs
      * no actual hashing. This makes user creation instant.
+     * The `using` keyword automatically restores the real
+     * implementation when the test ends.
      */
-    hash.fake()
+    // [!code highlight]
+    using _hash = hash.fake()
 
-    /**
-     * Return a cleanup function that restores the real
-     * implementation after each test.
-     */
-    return () => hash.restore()
-  })
-
-  test('lists all users', async ({ client }) => {
     /**
      * Without faking, creating 50 users with bcrypt (10 rounds)
      * takes ~5 seconds. With faking, it's nearly instant.
@@ -489,7 +484,7 @@ test.group('Users list', (group) => {
 })
 ```
 
-The fake implementation stores plain text and compares strings directly. Always call `hash.restore()` to prevent the fake from leaking into other tests.
+The fake implementation stores plain text and compares strings directly. You can also call `hash.restore()` manually if you need more control over when the real implementation is restored.
 
 ## Understanding PHC format
 
