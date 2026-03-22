@@ -629,25 +629,6 @@ if (safeEqual(trustedValue, userInput)) {
 }
 ```
 
-## cuid
-Create a secure, collision-resistant ID optimized for horizontal scaling and performance. This method uses the [@paralleldrive/cuid2](https://github.com/paralleldrive/cuid2) package under the hood.
-
-```ts
-import { cuid } from '@adonisjs/core/helpers'
-
-const id = cuid()
-// tz4a98xxat96iws9zmbrgj3a
-```
-
-You can use the `isCuid` method to check if a value is a valid CUID.
-
-```ts
-import { cuid, isCuid } from '@adonisjs/core/helpers'
-
-const id = cuid()
-isCuid(id) // true
-```
-
 ## compose
 
 The `compose` helper allows you to use TypeScript class mixins with a cleaner API. Following is an example of mixin usage without the `compose` helper.
