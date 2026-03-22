@@ -126,7 +126,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>app</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/application/blob/main/src/application.ts">Application</a>
+        <a href="https://github.com/adonisjs/application/blob/9.x/src/application.ts">Application</a>
       </td>
       <td>
         <code>@adonisjs/core/services/app</code>
@@ -148,7 +148,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>config</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/config/blob/main/src/config.ts">Config</a>
+        <a href="https://github.com/adonisjs/config/blob/6.x/src/config.ts">Config</a>
       </td>
       <td>
         <code>@adonisjs/core/services/config</code>
@@ -159,7 +159,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>encryption</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/encryption/blob/main/src/encryption.ts">Encryption</a>
+        <a href="https://github.com/boringnode/encryption/blob/1.x/src/encryption.ts">Encryption</a>
       </td>
       <td>
         <code>@adonisjs/core/services/encryption</code>
@@ -170,7 +170,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>emitter</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/events/blob/main/src/emitter.ts">Emitter</a>
+        <a href="https://github.com/adonisjs/events/blob/10.x/src/emitter.ts">Emitter</a>
       </td>
       <td>
         <code>@adonisjs/core/services/emitter</code>
@@ -181,7 +181,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>hash</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/hash/blob/main/src/hash_manager.ts">HashManager</a>
+        <a href="https://github.com/adonisjs/hash/blob/10.x/src/hash_manager.ts">HashManager</a>
       </td>
       <td>
         <code>@adonisjs/core/services/hash</code>
@@ -192,7 +192,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>logger</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/logger/blob/main/src/logger_manager.ts">LoggerManager</a>
+        <a href="https://github.com/adonisjs/logger/blob/7.x/src/logger_manager.ts">LoggerManager</a>
       </td>
       <td>
         <code>@adonisjs/core/services/logger</code>
@@ -214,7 +214,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>router</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/http-server/blob/main/src/router/main.ts">Router</a>
+        <a href="https://github.com/adonisjs/http-server/blob/8.x/src/router/main.ts">Router</a>
       </td>
       <td>
         <code>@adonisjs/core/services/router</code>
@@ -225,7 +225,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>server</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/http-server/blob/main/src/server/main.ts">Server</a>
+        <a href="https://github.com/adonisjs/http-server/blob/8.x/src/server/main.ts">Server</a>
       </td>
       <td>
         <code>@adonisjs/core/services/server</code>
