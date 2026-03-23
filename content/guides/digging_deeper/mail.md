@@ -836,16 +836,14 @@ import { test } from '@japa/runner'
 import mail from '@adonisjs/mail/services/main'
 import VerifyEmailNotification from '#mails/verify_email'
 
-test.group('Users | register', (group) => {
-  group.each.setup(() => {
-    /**
-     * Restore the real mailer after each test
-     */
-    return () => mail.restore()
-  })
-
+test.group('Users | register', () => {
   test('sends verification email on registration', async ({ client }) => {
-    const { mails } = mail.fake()
+    /**
+     * Fake the mailer. The `using` keyword automatically
+     * restores the real mailer when the test ends.
+     */
+    // [!code highlight]
+    using fake = mail.fake()
 
     await client
       .post('/register')
@@ -854,7 +852,7 @@ test.group('Users | register', (group) => {
     /**
      * Assert the email was sent
      */
-    mails.assertSent(VerifyEmailNotification, ({ message }) => {
+    fake.mails.assertSent(VerifyEmailNotification, ({ message }) => {
       return message
         .hasTo('user@example.com')
         .hasSubject('Please verify your email address')
@@ -862,16 +860,19 @@ test.group('Users | register', (group) => {
   })
 
   test('does not send password reset when user not found', async ({ client }) => {
-    const { mails } = mail.fake()
+    // [!code highlight]
+    using fake = mail.fake()
 
     await client
       .post('/forgot-password')
       .form({ email: 'unknown@example.com' })
 
-    mails.assertNotSent(PasswordResetNotification)
+    fake.mails.assertNotSent(PasswordResetNotification)
   })
 })
 ```
+
+You can also call `mail.restore()` manually if you need more control over when the real mailer is restored.
 
 ### Assertion methods
 
@@ -930,17 +931,17 @@ test.group('VerifyEmailNotification', () => {
 Retrieve the list of sent or queued emails for custom assertions:
 
 ```ts title="tests/functional/notifications.spec.ts"
-const { mails } = mail.fake()
+using fake = mail.fake()
 
 /**
  * Get all sent emails
  */
-const sentEmails = mails.sent()
+const sentEmails = fake.mails.sent()
 
 /**
  * Get all queued emails
  */
-const queuedEmails = mails.queued()
+const queuedEmails = fake.mails.queued()
 
 /**
  * Find a specific email

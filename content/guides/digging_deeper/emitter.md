@@ -407,12 +407,9 @@ import emitter from '@adonisjs/core/services/emitter'
 import { events } from '#generated/events'
 
 test.group('User signup', () => {
-  test('create a user account', async ({ client, cleanup }) => {
-    // [!code highlight:4]
-    const fakeEmitter = emitter.fake()
-    cleanup(() => {
-      emitter.restore()
-    })
+  test('create a user account', async ({ client }) => {
+    // [!code highlight:2]
+    using fakeEmitter = emitter.fake()
 
     await client
       .post('signup')
@@ -427,7 +424,7 @@ test.group('User signup', () => {
 })
 ```
 
-Call `emitter.restore()` after each test to return to normal event behavior. The `cleanup` hook ensures restoration happens even if the test fails.
+The `using` keyword automatically restores the emitter when the variable goes out of scope (at the end of the test function). You can also call `emitter.restore()` manually if you need more control over when restoration happens.
 
 ### Faking specific events
 

@@ -659,24 +659,6 @@ return safeTiming(200, async (timing) => {
   }
   throw new UnauthorizedException()
 })
-
-## cuid
-Create a secure, collision-resistant ID optimized for horizontal scaling and performance. This method uses the [@paralleldrive/cuid2](https://github.com/paralleldrive/cuid2) package under the hood.
-
-```ts
-import { cuid } from '@adonisjs/core/helpers'
-
-const id = cuid()
-// tz4a98xxat96iws9zmbrgj3a
-```
-
-You can use the `isCuid` method to check if a value is a valid CUID.
-
-```ts
-import { cuid, isCuid } from '@adonisjs/core/helpers'
-
-const id = cuid()
-isCuid(id) // true
 ```
 
 ## compose
