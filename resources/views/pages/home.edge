@@ -7,6 +7,18 @@
 })
   <div class="text-center">
     <div class="container mx-auto px-5 lg:px-10 py-28 lg:border-x border-gray-300 dark:border-woodsmoke-900 relative">
+      @link({
+        href: "https://adonisjs.com/we-hear-you",
+        target: "_blank",
+        class: "mb-6 inline-flex border border-gray-300/60 dark:border-woodsmoke-800 px-3.5 py-2 rounded-full flex items-center gap-2 backdrop-blur-xl bg-gray-200/10 dark:bg-woodsmoke-100/8 hover:bg-gray-200/60 dark:hover:bg-woodsmoke-100/10 transition-all"
+      })
+        <span class="text-14 inline-block text-mono font-medium text-green-600 dark:text-green-500 animate-pulse">New</span>
+        <span class="text-15 dark:text-white max-w-lg border-l border-gray-300 dark:border-woodsmoke-700 pl-2 truncate leading-4.5">
+          JavaScript devs, we hear you
+        </span>
+        @svg('mynaui:chevron-right', {class: "dark:text-white"})
+      @end
+
       <h1 class="font-display text-3xl lg:text-42 text-gray-950 dark:text-white leading-10 lg:leading-52 tracking-tight">
         Everything you need to get building
       </h1>
