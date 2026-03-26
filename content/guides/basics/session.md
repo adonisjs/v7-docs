@@ -521,7 +521,7 @@ Flash messages are temporary data stored in the session and available only for t
 
 ### Basic flash messages
 
-Use the `flashMessages.flash()` method to store a message for the next request. The first parameter is the message type (a convention for categorizing messages), and the second is the message content.
+Use the `flash()` method to store a message for the next request. The first parameter is the message type (a convention for categorizing messages), and the second is the message content.
 ```ts title="start/routes.ts"
 router.post('/cart', async ({ session, response }) => {
   // Add item to cart...
@@ -530,7 +530,7 @@ router.post('/cart', async ({ session, response }) => {
    * Flash a success message for the next request.
    * Available via flashMessages.get('success') in templates.
    */
-  session.flashMessages.flash('success', 'Item added to the cart')
+  session.flash('success', 'Item added to the cart')
   
   return response.redirect().back()
 })
@@ -542,10 +542,10 @@ export default class OrdersController {
   async store({ session, response }: HttpContext) {
     try {
       // Process order...
-      session.flashMessages.flash('success', 'Order placed successfully!')
+      session.flash('success', 'Order placed successfully!')
       return response.redirect('/orders')
     } catch (error) {
-      session.flashMessages.flash('error', 'Payment failed. Please try again.')
+      session.flash('error', 'Payment failed. Please try again.')
       return response.redirect().back()
     }
   }
@@ -578,7 +578,7 @@ Beyond the standard message types, you can create custom message types for speci
 router.post('/newsletter/subscribe', ({ session, response }) => {
   // Subscribe user...
   
-  session.flashMessages.flash('newsletter', 'Check your email to confirm subscription')
+  session.flash('newsletter', 'Check your email to confirm subscription')
   return response.redirect().back()
 })
 ```
@@ -607,7 +607,7 @@ export default class PostsController {
        * Users won't have to re-enter their data.
        */
       session.flashAll()
-      session.flashMessages.flash('error', 'Failed to create post. Please try again.')
+      session.flash('error', 'Failed to create post. Please try again.')
       
       return response.redirect().back()
     }
@@ -648,7 +648,7 @@ export default class CheckSubscriptionMiddleware {
        * Keep all flash messages for one more request.
        */
       session.reflash()
-      session.flashMessages.flash('error', 'Please subscribe to continue')
+      session.flash('error', 'Please subscribe to continue')
       
       return response.redirect('/subscribe')
     }
