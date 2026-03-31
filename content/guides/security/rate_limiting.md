@@ -352,6 +352,12 @@ When a user exhausts their rate limit, the middleware throws the `E_TOO_MANY_REQ
 
 See also: [E_TOO_MANY_REQUESTS exception reference](../../reference/exceptions.md#e_too_many_requests)
 
+The middleware will also add the following response headers:
+- `X-RateLimit-Limit`: Total number of requests that can be made
+- `X-RateLimit-Remaining` Number of requests remaining
+- `Retry-After`: Number of seconds after which the client can retry
+- `X-RateLimit-Reset`: Timestamp after which the client can retry
+
 ### Customizing the error response
 
 You can customize the error message without handling the exception globally using the `limitExceeded` hook:
