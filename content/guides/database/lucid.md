@@ -203,6 +203,10 @@ export class PostsSchema extends BaseModel {
 
 Lucid automatically converts database types to appropriate TypeScript types, snake_case column names to camelCase properties, and timestamp columns to Luxon DateTime objects. The `autoCreate` option means Lucid sets the timestamp when creating a record, and `autoUpdate` means it updates the timestamp on every save.
 
+### Schema generation rules
+
+The default schema generation can be steered by configuring schema generation rules in the `database\schema_rules.ts` file.
+
 ### Creating a model
 
 Now create a model that extends the generated schema class:
