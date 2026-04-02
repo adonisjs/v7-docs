@@ -35,10 +35,19 @@ npm create adonisjs@latest [project-name]
 
 This command starts an interactive setup and asks you to select a starter kit, or you may pre-define a starter kit using the `--kit` CLI option.
 
-```sh
+```sh title="Create a new Hypermedia application"
 npm create adonisjs@latest [project-name] -- --kit=hypermedia
+```
+
+```sh title="Create a new React application"
 npm create adonisjs@latest [project-name] -- --kit=react
+```
+
+```sh title="Create a new Vue application"
 npm create adonisjs@latest [project-name] -- --kit=vue
+```
+
+```sh title="Create a new API application"
 npm create adonisjs@latest [project-name] -- --kit=api
 ```
 
