@@ -203,6 +203,42 @@ export class PostsSchema extends BaseModel {
 
 Lucid automatically converts database types to appropriate TypeScript types, snake_case column names to camelCase properties, and timestamp columns to Luxon DateTime objects. The `autoCreate` option means Lucid sets the timestamp when creating a record, and `autoUpdate` means it updates the timestamp on every save.
 
+### Schema generation rules
+
+The default schema generation can be steered by configuring schema generation rules. Make sure your database config enables generation and points to the `database/schema_rules.ts` file:
+
+```typescript title="database/schema_rules.ts"
+import { type SchemaRules } from '@adonisjs/lucid/types/schema_generator';
+
+export default {
+  types: {
+    /**
+     * Customize all JSON columns globally to use a type-safe JSON wrapper
+     * instead of the default 'any' type.
+     */
+    jsonb: {
+      decorator: '@column()',
+      tsType: 'JSON<any>',
+      imports: [{ source: '#types/db', typeImports: ['JSON'] }],
+    },
+  },
+  tables: {
+    /**
+     * Customize the users table to make the user_role column
+     * a strict union type instead of a generic string.
+     */
+    users: {
+      columns: {
+        user_role: {
+          decorator: '@column()',
+          tsType: `'admin' | 'editor'`,
+        },
+      },
+    },
+  },
+} satisfies SchemaRules;
+```
+
 ### Creating a model
 
 Now create a model that extends the generated schema class:
