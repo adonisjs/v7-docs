@@ -385,6 +385,11 @@
         "contentPath": "./testing/resetting_state_between_tests.md"
       },
       {
+        "title": "Database assertions",
+        "permalink": "guides/testing/database-assertions",
+        "contentPath": "./testing/database_assertions.md"
+      },
+      {
         "title": "Test doubles",
         "permalink": "guides/testing/test-doubles",
         "oldUrls": ["guides/basics/mocks-and-fakes"],
