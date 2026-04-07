@@ -230,7 +230,7 @@ export default {
     users: {
       columns: {
         user_role: {
-          decorator: '@column()',
+          decorators: [{ name: '@column' }],
           tsType: `'admin' | 'editor'`,
         },
       },
