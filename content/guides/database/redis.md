@@ -58,7 +58,7 @@ node ace add @adonisjs/redis
 
 The configuration for the Redis package is stored inside the `config/redis.ts` file.
 
-See also: [Config file stub](https://github.com/adonisjs/redis/blob/main/stubs/config/redis.stub)
+See also: [Config file stub](https://github.com/adonisjs/redis/blob/10.x/stubs/config/redis.stub)
 
 ```ts title="config/redis.ts"
 import env from '#start/env'

@@ -29,7 +29,7 @@ Tuyau installation differs depending on whether you're using Inertia (single rep
 
 ### Inertia applications
 
-For Inertia applications, installation is straightforward since your frontend and backend live in the same repository. **Official starter kits for [React](https://github.com/adonisjs/react-starter-kit/inertia-react) and [Vue](https://github.com/adonisjs/react-starter-kit/inertia-vue) come pre-configured with Tuyau, hence no manual setup is required.**
+For Inertia applications, installation is straightforward since your frontend and backend live in the same repository. **Official starter kits for [React](https://github.com/adonisjs/starter-kits/tree/main/inertia-react) and [Vue](https://github.com/adonisjs/starter-kits/tree/main/inertia-vue) come pre-configured with Tuyau, hence no manual setup is required.**
 
 ::::steps
 
