@@ -14,7 +14,7 @@ This guide covers the Application class in AdonisJS. You will learn how to:
 
 ## Overview
 
-The [Application](https://github.com/adonisjs/application/blob/main/src/application.ts) class handles the heavy lifting of wiring together an AdonisJS application. It manages the application lifecycle, provides access to environment information, tracks the current state, and offers helper methods for generating paths to various project directories.
+The [Application](https://github.com/adonisjs/application/blob/9.x/src/application.ts) class handles the heavy lifting of wiring together an AdonisJS application. It manages the application lifecycle, provides access to environment information, tracks the current state, and offers helper methods for generating paths to various project directories.
 
 You access the Application instance through the `app` service, which is available throughout your application.
 
@@ -486,4 +486,4 @@ app.generators.controllerName('user')
 // UsersController
 ```
 
-See the [`generators.ts` source code](https://github.com/adonisjs/application/blob/main/src/generators.ts) for the complete list of available generators.
+See the [`generators.ts` source code](https://github.com/adonisjs/application/blob/9.x/src/generators.ts) for the complete list of available generators.
