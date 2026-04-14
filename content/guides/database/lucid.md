@@ -623,7 +623,7 @@ Direct query builder updates bypass hooks entirely. When you use `await Post.que
 This behavior exists for performance reasons when updating many records. If you need hooks to run, fetch the model instance first, modify it, and call `save()`.
 :::
 
-For complete hook lifecycle information and advanced patterns, see the [Lucid hooks documentation](https://lucid.adonisjs.com/docs/hooks).
+For complete hook lifecycle information and advanced patterns, see the [Lucid hooks documentation](https://lucid.adonisjs.com/docs/model-hooks).
 
 ## Model relationships
 
@@ -815,7 +815,7 @@ export default class User extends UsersSchema {
 }
 ```
 
-For custom serialization logic, computed properties, and working with transformers, see the [Lucid serialization documentation](https://lucid.adonisjs.com/docs/serialization) and [AdonisJS transformers documentation](https://docs.adonisjs.com).
+For custom serialization logic, computed properties, and working with transformers, see the [Lucid serialization documentation](https://lucid.adonisjs.com/docs/serializing-models) and [AdonisJS transformers documentation](https://docs.adonisjs.com/guides/frontend/transformers).
 
 ## Model factories
 
@@ -897,7 +897,7 @@ const publishedPosts = await PostFactory
   .createMany(5)
 ```
 
-For relationship factories, stubbing database calls in tests, and advanced factory patterns, see the [Lucid factories documentation](https://lucid.adonisjs.com/docs/factories).
+For relationship factories, stubbing database calls in tests, and advanced factory patterns, see the [Lucid factories documentation](https://lucid.adonisjs.com/docs/model-factories).
 
 ## Next steps
 
@@ -906,7 +906,7 @@ This guide covered the essential features of Lucid ORM to help you understand ho
 For deeper knowledge on any topic, refer to the comprehensive [Lucid documentation](https://lucid.adonisjs.com), which covers advanced query builder methods, relationship customization, query scopes, soft deletes, custom naming strategies, and much more.
 
 You might also want to explore:
-- [Database validation rules](https://lucid.adonisjs.com/docs/validation-rules) for validating unique and existing values
-- [Query scopes](https://lucid.adonisjs.com/docs/query-scopes) for reusable query constraints
-- [Custom column types](https://lucid.adonisjs.com/docs/schema-classes#customizing-column-types) for handling special data formats
-- [Redis integration](https://docs.adonisjs.com/guides/redis) for caching model queries
+- [Database validation rules](https://lucid.adonisjs.com/docs/validation) for validating unique and existing values
+- [Query scopes](https://lucid.adonisjs.com/docs/model-query-scopes) for reusable query constraints
+- [Custom column types](https://lucid.adonisjs.com/docs/schema-classes#customizing-types-with-schema-rules) for handling special data formats
+- [Redis integration](https://docs.adonisjs.com/guides/database/redis) for caching model queries
