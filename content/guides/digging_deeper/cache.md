@@ -56,7 +56,7 @@ node ace add @adonisjs/cache
 
 The cache configuration lives in `config/cache.ts`. This file defines your stores, the default store, and driver-specific settings.
 
-See also: [Config stub](https://github.com/adonisjs/cache/blob/-/stubs/config/cache.stub)
+See also: [Config stub](https://github.com/adonisjs/cache/blob/2.x/stubs/config.stub)
 
 ```ts title="config/cache.ts"
 import { defineConfig, store, drivers } from '@adonisjs/cache'

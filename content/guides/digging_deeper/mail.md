@@ -119,13 +119,13 @@ export default mailConfig
 
 Each transport accepts provider-specific options. The following sections document the available transports and their configuration.
 
-See also: [TypeScript types for config object](https://github.com/adonisjs/mail/blob/main/src/types.ts#L261)
+See also: [TypeScript types for config object](https://github.com/adonisjs/mail/blob/10.x/src/types.ts#L243)
 
 :::disclosure{title="SMTP"}
 
 SMTP configuration options are forwarded directly to Nodemailer.
 
-See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp/)
+See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp)
 
 ```ts title="config/mail.ts"
 {
@@ -183,7 +183,7 @@ Configuration options are sent to Resend's [`/emails`](https://resend.com/docs/a
 
 :::disclosure{title="Mailgun"}
 
-Configuration options are sent to Mailgun's [`/messages.mime`](https://documentation.mailgun.com/en/latest/api-sending.html#sending) API endpoint.
+Configuration options are sent to Mailgun's [`/messages.mime`](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages-mime) API endpoint.
 
 ```ts title="config/mail.ts"
 {
@@ -252,7 +252,7 @@ SES configuration options are forwarded to Nodemailer. You must install the AWS 
 npm i @aws-sdk/client-sesv2
 ```
 
-See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses/)
+See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
 
 ```ts title="config/mail.ts"
 {
@@ -751,7 +751,7 @@ await mail.send((message) => {
 })
 ```
 
-See also: [Nodemailer list headers documentation](https://nodemailer.com/message/list-headers/)
+See also: [Nodemailer list headers documentation](https://nodemailer.com/message/list-headers)
 
 ## Class-based emails
 
