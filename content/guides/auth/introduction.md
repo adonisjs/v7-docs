@@ -32,7 +32,7 @@ The auth package focuses specifically on authenticating HTTP requests. The follo
 
 :::tip
 
-Looking for a complete authentication system? [AdonisJS Kit](https://adonisjs.com/kit) provides full-stack components with ready-to-use flows for user registration, email verification, password recovery, profile management, and more.
+Looking for a complete authentication system? [AdonisJS Kit](https://plus.adonisjs.com/kit) provides full-stack components with ready-to-use flows for user registration, email verification, password recovery, profile management, and more.
 
 :::
 
@@ -138,7 +138,7 @@ node ace add @adonisjs/auth --guard=basic_auth
 
 ## The initialize auth middleware
 
-During setup, the `@adonisjs/auth/initialize_auth_middleware` is added to your application's middleware stack. This middleware runs on every request and creates an instance of the [Authenticator](https://github.com/adonisjs/auth/blob/main/src/authenticator.ts) class, which it attaches to `ctx.auth`.
+During setup, the `@adonisjs/auth/initialize_auth_middleware` is added to your application's middleware stack. This middleware runs on every request and creates an instance of the [Authenticator](https://github.com/adonisjs/auth/blob/10.x/src/authenticator.ts) class, which it attaches to `ctx.auth`.
 
 The initialize auth middleware does not authenticate requests or protect routes. Its only job is to set up the authenticator instance so it's available throughout the request lifecycle. To protect routes, use the [auth middleware](./session_guard.md#protecting-routes).
 

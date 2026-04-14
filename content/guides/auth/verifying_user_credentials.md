@@ -153,7 +153,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
 
 ## Automatic password hashing
 
-The AuthFinder mixin registers a [beforeSave hook](https://github.com/adonisjs/auth/blob/main/src/mixins/lucid.ts#L40-L50) that automatically hashes passwords when creating or updating users. You don't need to manually hash passwords in your models or controllers:
+The AuthFinder mixin registers a [beforeSave hook](https://github.com/adonisjs/auth/blob/10.x/src/mixins/lucid.ts#L88-L95) that automatically hashes passwords when creating or updating users. You don't need to manually hash passwords in your models or controllers:
 ```ts title="app/controllers/users_controller.ts"
 import User from '#models/user'
 import type { HttpContext } from '@adonisjs/core/http'

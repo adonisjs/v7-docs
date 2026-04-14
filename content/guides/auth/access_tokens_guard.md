@@ -117,7 +117,7 @@ export default class extends BaseSchema {
 
 ## Issuing tokens
 
-Use the tokens provider on your User model to create tokens. The `create` method accepts a user instance and returns an [AccessToken](https://github.com/adonisjs/auth/blob/main/modules/access_tokens_guard/access_token.ts) object:
+Use the tokens provider on your User model to create tokens. The `create` method accepts a user instance and returns an [AccessToken](https://github.com/adonisjs/auth/blob/10.x/modules/access_tokens_guard/access_token.ts) object:
 ```ts title="start/routes.ts"
 import User from '#models/user'
 import router from '@adonisjs/core/services/router'
@@ -233,7 +233,7 @@ const authConfig = defineConfig({
 export default authConfig
 ```
 
-The `tokensGuard` method creates an instance of [AccessTokensGuard](https://github.com/adonisjs/auth/blob/main/modules/access_tokens_guard/guard.ts).
+The `tokensGuard` method creates an instance of [AccessTokensGuard](https://github.com/adonisjs/auth/blob/10.x/modules/access_tokens_guard/guard.ts).
 
 The `tokensUserProvider` method accepts two options:
 

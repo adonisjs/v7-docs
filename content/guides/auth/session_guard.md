@@ -41,9 +41,9 @@ const authConfig = defineConfig({
 export default authConfig
 ```
 
-The `sessionGuard` method creates an instance of the [SessionGuard](https://github.com/adonisjs/auth/blob/main/modules/session_guard/guard.ts) class. It accepts a user provider and an optional configuration object for remember me tokens.
+The `sessionGuard` method creates an instance of the [SessionGuard](https://github.com/adonisjs/auth/blob/10.x/modules/session_guard/guard.ts) class. It accepts a user provider and an optional configuration object for remember me tokens.
 
-The `sessionUserProvider` method creates an instance of [SessionLucidUserProvider](https://github.com/adonisjs/auth/blob/main/modules/session_guard/user_providers/lucid.ts), which uses a Lucid model to find users during authentication.
+The `sessionUserProvider` method creates an instance of [SessionLucidUserProvider](https://github.com/adonisjs/auth/blob/10.x/modules/session_guard/user_providers/lucid.ts), which uses a Lucid model to find users during authentication.
 
 ## Logging in
 
@@ -136,7 +136,7 @@ When multiple guards are specified, authentication succeeds if any of them authe
 
 ### Handling authentication errors
 
-When the auth middleware cannot authenticate a request, it throws the [E_UNAUTHORIZED_ACCESS](https://github.com/adonisjs/auth/blob/main/src/errors.ts#L21) exception. The exception is converted to an HTTP response using content negotiation:
+When the auth middleware cannot authenticate a request, it throws the [E_UNAUTHORIZED_ACCESS](https://github.com/adonisjs/auth/blob/10.x/src/errors.ts#L21) exception. The exception is converted to an HTTP response using content negotiation:
 
 - Requests with `Accept: application/json` receive an array of error objects.
 - Requests with `Accept: application/vnd.api+json` receive errors formatted per the JSON API specification.
