@@ -124,7 +124,7 @@ In addition to the data you explicitly pass, AdonisJS automatically shares certa
 - The `auth` object for checking authentication status
 - Edge helpers like `excerpt()`, `truncate()`, and route helpers
 
-You can view all available helpers and global properties in the [Edge reference guide](#).
+You can view all available helpers and global properties in the [Edge reference guide](/reference/edge).
 
 ## Template syntax refresher
 
