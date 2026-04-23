@@ -17,6 +17,7 @@ Instead of scattering permission checks throughout your controllers, you define 
 ## Installing Bouncer
 
 Let's install and configure the Bouncer package using the following command.
+
 ```bash
 node ace add @adonisjs/bouncer
 ```
@@ -32,11 +33,13 @@ You're all set! Now let's create our first policy.
 ## Creating the PostPolicy
 
 Policies are classes where each method represents a permission check. Let's create a policy for posts.
+
 ```bash
 node ace make:policy post
 ```
 
 Open the generated file and add permission checks for editing and deleting posts.
+
 ```ts title="app/policies/post_policy.ts"
 import type User from '#models/user'
 import type Post from '#models/post'
@@ -66,11 +69,13 @@ You might notice that `edit` and `delete` have identical logic right now. Even t
 ## Creating the CommentPolicy
 
 Now create a policy for comments.
+
 ```bash
 node ace make:policy comment
 ```
 
 Add the delete permission check.
+
 ```ts title="app/policies/comment_policy.ts"
 import type User from '#models/user'
 import type Comment from '#models/comment'
@@ -96,6 +101,7 @@ Perfect! Now let's put these policies to work.
 We'll add a validator for updating posts. Since we already have a `validators/post.ts` file for creating posts, we'll add the update validator there too. A single validator file can export multiple validators (this keeps related validation logic organized together).
 
 Open your existing post validator file and add the update validator.
+
 ```ts title="app/validators/post.ts"
 import vine from '@vinejs/vine'
 
@@ -121,6 +127,7 @@ We're cloning the `createPostValidator` schema to reuse the same validation rule
 :::step{title="Add controller methods"}
 
 We'll add two controller methods: `edit` to show the edit form, and `update` to handle the form submission. Both methods will use Bouncer to check if the current user is allowed to modify the post before performing any action.
+
 ```ts title="app/controllers/posts_controller.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import Post from '#models/post'
@@ -192,6 +199,7 @@ The solution is to **pre-compute user permissions within transformers and send t
 We'll use a **transformer variant** for this. Variants allow you to define multiple output shapes for the same resource. For example, you might want minimal data for list views but detailed data (including permissions) for detail views. Learn more about variants in the [Transformers documentation](../../../guides/frontend/transformers.md#using-variants).
 
 Let's add a `forDetailedView` variant to the `PostTransformer`:
+
 ```ts title="app/transformers/post_transformer.ts"
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type Post from '#models/post'
@@ -199,7 +207,7 @@ import UserTransformer from '#transformers/user_transformer'
 import CommentTransformer from '#transformers/comment_transformer'
 // [!code ++:3]
 import { inject } from '@adonisjs/core'
-import type { HttpContext } from '@adonisjs/core/http'
+import { HttpContext } from '@adonisjs/core/http'
 import PostPolicy from '#policies/post_policy'
 
 export default class PostTransformer extends BaseTransformer<Post> {
@@ -233,6 +241,7 @@ Notice we're using the same `bouncer.with(PostPolicy)` pattern we used in the co
 When your React component receives this data, it has simple boolean flags (`post.can.edit`, `post.can.delete`) it can use for conditional rendering—without needing to know anything about the authorization logic itself.
 
 Now update the `show` method to use this variant:
+
 ```ts title="app/controllers/posts_controller.ts"
 async show({ inertia, params }: HttpContext) {
   const post = await Post.query()
@@ -259,6 +268,7 @@ async show({ inertia, params }: HttpContext) {
 :::step{title="Register the routes"}
 
 Now let's register the routes for editing posts. Open your routes file.
+
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
@@ -283,11 +293,13 @@ We need two routes (one to show the edit form and another to handle the form sub
 :::step{title="Create the edit form component"}
 
 Create the edit form component.
+
 ```bash
 node ace make:page posts/edit
 ```
 
 Now add the form markup.
+
 ```tsx title="inertia/pages/posts/edit.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
@@ -370,6 +382,7 @@ This form is similar to the create form, with a few key differences:
 :::step{title="Add edit button to post detail page"}
 
 Now add an Edit button to the post detail page. Open your `posts/show.tsx` component.
+
 ```tsx title="inertia/pages/posts/show.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
@@ -437,6 +450,7 @@ Visit a post you created and you'll see the Edit button. Click it and try updati
 :::step{title="Add controller method"}
 
 Deleting a post is simpler than editing because there's no form to show (just a button that submits a DELETE request). Let's add the controller method to handle deletions.
+
 ```ts title="app/controllers/posts_controller.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import Post from '#models/post'
@@ -472,6 +486,7 @@ The pattern is familiar by now: find the post, authorize the action using the po
 :::step{title="Register the route"}
 
 Now register the delete route.
+
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
@@ -488,6 +503,7 @@ router.post('/posts/:id/comments', [controllers.Comments, 'store']).use(middlewa
 :::step{title="Add delete button to post detail page"}
 
 Add a delete button next to the edit button in your post detail component.
+
 ```tsx title="inertia/pages/posts/show.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
@@ -569,13 +585,14 @@ Try it out! Visit a post you created and you'll see both Edit and Delete buttons
 :::step{title="Update the Comment transformer to include authorization"}
 
 Similar to posts, we need to add authorization data to comments. We'll use the same policy pattern we learned earlier. Create a variant in the `CommentTransformer`:
+
 ```ts title="app/transformers/comment_transformer.ts"
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type Comment from '#models/comment'
 import UserTransformer from '#transformers/user_transformer'
 // [!code ++:3]
 import { inject } from '@adonisjs/core'
-import type { HttpContext } from '@adonisjs/core/http'
+import { HttpContext } from '@adonisjs/core/http'
 import CommentPolicy from '#policies/comment_policy'
 
 export default class CommentTransformer extends BaseTransformer<Comment> {
@@ -607,13 +624,14 @@ export default class CommentTransformer extends BaseTransformer<Comment> {
 :::step{title="Update Post transformer to use comment authorization variant"}
 
 Now update the `PostTransformer` to use the comment authorization variant:
+
 ```ts title="app/transformers/post_transformer.ts"
 import { BaseTransformer } from '@adonisjs/core/transformers'
 import type Post from '#models/post'
 import UserTransformer from '#transformers/user_transformer'
 import CommentTransformer from '#transformers/comment_transformer'
 import { inject } from '@adonisjs/core'
-import type { HttpContext } from '@adonisjs/core/http'
+import { HttpContext } from '@adonisjs/core/http'
 import PostPolicy from '#policies/post_policy'
 
 export default class PostTransformer extends BaseTransformer<Post> {
@@ -649,6 +667,7 @@ export default class PostTransformer extends BaseTransformer<Post> {
 :::step{title="Add controller method"}
 
 Let's add the controller method for deleting comments.
+
 ```ts title="app/controllers/comments_controller.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import Comment from '#models/comment'
@@ -693,6 +712,7 @@ Here's what this method does:
 :::step{title="Register the route"}
 
 Now register the delete route for comments.
+
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
@@ -714,6 +734,7 @@ router
 :::step{title="Add delete button to comments"}
 
 Finally, add delete buttons to the comments list in your post detail component.
+
 ```tsx title="inertia/pages/posts/show.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
