@@ -1,13 +1,13 @@
 import edge from 'edge.js'
 import { Socket } from 'node:net'
 import { dirname } from 'node:path'
+import { appUrl } from '#config/app'
 import { inject } from '@adonisjs/core'
 import { Router } from '@adonisjs/core/http'
 import { IncomingMessage } from 'node:http'
 import { type Infer } from '@vinejs/vine/types'
 import { BaseCommand } from '@adonisjs/core/ace'
 import { type singleDoc } from '#collections/docs'
-import { appUrl } from '#config/app'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
 import { RequestFactory } from '@adonisjs/core/factories/http'
@@ -99,7 +99,7 @@ export default class BuildStatic extends BaseCommand {
         try {
           await this.#compileDoc(doc)
           action.succeeded()
-        } catch (error) {
+        } catch (error: any) {
           action.failed(error.message)
         }
       }
