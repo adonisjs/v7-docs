@@ -160,3 +160,15 @@
 #carbonads .carbon-poweredby {
   @apply block text-center! mt-2 dark:text-woodsmoke-400;
 }
+
+.tippy-box {
+  @apply bg-indigo-500;
+}
+
+.tippy-box[data-placement^='top']>.tippy-arrow::before {
+  border-top-color: var(--color-indigo-500) !important;
+}
+
+.tippy-box[data-placement^='bottom']>.tippy-arrow::before {
+  border-bottom-color: var(--color-indigo-500) !important;
+}

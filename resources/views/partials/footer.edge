@@ -109,7 +109,12 @@
 
       <div class="mt-8 pt-3 flex justify-between items-center">
         <span class="text-13 text-gray-600 dark:text-woodsmoke-400">Copyright © 2026 AdonisJS</span>
-        <div x-data="themeSwitcher()" class="flex bg-gray-200 dark:bg-woodsmoke-950 p-1 rounded-full">
+        <div 
+          x-data="themeSwitcher()" 
+          class="flex bg-gray-200 dark:bg-woodsmoke-950 p-1 rounded-full border border-gray-300 dark:border-woodsmoke-800/70"
+          data-tippy-content="Or press D"
+          data-tippy-placement="top"  
+        >
           <button
             type="button"
             class="p-1.5 rounded-full text-gray-600 dark:text-woodsmoke-400 hover:text-gray-900 dark:hover:text-woodsmoke-50 transition-colors duration-150"

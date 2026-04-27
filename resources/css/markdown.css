@@ -371,7 +371,7 @@ html.dark .code_snippet pre code span {
   overflow: hidden;
   margin-top: 32px;
   margin-bottom: 32px;
-  @apply border border-woodsmoke-800/70 rounded-lg;
+  @apply border border-gray-300 dark:border-woodsmoke-800/70 rounded-lg;
 }
 
 .prose p + .disclosure {
@@ -383,12 +383,12 @@ html.dark .code_snippet pre code span {
   anchor-name: --summary;
   user-select: none;
   cursor: pointer;
-  @apply py-4 px-6 font-medium text-woodsmoke-50;
-  @apply bg-woodsmoke-900;
+  @apply py-4 px-6 font-medium dark:text-woodsmoke-50;
+  @apply bg-gray-200/50 dark:bg-woodsmoke-900;
 }
 
 .prose .disclosure_summary:hover {
-  @apply bg-woodsmoke-800/50;
+  @apply bg-gray-200 dark:bg-woodsmoke-800/50;
 }
 
 .prose .disclosure_summary::marker {
@@ -424,8 +424,8 @@ html.dark .code_snippet pre code span {
 }
 
 .prose .disclosure_summary {
-  @apply before:border-woodsmoke-50;
-  @apply after:border-woodsmoke-50;
+  @apply dark:before:border-woodsmoke-50;
+  @apply dark:after:border-woodsmoke-50;
 }
 
 .prose .disclosure[open] .disclosure_summary::after {
@@ -437,7 +437,7 @@ html.dark .code_snippet pre code span {
 }
 
 .prose .disclosure[open] .disclosure_summary {
-  @apply bg-woodsmoke-800/50;
+  @apply bg-gray-200 dark:bg-woodsmoke-800/50;
 }
 
 .menu-group li > a.up-current {

@@ -6,7 +6,14 @@ import '@pagefind/component-ui'
 import '@pagefind/component-ui/css'
 import '@github/tab-container-element'
 import collapse from '@alpinejs/collapse'
+import tippy from 'tippy.js'
+import 'tippy.js/dist/tippy.css'
 import '../css/app.css'
+
+up.compiler('[data-tippy-content]', function (element) {
+  const instance = tippy(element)
+  return () => instance.destroy()
+})
 
 import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
 import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
@@ -165,26 +172,25 @@ const initialEffectiveColorMode = (() => {
   }
 })()
 
-Alpine.store('colorMode', { effective: initialEffectiveColorMode })
+const initialCurrentColorMode = (() => {
+  try {
+    const stored = window.localStorage.getItem('theme')
+    return stored === 'light' || stored === 'dark' ? stored : 'system'
+  } catch (e) {
+    return 'system'
+  }
+})()
+
+Alpine.store('colorMode', {
+  effective: initialEffectiveColorMode,
+  current: initialCurrentColorMode,
+})
 
 Alpine.data('themeSwitcher', function () {
-  const storedTheme = (() => {
-    try {
-      return window.localStorage.getItem('theme')
-    } catch (e) {
-      return null
-    }
-  })()
-
-  const initialCurrent =
-    storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'system'
-
   return {
-    current: initialCurrent,
-
     init() {
-      if (storedTheme === 'light' || storedTheme === 'dark') {
-        this.applyExplicitTheme(storedTheme)
+      if (Alpine.store('colorMode').current !== 'system') {
+        this.applyExplicitTheme(Alpine.store('colorMode').current)
       } else {
         this.applySystemTheme()
       }
@@ -192,52 +198,67 @@ Alpine.data('themeSwitcher', function () {
 
     applyExplicitTheme(theme) {
       const root = document.documentElement
-
       if (theme === 'dark') {
         root.classList.add('dark')
       } else {
         root.classList.remove('dark')
       }
-
       Alpine.store('colorMode').effective = theme
     },
 
     applySystemTheme() {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       const root = document.documentElement
-
       if (prefersDark) {
         root.classList.add('dark')
       } else {
         root.classList.remove('dark')
       }
-
       Alpine.store('colorMode').effective = prefersDark ? 'dark' : 'light'
     },
 
     setSystem() {
-      this.current = 'system'
+      Alpine.store('colorMode').current = 'system'
       window.localStorage.removeItem('theme')
       this.applySystemTheme()
     },
 
     setLight() {
-      this.current = 'light'
+      Alpine.store('colorMode').current = 'light'
       window.localStorage.setItem('theme', 'light')
       this.applyExplicitTheme('light')
     },
 
     setDark() {
-      this.current = 'dark'
+      Alpine.store('colorMode').current = 'dark'
       window.localStorage.setItem('theme', 'dark')
       this.applyExplicitTheme('dark')
     },
 
     buttonClass(name) {
-      return this.current === name
+      return this.$store.colorMode.current === name
         ? 'bg-gray-300 dark:bg-woodsmoke-800 text-gray-900 dark:text-woodsmoke-50! shadow-sm'
         : ''
     },
+  }
+})
+
+document.addEventListener('keydown', function (e) {
+  if ((e.key === 'd' || e.key === 'D') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const tag = document.activeElement.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement.isContentEditable) return
+    const isDark = document.documentElement.classList.contains('dark')
+    if (isDark) {
+      document.documentElement.classList.remove('dark')
+      window.localStorage.setItem('theme', 'light')
+      Alpine.store('colorMode').effective = 'light'
+      Alpine.store('colorMode').current = 'light'
+    } else {
+      document.documentElement.classList.add('dark')
+      window.localStorage.setItem('theme', 'dark')
+      Alpine.store('colorMode').effective = 'dark'
+      Alpine.store('colorMode').current = 'dark'
+    }
   }
 })
 
