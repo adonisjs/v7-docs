@@ -50,15 +50,15 @@
     "youch": "^4.1.1"
   },
   "dependencies": {
-    "@adonisjs/content": "^1.6.1",
-    "@adonisjs/core": "^7.3.1",
+    "@adonisjs/content": "^1.7.0",
+    "@adonisjs/core": "^7.3.2",
     "@adonisjs/static": "^2.0.1",
     "@adonisjs/vite": "^5.1.0",
     "@github/tab-container-element": "^4.8.2",
     "@iconify-json/mynaui": "^1.2.17",
     "@iconify-json/tabler": "^1.2.33",
     "@iconify-json/uiw": "^1.2.4",
-    "@tailwindcss/vite": "^4.2.3",
+    "@tailwindcss/vite": "^4.2.4",
     "@types/luxon": "^3.7.1",
     "@vinejs/vine": "^4.3.1",
     "edge-iconify": "^2.0.2",
@@ -69,7 +69,7 @@
     "reflect-metadata": "^0.2.2",
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2",
-    "tailwindcss": "^4.2.3"
+    "tailwindcss": "^4.2.4"
   },
   "hotHook": {
     "boundaries": [

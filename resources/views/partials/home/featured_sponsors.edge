@@ -9,21 +9,22 @@
                 List of individuals and companies publicly sponsoring Harminder Virk on GitHub. If you are sponsoring and cannot see your name, ensure your sponsorship is not private.
             </p>
 
-            @!button({ 
-                text: 'Become a Sponsors', 
-                color: 'secondary', 
-                radius: 'md', 
-                external: true, 
-                href: 'https://github.com/sponsors/thetutlage/sponsorships?sponsor=thetutlage&tier_id=161747&preview=false', 
-                target: "_blank" 
+            @!button({
+              text: 'Sponsor on GitHub',
+              color: 'primary',
+              radius: 'md',
+              size: 'md',
+              external: true,
+              href: 'https://github.com/sponsors/thetutlage/sponsorships?sponsor=thetutlage&tier_id=161747&preview=false',
+              target: "_blank"
             })
         </div>
-        
+
         <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
             <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-gray-300 dark:bg-woodsmoke-900 border-l border-r border-gray-300 dark:border-woodsmoke-900">
                 @each(sponsor in featuredSponsors.all())
-                    <a 
-                        href={{ sponsor.url }} 
+                    <a
+                        href={{ sponsor.url }}
                         target="_blank"
                         class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
                     >
@@ -34,7 +35,7 @@
                     </a>
                 @end
 
-                <a 
+                <a
                     href="/"
                     class="flex items-center justify-center p-6 min-h-25 uppercase font-mono text-18 group bg-gray-100 dark:bg-woodsmoke-1000"
                 >
