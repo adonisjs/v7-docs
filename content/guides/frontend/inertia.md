@@ -6,11 +6,15 @@ description: Learn how to build modern single-page applications using Inertia wi
 
 This guide covers using Inertia with AdonisJS to build single-page applications. You will learn how to:
 
-- Render Inertia pages from controllers and pass props to frontend components
+- Render Inertia pages from controllers and routes and pass props to frontend components
+- Scaffold page components with the `make:page` command
 - Structure the `inertia/` directory and understand key configuration files
+- Generate end-to-end types for pages and shared data
 - Use data loading patterns like optional, deferred, and mergeable props
 - Build forms and navigation with the `Link` and `Form` components
-- Share data globally across all pages
+- Share data globally and scope validation errors with error bags
+- Customize the root Edge template with the `@inertia` and `@inertiaHead` tags
+- Control redirects, browser history, and history encryption
 - Enable server-side rendering (SSR)
 - Understand the request lifecycle in Inertia applications
 
@@ -22,15 +26,21 @@ This approach gives you the best of both worlds: the simplicity of server-side r
 
 See also: [How Inertia works](https://inertiajs.com/how-it-works) on the official Inertia documentation.
 
-## Rendering pages
+## Basic example
 
-Controllers in an Inertia application work the same way as any AdonisJS controller. The difference is that instead of rendering Edge templates or returning JSON, you call `inertia.render()` to render a frontend component with props.
+Let's walk through rendering a posts list end-to-end. The flow has three pieces: a route, a controller that calls `inertia.render()`, and a page component inside `inertia/pages/`.
+
+### Step 1. Register a route
+
+Routes look identical to any other AdonisJS route. There is no special routing layer for Inertia.
 
 ```ts title="start/routes.ts"
 router.get('/posts', [controllers.Posts, 'index'])
 ```
 
-The controller receives the `inertia` object from the HTTP context and uses it to render a page component with data.
+### Step 2. Render a page from the controller
+
+The HTTP context exposes an `inertia` object. Call `inertia.render()` with two arguments: the page component path (relative to `inertia/pages/`) and an object of props the component receives.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -41,10 +51,6 @@ export default class PostsController {
   async index({ inertia }: HttpContext) {
     const posts = await Post.all()
 
-    /**
-     * The first argument is the page component path relative to inertia/pages/.
-     * The second argument is the props object passed to that component.
-     */
     return inertia.render('posts/index', {
       posts: PostTransformer.transform(posts)
     })
@@ -52,7 +58,11 @@ export default class PostsController {
 }
 ```
 
-The page component receives the props and renders the UI. Rather than defining prop types manually, you can rely on auto-generated types from your transformers.
+Use a [transformer](./transformers.md) to serialize model instances into plain objects. Transformers also generate frontend types under the `Data` namespace, keeping props in sync with the backend.
+
+### Step 3. Create the page component
+
+The string `'posts/index'` resolves to `inertia/pages/posts/index.tsx` (or `.vue`). Scaffold the file with `node ace make:page posts/index`. The component receives the props from `inertia.render()` directly.
 
 ::::tabs
 
@@ -95,9 +105,27 @@ defineProps<{ posts: Data.Post[] }>()
 
 ::::
 
-When the first request hits the server, Inertia renders a shell HTML page containing a `div` with the component name and serialized props. The frontend bundle uses this data to boot the React or Vue application. From that point on, all navigation happens via `fetch` requests that receive JSON responses, giving you the snappy feel of a SPA without building an API.
+The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` or `flash` are typed alongside `posts`.
 
-See also: [Transformers](./transformers.md) for details on serializing model data for the frontend.
+### Rendering from a route
+
+For pages without controller logic, skip the controller and render directly from the route definition using `renderInertia()`.
+
+```ts title="start/routes.ts"
+router.on('/about').renderInertia('about')
+
+router.on('/pricing').renderInertia('marketing/pricing', {
+  plans: ['starter', 'pro', 'enterprise'],
+})
+```
+
+The component name is type-checked against the generated `InertiaPages` interface, so typos are caught at compile time.
+
+### What happens behind the scenes
+
+On the very first request to `/posts`, Inertia returns an HTML shell containing a root `<div>` with the page component name and serialized props as a `data-page` attribute. The frontend bundle reads that attribute and boots React or Vue.
+
+For every subsequent navigation (link clicks, form submits) Inertia issues a `fetch` request with an `X-Inertia` header. The server runs the same controller but returns a JSON page object instead of HTML. The client swaps in the new component and updates the URL. No full page reload, no separate API.
 
 ## The inertia directory
 
@@ -128,20 +156,14 @@ You can create additional directories as your project grows, such as `components
 
 Two configuration files control how Inertia works in your AdonisJS application.
 
-The `config/inertia.ts` file defines the Inertia adapter settings, including SSR configuration and the page component resolver.
+The `config/inertia.ts` file defines the Inertia adapter settings.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
 
 const inertiaConfig = defineConfig({
-  /**
-   * Path to the Edge template that renders the initial HTML shell.
-   */
   rootView: 'inertia_layout',
 
-  /**
-   * SSR configuration (covered in the SSR section below).
-   */
   ssr: {
     enabled: false,
     entrypoint: 'inertia/ssr.tsx',
@@ -151,17 +173,159 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-The `resources/views/inertia_layout.edge` template renders the initial HTML shell that contains the root `div` where your frontend application mounts.
+The supported options are:
+
+::::options
+
+:::option{name="rootView" type="string | (ctx) => string"}
+The Edge template that renders the initial HTML shell. Defaults to `inertia_layout`. Pass a function to choose a different template per request, for example to render a marketing layout for unauthenticated users.
+
+```ts
+rootView: (ctx) => ctx.auth.isAuthenticated ? 'app_layout' : 'marketing_layout'
+```
+:::
+
+:::option{name="encryptHistory" type="boolean"}
+Encrypts sensitive page props stored in the browser's history state. Defaults to `false`. See [history encryption](https://inertiajs.com/history-encryption) on the Inertia documentation.
+:::
+
+:::option{name="assetsVersion" type="string | number"}
+Pins the asset version string used for [asset versioning](#asset-versioning). When omitted, the version is computed from the Vite manifest. Set this to override the default with a git commit hash, build timestamp, or any custom identifier.
+:::
+
+:::option{name="ssr.enabled" type="boolean"}
+Enables server-side rendering. See [Server-side rendering](#server-side-rendering).
+:::
+
+:::option{name="ssr.entrypoint" type="string"}
+Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`.
+:::
+
+:::option{name="ssr.bundle" type="string"}
+Path to the production SSR bundle generated by Vite. Defaults to `ssr/ssr.js`.
+:::
+
+:::option{name="ssr.pages" type="string[] | (ctx, page) => boolean"}
+Restricts SSR to a subset of pages. Pass an array of component names, or a function that returns a boolean for each page.
+
+```ts
+ssr: {
+  enabled: true,
+  entrypoint: 'inertia/ssr.tsx',
+  pages: ['home', 'marketing/pricing'],
+}
+```
+:::
+
+::::
+
+The `resources/views/inertia_layout.edge` template renders the initial HTML shell that contains the root `div` where your frontend application mounts. See [Root template](#root-template) for the available Edge tags.
+
+## Root template
+
+The Edge template configured under `rootView` is rendered for the very first request. It contains the root element where your frontend application mounts and any HTML the SSR output needs to slot into.
+
+The Inertia package registers two Edge tags for this template.
+
+```edge title="resources/views/inertia_layout.edge"
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  @inertiaHead()
+  @vite(['inertia/app.tsx'])
+</head>
+<body>
+  @inertia()
+</body>
+</html>
+```
+
+The `@inertia` tag renders a `div` with the encoded page object as a `data-page` attribute. The frontend reads this attribute to boot the SPA. By default, the element is `<div id="app">`. Pass an object to override the tag, id, or class.
+
+```edge
+@inertia({ as: 'main', id: 'app-root', class: 'min-h-screen' })
+```
+
+The `@inertiaHead` tag outputs the head fragments (title, meta tags) collected during server-side rendering. Include it whenever SSR is enabled. It is a no-op for non-SSR responses.
+
+### Passing data to the template
+
+The third argument to `inertia.render()` is forwarded to the root template as view props. Use this for values that belong in the HTML shell rather than as page props, such as the page title or `<meta>` tags for non-SSR pages.
+
+```ts title="app/controllers/posts_controller.ts"
+return inertia.render(
+  'posts/show',
+  { post: PostTransformer.transform(post) },
+  { title: post.title, description: post.summary }
+)
+```
+
+```edge title="resources/views/inertia_layout.edge"
+<head>
+  <title>{{ title ?? 'My App' }}</title>
+  @if(description)
+    <meta name="description" content="{{ description }}">
+  @end
+  @inertiaHead()
+</head>
+```
 
 ## Generated types
 
-The `Data` namespace imported in page components comes from auto-generated types stored at `.adonisjs/client/data.d.ts`. These types are created by an Assembler hook when you use transformers, ensuring your frontend props stay in sync with your backend serialization logic.
+Inertia in AdonisJS is fully type-safe end to end. Two generated artifacts power this:
 
-See also: [Transformers](./transformers.md) for details on how types are generated.
+- The `Data` namespace at `.adonisjs/client/data.d.ts` mirrors transformer output, so props passed from the controller are typed in the page component. See [Transformers](./transformers.md).
+- The `InertiaPages` interface at `.adonisjs/server/pages.d.ts` maps each file in `inertia/pages/` to its component prop types. This is what makes `inertia.render('posts/index', { posts })` autocomplete and type-check the component name and props.
+
+The `InertiaPages` types are produced by the `indexPages` Assembler hook. Register it in `adonisrc.ts`, passing the framework you use.
+
+```ts title="adonisrc.ts"
+import { defineConfig } from '@adonisjs/core/app'
+import { indexPages } from '@adonisjs/inertia/index_pages'
+
+export default defineConfig({
+  hooks: {
+    onDevServerStarted: [indexPages({ framework: 'react' })],
+    onBuildStarting: [indexPages({ framework: 'react' })],
+  },
+})
+```
+
+The `framework` option accepts `'vue3'` or `'react'`. Pass `source` to scan a directory other than `inertia/pages`.
+
+### Typing shared data
+
+Shared data returned from the Inertia middleware is available on every page through the `InertiaProps` helper. To make it type-safe, augment the `SharedProps` interface with the inferred return type of your `share()` method.
+
+```ts title="app/middleware/inertia_middleware.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import type { InferSharedProps } from '@adonisjs/inertia/types'
+
+export default class InertiaMiddleware {
+  share(ctx: HttpContext) {
+    return {
+      user: ctx.auth?.user,
+      flash: ctx.session?.flashMessages.all(),
+    }
+  }
+}
+
+declare module '@adonisjs/inertia/types' {
+  interface SharedProps extends InferSharedProps<InertiaMiddleware> {}
+}
+```
+
+Once augmented, `props.user` and `props.flash` are typed inside every page component without redeclaring them.
 
 ## Data loading patterns
 
 Inertia provides several patterns for loading data efficiently. AdonisJS exposes helpers on the `inertia` object to support each pattern.
+
+:::tip
+Optional and deferred props look similar but behave differently. Optional props are evaluated **only** when the frontend explicitly asks for them through a partial reload. Deferred props are evaluated on a follow-up request that Inertia issues automatically right after the page mounts. Reach for `optional` when the value is rarely needed (a tab a user may never click) and `defer` when the value is always needed but slow to compute (a dashboard chart).
+:::
 
 ### Optional props
 
@@ -374,6 +538,21 @@ The `Form` component infers the HTTP method (`POST`, `PUT`, `PATCH`, `DELETE`) f
 
 When validation fails on the server, AdonisJS automatically adds validation errors to the session flash messages. The Inertia middleware then shares these errors with the frontend, making them available through the `errors` object in your form.
 
+### Scoping errors with error bags
+
+When a page renders multiple independent forms, errors from one form will leak into the others because they all read from the same `errors` object. To isolate them, set the `errorBag` prop on the form. Inertia sends this name in the `X-Inertia-Error-Bag` header, and the middleware nests the validation errors under that key.
+
+```tsx
+<Form route="comments.store" errorBag="newComment">
+  {({ errors }) => (
+    /**
+     * errors.newComment.body holds errors from this form only.
+     */
+    <textarea name="body" />
+  )}
+</Form>
+```
+
 ### Route parameters
 
 Both `Link` and `Form` accept a `routeParams` prop for routes with dynamic segments. The keys in the object correspond to the parameter names defined in your route:
@@ -579,23 +758,72 @@ See also: [Shield](../security/securing_ssr_applications.md#csrf-configuration-r
 
 Asset versioning tells the frontend when your JavaScript or CSS bundles have changed, triggering a full page reload instead of a partial update. This ensures users always run the latest version of your frontend code after a deployment.
 
-By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier.
+By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier. To pin the version to a custom value, set `assetsVersion` in `config/inertia.ts` to a git commit hash, build timestamp, or any other identifier you control.
 
-You can define custom versioning logic by adding a `version` method to your Inertia middleware.
+```ts title="config/inertia.ts"
+const inertiaConfig = defineConfig({
+  assetsVersion: process.env.RELEASE_SHA,
+})
+```
 
-```ts title="app/middleware/inertia_middleware.ts"
-import type { HttpContext } from '@adonisjs/core/http'
+Inertia sends the current asset version with every request in the `X-Inertia-Version` header. When the server detects a mismatch on a `GET` request, it responds with a `409` and instructs the client to perform a full page reload at the same URL. Flash messages are reflashed automatically so they survive the reload.
 
-export default class InertiaMiddleware {
-  version(ctx: HttpContext) {
-    /**
-     * Return any string that changes when assets change.
-     * For example, a git commit hash or build timestamp.
-     */
-    return 'v1.2.3'
-  }
+## Redirects and history
+
+Inertia's redirect and history behaviour differs from a traditional server-rendered application because navigation happens over `fetch`. The `inertia` object on the HTTP context exposes helpers for the cases the framework cannot handle automatically.
+
+### Redirects from mutations
+
+When a `PUT`, `PATCH`, or `DELETE` request is followed by a `302` redirect, browsers replay the original method against the new URL. The Inertia middleware automatically upgrades these redirects to `303` so the browser issues a `GET` instead. You don't need to set the status code yourself.
+
+```ts title="app/controllers/posts_controller.ts"
+async update({ request, response }: HttpContext) {
+  await Post.updateOrFail(request.param('id'), request.all())
+  return response.redirect().toRoute('posts.index')
 }
 ```
+
+### External redirects
+
+Inertia cannot follow redirects to a different origin over `fetch`. Use `inertia.location()` to send the client a `409` response with an `X-Inertia-Location` header, which triggers a full browser navigation to the target URL.
+
+```ts
+async checkout({ inertia }: HttpContext) {
+  const session = await stripe.createCheckoutSession()
+  return inertia.location(session.url)
+}
+```
+
+### Clearing browser history
+
+Call `inertia.clearHistory()` before rendering to clear the client-side history stack. This is useful after sign-out, where you don't want the user to navigate back to authenticated pages.
+
+```ts
+async destroy({ inertia, auth }: HttpContext) {
+  await auth.use('web').logout()
+  inertia.clearHistory()
+  return inertia.location('/')
+}
+```
+
+### Encrypting history state
+
+Inertia stores the page object for each visit in the browser's history state to support back/forward navigation. For pages that contain sensitive data (account settings, billing details), enable encryption so the data is unreadable from the history API.
+
+Toggle encryption per request before calling `render()`:
+
+```ts
+async settings({ inertia, auth }: HttpContext) {
+  inertia.encryptHistory()
+  return inertia.render('account/settings', {
+    user: UserTransformer.transform(auth.user),
+  })
+}
+```
+
+Or enable it globally through the [`encryptHistory`](#configuration-files) config option.
+
+See [history encryption](https://inertiajs.com/history-encryption) on the Inertia documentation for the trade-offs.
 
 ## Server-side rendering
 
