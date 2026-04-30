@@ -30,7 +30,9 @@ See also: [How Inertia works](https://inertiajs.com/how-it-works) on the officia
 
 Let's walk through rendering a posts list end-to-end. The flow has three pieces: a route, a controller that calls `inertia.render()`, and a page component inside `inertia/pages/`.
 
-### Step 1. Register a route
+::::steps
+
+:::step{title="Register a route"}
 
 Routes look identical to any other AdonisJS route. There is no special routing layer for Inertia.
 
@@ -38,7 +40,9 @@ Routes look identical to any other AdonisJS route. There is no special routing l
 router.get('/posts', [controllers.Posts, 'index'])
 ```
 
-### Step 2. Render a page from the controller
+:::
+
+:::step{title="Render a page from the controller"}
 
 The HTTP context exposes an `inertia` object. Call `inertia.render()` with two arguments: the page component path (relative to `inertia/pages/`) and an object of props the component receives.
 
@@ -60,7 +64,9 @@ export default class PostsController {
 
 Use a [transformer](./transformers.md) to serialize model instances into plain objects. Transformers also generate frontend types under the `Data` namespace, keeping props in sync with the backend.
 
-### Step 3. Create the page component
+:::
+
+:::step{title="Create the page component"}
 
 The string `'posts/index'` resolves to `inertia/pages/posts/index.tsx` (or `.vue`). Scaffold the file with `node ace make:page posts/index`. The component receives the props from `inertia.render()` directly.
 
@@ -106,6 +112,10 @@ defineProps<{ posts: Data.Post[] }>()
 ::::
 
 The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` or `flash` are typed alongside `posts`.
+
+:::
+
+::::
 
 ### Rendering from a route
 
