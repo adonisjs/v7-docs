@@ -53,7 +53,7 @@ A few important things to understand about this template:
 
 - The `@layout()` component wraps your content with a complete HTML document structure (including `<html>`, `<head>`, and `<body>` tags). We'll explore layouts in detail later in this guide.
 
-- The `@each` tag loops over the `posts` array and renders the content for each post. Edge provides several tags like `@if`, `@else`, and `@elseif` for writing logic in templates. You can learn about all available tags in the [Edge syntax reference](#).
+- The `@each` tag loops over the `posts` array and renders the content for each post. Edge provides several tags like `@if`, `@else`, and `@elseif` for writing logic in templates. You can learn about all available tags in the [Edge syntax reference](https://edgejs.dev/docs/syntax_specification).
 
 - The double curly braces `{{ }}` evaluate and output a JavaScript expression. The triple curly braces `{{{ }}}` do the same but don't escape HTML, which is useful for rendering rich content.
 
@@ -162,7 +162,7 @@ Edge uses a combination of curly braces and tags to add dynamic behavior to your
 {{ posts.length > 0 ? 'Posts available' : 'No posts yet' }}
 ```
 
-For complete coverage of Edge's template syntax, including advanced features like partials, slots, and custom tags, refer to the [Edge syntax reference](#).
+For complete coverage of Edge's template syntax, including advanced features like partials, slots, and custom tags, refer to the [Edge syntax reference](https://edgejs.dev/docs/syntax_specification).
 
 ## Working with layouts and components
 
@@ -203,7 +203,7 @@ You can use it in your templates like this:
 @end
 ```
 
-Components can accept props (parameters) and have multiple named slots for more complex compositions. For a complete guide to building and using components, see the [Edge components guide](#).
+Components can accept props (parameters) and have multiple named slots for more complex compositions. For a complete guide to building and using components, see the [Edge components guide](https://edgejs.dev/docs/components/introduction).
 
 ## Starter kit components
 
@@ -511,11 +511,11 @@ node ace make:preload view
 
 This creates a preload file where you can customize Edge before your application starts. Inside this file, you can register Edge globals, plugins, and custom tags.
 
-If you need to customize the directory where templates are stored, you can modify the `directories` option in your `adonisrc.ts` file. See the [AdonisRC reference guide](#) for more details on configuration options.
+If you need to customize the directory where templates are stored, you can modify the `directories` option in your `adonisrc.ts` file. See the [AdonisRC reference guide](/reference/adonisrc-rcfile) for more details on configuration options.
 
 ## See also
 
-- [Edge syntax reference](#) - Learn about all template syntax features, tags, and expressions
-- [Edge components guide](#) - Deep dive into building and composing components
-- [Edge reference guide](#) - View all available helpers and global properties in Edge templates
+- [Edge syntax reference](https://edgejs.dev/docs/syntax_specification) - Learn about all template syntax features, tags, and expressions
+- [Edge components guide](https://edgejs.dev/docs/components/introduction) - Deep dive into building and composing components
+- [Edge reference guide](/reference/edge) - View all available helpers and global properties in Edge templates
 - [Edge documentation](https://edgejs.dev) - Complete Edge documentation with advanced features and patterns
