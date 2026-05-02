@@ -2,6 +2,7 @@ import { type Edge } from 'edge.js'
 import { errors } from '@adonisjs/core'
 import { findDoc, resolveAsset, resolveLink } from '#collections/docs'
 import { adonisJsReleases } from '#collections/releases'
+import { ossStats } from '#collections/oss_stats'
 import env from '#start/env'
 
 export class DocService {
@@ -18,6 +19,7 @@ export class DocService {
         resolveAsset,
         carbonAdUrl: env.get('CARBON_AD_URL'),
         releaseBlocks: releases.groupedByMonth(),
+        ossStats: await ossStats.load(),
         ...doc,
         permalink,
       })

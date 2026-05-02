@@ -30,11 +30,15 @@
           </li>
 
           <li>
-            <a href="https://github.com/adonisjs/core" target="_blank" class="block">
-              @svg('uiw:github', {
-                class: 'size-4.5 md:size-6 text-gray-600 hover:text-gray-900 dark:text-woodsmoke-400 dark:hover:text-white transition-colors'
-              })
-              <span class="sr-only">Github repository</span>
+            @let(stats = ossStats.formatted())
+            <a
+              href="https://github.com/adonisjs/core"
+              target="_blank"
+              class="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-woodsmoke-300 dark:hover:text-white transition-colors"
+            >
+              @svg('uiw:github', { class: 'size-5' })
+              <span class="font-mono text-14 font-semibold">{{ stats.coreStars }}</span>
+              <span class="sr-only">Star adonisjs/core on GitHub</span>
             </a>
           </li>
         </ul>
