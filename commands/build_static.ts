@@ -64,12 +64,14 @@ export default class BuildStatic extends BaseCommand {
   async #createHomePage() {
     const { sponsors } = await import('#collections/sponsors')
     const { featuredSponsors } = await import('#collections/featured_sponsors')
+    const { ossStats } = await import('#collections/oss_stats')
 
     await this.#writeOutput(
       'index',
       await this.#createView('/').render('pages/home', {
         featuredSponsors: await featuredSponsors.load(),
         sponsors: await sponsors.load(),
+        ossStats: await ossStats.load(),
       }),
       'html'
     )
