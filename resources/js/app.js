@@ -2,6 +2,7 @@
 
 import 'unpoly'
 import Alpine from 'alpinejs'
+import posthog from 'posthog-js'
 import '@pagefind/component-ui'
 import '@pagefind/component-ui/css'
 import '@github/tab-container-element'
@@ -9,6 +10,17 @@ import collapse from '@alpinejs/collapse'
 import tippy from 'tippy.js'
 import 'tippy.js/dist/tippy.css'
 import '../css/app.css'
+
+const posthogKey = import.meta.env.VITE_POSTHOG_API_KEY
+if (posthogKey) {
+  posthog.init(posthogKey, {
+    api_host: import.meta.env.VITE_POSTHOG_HOST ?? 'https://eu.i.posthog.com',
+    person_profiles: 'always',
+    capture_pageview: true,
+    capture_pageleave: true,
+    capture_exceptions: true,
+  })
+}
 
 up.compiler('[data-tippy-content]', function (element) {
   const instance = tippy(element)
@@ -102,6 +114,10 @@ up.viewport.config.revealPadding = 55
 up.on('up:location:changed', function () {
   window.dispatchEvent(new CustomEvent('hide-mobile-nav'))
   closeSearchModal()
+  if (posthogKey) {
+    posthog.capture('$pageleave')
+    posthog.capture('$pageview')
+  }
 })
 up.on('up:fragment:offline', function (event) {
   window.location.reload()

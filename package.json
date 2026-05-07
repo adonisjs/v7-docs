@@ -66,6 +66,7 @@
     "edge.js": "^6.5.0",
     "hast-util-to-text": "^4.0.2",
     "luxon": "^3.7.2",
+    "posthog-js": "^1.372.9",
     "reflect-metadata": "^0.2.2",
     "tailwind-merge": "^3.5.0",
     "tailwind-variants": "^3.2.2",
