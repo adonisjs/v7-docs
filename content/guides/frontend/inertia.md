@@ -527,7 +527,7 @@ defineProps<{ post: { id: number; title: string } }>()
 <template>
   <Form
     route="posts.update"
-    :routeParams="{ id: post.id }"
+    :params="{ id: post.id }"
     v-slot="{ errors }"
   >
     <div>
@@ -565,7 +565,7 @@ When a page renders multiple independent forms, errors from one form will leak i
 
 ### Route parameters
 
-Both `Link` and `Form` accept a `routeParams` prop for routes with dynamic segments. The keys in the object correspond to the parameter names defined in your route:
+Both `Link` and `Form` accept route parameters for routes with dynamic segments. The keys in the object correspond to the parameter names defined in your route:
 
 ```ts title="start/routes.ts"
 // Single parameter — :id
@@ -575,7 +575,11 @@ router.get('posts/:id', [PostsController, 'show']).as('posts.show')
 router.get('users/:userId/posts/:postId', [PostsController, 'show']).as('users.posts.show')
 ```
 
-Pass the matching parameter values through `routeParams`:
+Pass the matching parameter values to the component. In React, use `routeParams`. In Vue, use `params`.
+
+::::tabs
+
+:::tab{title="React"}
 
 ```tsx
 {/* Single parameter */}
@@ -588,6 +592,25 @@ Pass the matching parameter values through `routeParams`:
   View post
 </Link>
 ```
+:::
+
+:::tab{title="Vue"}
+```vue
+<template>
+  <!-- Single parameter -->
+  <Link route="posts.show" :params="{ id: post.id }">
+    {{ post.title }}
+  </Link>
+
+  <!-- Multiple parameters -->
+  <Link route="users.posts.show" :params="{ userId: user.id, postId: post.id }">
+    View post
+  </Link>
+</template>
+```
+:::
+
+::::
 
 TypeScript enforces that you provide all required parameters with the correct names. Missing or misspelled parameters are caught at compile time.
 
@@ -604,7 +627,7 @@ import { urlFor } from '~/client'
 ```
 
 :::note
-When using `href`, you lose the type-safe route name checking that the `route` prop provides. Use `route` with `routeParams` for standard navigation and fall back to `href` with `urlFor` only when you need query parameters.
+When using `href`, you lose the type-safe route name checking that the `route` prop provides. Use `route` with route parameters for standard navigation and fall back to `href` with `urlFor` only when you need query parameters.
 :::
 
 ## Shared data
