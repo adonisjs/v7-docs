@@ -92,7 +92,7 @@ The simplest form registers a file to run in all environments.
 ```ts title="adonisrc.ts"
 {
   preloads: [
-    () => import('./start/view.js')
+    () => import('#start/view')
   ]
 }
 ```
@@ -103,7 +103,7 @@ To restrict a preload file to specific environments, use the object form with an
 {
   preloads: [
     {
-      file: () => import('./start/view.js'),
+      file: () => import('#start/view'),
       environment: ['web', 'console', 'test']
     },
   ]
