@@ -285,7 +285,7 @@ The queue to dispatch this job to. Defaults to `'default'`.
 :::
 
 :::option{name="maxRetries" dataType="number"}
-Maximum number of retry attempts before the job fails permanently. Defaults to `3`.
+Maximum number of retry attempts before the job fails permanently. Defaults to `0` unless configured globally or at the queue level.
 :::
 
 :::option{name="priority" dataType="number"}
@@ -297,7 +297,7 @@ Maximum execution time before the job is timed out. Accepts a number in millisec
 :::
 
 :::option{name="failOnTimeout" dataType="boolean"}
-Whether to mark the job as permanently failed on timeout. When `false`, the job is retried instead. Defaults to `true`.
+Whether to mark the job as permanently failed on timeout. When `false`, timed out jobs follow the normal retry policy. Defaults to `false`.
 :::
 
 :::option{name="retry" dataType="RetryConfig"}
@@ -429,6 +429,37 @@ export default class OrdersController {
   }
 }
 ```
+
+### Dispatching jobs from Ace commands
+
+When your application boots for HTTP requests, job files from the `locations` config are loaded automatically. The `queue:work` command also loads them before starting the worker.
+
+Custom Ace commands are different: jobs are not auto-discovered during the console boot lifecycle. If your command dispatches jobs and you use the `sync` adapter locally or in tests, load the configured job locations before dispatching.
+
+```ts title="commands/import_orders.ts"
+import { BaseCommand } from '@adonisjs/core/ace'
+import ImportOrders from '#jobs/import_orders'
+
+export default class ImportOrdersCommand extends BaseCommand {
+  static commandName = 'orders:import'
+
+  static options = {
+    startApp: true,
+  }
+
+  async run() {
+    const queue = await this.app.container.make('queue.manager')
+
+    await queue.loadJobs()
+
+    await ImportOrders.dispatch({
+      source: 'warehouse',
+    })
+  }
+}
+```
+
+If your command only dispatches jobs to Redis or Database, importing the job class is enough to enqueue it. Calling `queue.loadJobs()` keeps the same command compatible with the `sync` adapter, which executes the job immediately in the current process.
 
 ### Dispatch options
 
