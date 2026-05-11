@@ -11,6 +11,7 @@ This guide covers validation in AdonisJS using VineJS validators at the controll
 - Customize error messages globally or with i18n
 - Validate query strings, params, headers, and cookies
 - Pass metadata to validators for context-specific validation
+- Use Lucid ORM database validation rules with VineJS
 - Use validators outside HTTP requests in jobs and commands
 
 ## Overview
@@ -22,6 +23,10 @@ Once data passes validation, you can trust it completely and pass it to other la
 ## VineJS - The validation library
 
 AdonisJS comes pre-bundled with [VineJS](https://vinejs.dev), a superfast validation library. While you can use a different validation library and uninstall VineJS, VineJS provides additional validation rules specifically designed for AdonisJS, such as checking for uniqueness within the database or validating multipart file uploads.
+
+:::tip{title="Lucid validation rules"}
+When using Lucid ORM, you can use database validation rules such as `unique` and `exists` in your VineJS schemas. These rules query your database during validation, which is useful when checking unique emails or ensuring a foreign key points to an existing row. See the [Lucid validation rules documentation](https://lucid.adonisjs.com/docs/validation) for the full list of available database rules and options.
+:::
 
 ## Creating your first validator
 
@@ -336,6 +341,7 @@ This approach ensures consistent validation logic across your entire application
 
 Now that you understand validation in AdonisJS, you can:
 - Explore the [VineJS documentation](https://vinejs.dev) to discover all available schema types and validation rules
+- Review the [Lucid validation rules](https://lucid.adonisjs.com/docs/validation) to validate unique and existing database values
 - Learn about [flash messages](./session.md#flash-messages) to display validation errors in your templates
 - Read the [exception handling guide](./exception_handling.md) to understand how AdonisJS processes validation errors
 - Check out the [i18n guide](../digging_deeper/i18n.md) for localizing validation messages in multiple languages
