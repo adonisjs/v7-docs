@@ -676,7 +676,7 @@ The `share` method may be called before the request passes through all middlewar
 
 ### Accessing shared data
 
-Shared data is automatically included in the props for every page. When you define page props using the `InertiaProps` type helper, it includes both your page-specific props and all shared data.
+Shared data is automatically included in the props for every page. In React, when you define page props using the `InertiaProps` type helper, it includes both your page-specific props and all shared data. In Vue, use `usePage`.
 
 ::::tabs
 
