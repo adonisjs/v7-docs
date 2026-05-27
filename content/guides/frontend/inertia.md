@@ -425,7 +425,19 @@ return inertia.render('users/index', {
 })
 ```
 
-You can combine merging with deferred loading by chaining the `merge()` method.
+By default, data is shallow merged. For nested objects that need recursive merging, use `deepMerge()` instead.
+
+```ts title="app/controllers/users_controller.ts"
+return inertia.render('users/index', {
+  /**
+   * Nested settings are deep merged with existing ones
+   * instead of replacing the entire object.
+   */
+  settings: inertia.deepMerge(await fetchSettings())
+})
+```
+
+You can combine merging with deferred loading by chaining the `merge()` or `deepMerge()` method.
 
 ```ts title="app/controllers/users_controller.ts"
 return inertia.render('users/index', {
@@ -435,12 +447,10 @@ return inertia.render('users/index', {
 })
 ```
 
-By default, data is shallow merged. For nested objects that need recursive merging, use `deepMerge()` instead.
-
 ```ts title="app/controllers/users_controller.ts"
 return inertia.render('users/index', {
-  notifications: inertia.defer(() => {
-    return fetchNotifications()
+  settings: inertia.defer(() => {
+    return fetchSettings()
   }).deepMerge()
 })
 ```
