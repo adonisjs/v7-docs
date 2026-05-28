@@ -23,16 +23,16 @@
         <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
             <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-gray-300 dark:bg-woodsmoke-900 border-l border-r border-gray-300 dark:border-woodsmoke-900">
                 @each(sponsor in featuredSponsors.all())
-                    <a
-                        href={{ sponsor.url }}
-                        target="_blank"
-                        class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
-                    >
-                        <span class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-600 dark:text-woodsmoke-100">
-                            {{{ sponsor.logo }}}
-                            <span class="sr-only">{{ sponsor.name }}</span>
-                        </span>
-                    </a>
+                <a
+                    href={{ sponsor.url }}
+                    target="_blank"
+                    class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
+                >
+                    <span class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-600 dark:text-woodsmoke-100">
+                        {{{ sponsor.logo }}}
+                        <span class="sr-only">{{ sponsor.name }}</span>
+                    </span>
+                </a>
                 @end
 
                 <a
