@@ -22,7 +22,7 @@
     title: 'Roadmap',
     external: true,
     icon: 'mynaui:table',
-  }
+  },
 ])
 
 <aside up-section-sidebar>
@@ -35,19 +35,16 @@
             section.active
               ? 'text-gray-950 dark:text-white font-medium dark:font-normal'
               : ''
-          }}">
+          }}"
+        >
           @if(section.external)
-            <a
-              href="{{ section.href }}"
-              class="flex items-center gap-2"
-              target="_blank"
-              >
-                @svg(section.icon, { class: 'w-5 h-5' })
-                <div class="flex items-center gap-1">
-                  {{ section.title }}
-                  @svg('mynaui:arrow-up-right', { class: 'w-3 h-3 mt-0.5' })
-                </div>
-              </a>
+            <a href="{{ section.href }}" class="flex items-center gap-2" target="_blank">
+              @svg(section.icon, { class: 'w-5 h-5' })
+              <div class="flex items-center gap-1">
+                {{ section.title }}
+                @svg('mynaui:arrow-up-right', { class: 'w-3 h-3 mt-0.5' })
+              </div>
+            </a>
           @else
             <a
               href="{{ section.href }}"
@@ -55,23 +52,22 @@
               up-follow
               up-preload
               up-target="main"
-              >
-                @svg(section.icon, { class: 'w-5 h-5' })
-                {{ section.title }}
-              </a>
+            >
+              @svg(section.icon, { class: 'w-5 h-5' })
+              {{ section.title }}
+            </a>
           @end
         </li>
       @end
     </ul>
   </nav>
-
   {{-- Section menu --}}
   @each(group in section.menu(doc.variant))
     @let(isExpanded = true)
     <nav
-    class="menu-group {{ isExpanded ? 'expanded' : '' }}"
-    x-data="{ expanded: {{ isExpanded }} }"
-    :class="{ expanded }"
+      class="menu-group {{ isExpanded ? 'expanded' : '' }}"
+      x-data="{ expanded: {{ isExpanded }} }"
+      :class="{ expanded }"
     >
       @if(group.category !== 'Root')
         <button
@@ -93,9 +89,15 @@
               'up-follow': 'true',
               'up-preload': 'true',
               'up-target': '[up-main], [up-section-toc], [up-docs-nav]',
-              class: ['leading-5', 'block', 'py-1', 'relative', {
-              'up-current': request.url() === `/${doc.permalink}`
-              }]
+              class: [
+                'leading-5',
+                'block',
+                'py-1',
+                'relative',
+                {
+                  'up-current': request.url() === `/${doc.permalink}`,
+                },
+              ],
             })
           </li>
         @end

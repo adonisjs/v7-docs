@@ -165,10 +165,10 @@
   @apply bg-indigo-500;
 }
 
-.tippy-box[data-placement^='top']>.tippy-arrow::before {
+.tippy-box[data-placement^='top'] > .tippy-arrow::before {
   border-top-color: var(--color-indigo-500) !important;
 }
 
-.tippy-box[data-placement^='bottom']>.tippy-arrow::before {
+.tippy-box[data-placement^='bottom'] > .tippy-arrow::before {
   border-bottom-color: var(--color-indigo-500) !important;
 }

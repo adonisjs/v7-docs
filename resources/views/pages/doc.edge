@@ -4,9 +4,8 @@
     enabled: doc.toc !== false,
     maxDepth: 2,
     minDepth: 2,
-  }
+  },
 }))
-
 @layout({
   ossStats,
   title: doc.title,
@@ -15,19 +14,22 @@
     ogImage: `resources/assets/og/docs/${doc.permalink.replace(/\//g, '-')}.jpg`,
     ogType: 'article',
     description: markdownDocument.frontmatter.description,
-  }
+  },
 })
   <div class="container-full mx-auto lg:px-10 relative" x-data>
     <div up-docs-nav>
-      <button @click.prevent="$dispatch('toggle-mobile-nav')"
-        class="w-full lg:hidden py-3 backdrop-blur-3xl bg-gray-100 dark:bg-woodsmoke-950/60 border-b border-gray-300 dark:border-woodsmoke-900 flex items-center justify-between sticky top-18 z-1 px-5">
+      <button
+        @click.prevent="$dispatch('toggle-mobile-nav')"
+        class="w-full lg:hidden py-3 backdrop-blur-3xl bg-gray-100 dark:bg-woodsmoke-950/60 border-b border-gray-300 dark:border-woodsmoke-900 flex items-center justify-between sticky top-18 z-1 px-5"
+      >
         <div class="text-13 flex items-center gap-2.5 dark:text-white font-medium w-10/12">
           <span class="dark:text-woodsmoke-500 inline-block truncate max-w-3/5">
             {{ section.getName() }}
-            / {{ doc.category }}
+            /
+            {{ doc.category }}
           </span>
-          @svg('mynaui:chevron-right', {class: 'size-4'})
-          <span class="truncate max-w-3/5"> {{ doc.title }} </span>
+          @svg('mynaui:chevron-right', { class: 'size-4' })
+          <span class="truncate max-w-3/5">{{ doc.title }}</span>
         </div>
         <div>
           @svg('mynaui:menu', { class: 'size-6 dark:text-woodsmoke-200' })
@@ -35,13 +37,16 @@
       </button>
     </div>
 
-    <div class="px-5 lg:px-0 lg:border-l lg:border-r border-gray-300 dark:border-woodsmoke-900 bg-docs-hero bg-contain bg-no-repeat bg-top-bottom lg:grid xl:grid-cols-[230px_1fr_230px] lg:grid-cols-[270px_1fr] gap-4">
+    <div
+      class="px-5 lg:px-0 lg:border-l lg:border-r border-gray-300 dark:border-woodsmoke-900 bg-docs-hero bg-contain bg-no-repeat bg-top-bottom lg:grid xl:grid-cols-[230px_1fr_230px] lg:grid-cols-[270px_1fr] gap-4"
+    >
       {{-- webview --}}
-      <div class="pl-8 pr-3 hidden lg:block sticky top-23 pt-10 pb-11 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto">
+      <div
+        class="pl-8 pr-3 hidden lg:block sticky top-23 pt-10 pb-11 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto"
+      >
         @include('partials/docs/sidebar')
       </div>
       {{-- webview --}}
-
       {{-- mobile view --}}
       <div
         x-data="{ isOpen: false }"
@@ -55,11 +60,10 @@
           @include('partials/docs/sidebar')
         </div>
         <button class="sticky top-0" @click.prevent="$dispatch('toggle-mobile-nav')">
-          @svg('mynaui:x', {class: 'size-6 dark:text-woodsmoke-200'})
+          @svg('mynaui:x', { class: 'size-6 dark:text-woodsmoke-200' })
         </button>
       </div>
       {{-- mobile view --}}
-
       @include('partials/docs/content')
       @include('partials/docs/toc')
     </div>

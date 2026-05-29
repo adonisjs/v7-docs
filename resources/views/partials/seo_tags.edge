@@ -1,17 +1,18 @@
-<link rel="canonical" href="{{ appUrl }}{{ request.url() }}">
-<meta name="description" content="{{ meta.description }}">
-<meta name="twitter:title" content="{{ title }}">
-<meta name="twitter:description" content="{{ meta.description }}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:site" content="@adonisframework">
-<meta name="twitter:creator" content="@adonisframework">
-<meta property="og:title" content="{{ title }}">
-<meta property="og:description" content="{{ meta.description }}">
+<link rel="canonical" href="{{ appUrl }}{{ request.url() }}" />
+<meta name="description" content="{{ meta.description }}" />
+<meta name="twitter:title" content="{{ title }}" />
+<meta name="twitter:description" content="{{ meta.description }}" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:site" content="@adonisframework" />
+<meta name="twitter:creator" content="@adonisframework" />
+<meta property="og:title" content="{{ title }}" />
+<meta property="og:description" content="{{ meta.description }}" />
 @if(meta.ogImage)
   @let(ogImagePath = ogImageAsset(meta.ogImage, request.url()))
   @if(ogImagePath)
-    <meta name="twitter:image" content="{{ ogImagePath }}">
-    <meta property="og:image" content="{{ ogImagePath }}">
+    <meta name="twitter:image" content="{{ ogImagePath }}" />
+    <meta property="og:image" content="{{ ogImagePath }}" />
   @end
 @end
-<meta property="og:type" content="{{ meta.ogType ?? 'website' }}">
+
+<meta property="og:type" content="{{ meta.ogType ?? 'website' }}" />

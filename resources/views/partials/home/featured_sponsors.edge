@@ -1,49 +1,56 @@
 <div class="flex flex-col md:flex-row gap-9 md:items-center">
-    <div class="flex-1">
-        <div class="max-w-4xl px-5 lg:px-15">
-            <h2 class="font-display text-2xl md:text-4xl font-medium text-gray-950 dark:text-white mb-4 tracking-tight">
-                Our sponsors
-            </h2>
+  <div class="flex-1">
+    <div class="max-w-4xl px-5 lg:px-15">
+      <h2
+        class="font-display text-2xl md:text-4xl font-medium text-gray-950 dark:text-white mb-4 tracking-tight"
+      >
+        Our sponsors
+      </h2>
 
-            <p class="dark:text-woodsmoke-400 leading-7 mb-6">
-                List of individuals and companies publicly sponsoring Harminder Virk on GitHub. If you are sponsoring and cannot see your name, ensure your sponsorship is not private.
-            </p>
-
-            @!button({
-              text: 'Sponsor on GitHub',
-              color: 'primary',
-              radius: 'md',
-              size: 'md',
-              external: true,
-              href: 'https://github.com/sponsors/thetutlage/sponsorships?sponsor=thetutlage&tier_id=161747&preview=false',
-              target: "_blank"
-            })
-        </div>
-
-        <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
-            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-gray-300 dark:bg-woodsmoke-900 border-l border-r border-gray-300 dark:border-woodsmoke-900">
-                @each(sponsor in featuredSponsors.all())
-                <a
-                    href={{ sponsor.url }}
-                    target="_blank"
-                    class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
-                >
-                    <span class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-600 dark:text-woodsmoke-100">
-                        {{{ sponsor.logo }}}
-                        <span class="sr-only">{{ sponsor.name }}</span>
-                    </span>
-                </a>
-                @end
-
-                <a
-                    href="/"
-                    class="flex items-center justify-center p-6 min-h-25 uppercase font-mono text-18 group bg-gray-100 dark:bg-woodsmoke-1000"
-                >
-                    <span class="scale-75 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 select-none">
-                        your logo
-                    </span>
-                </a>
-            </div>
-        </div>
+      <p class="dark:text-woodsmoke-400 leading-7 mb-6">
+        List of individuals and companies publicly sponsoring Harminder Virk on GitHub. If you are sponsoring and cannot see your name, ensure your sponsorship is not private.
+      </p>
+      @!button({
+        text: 'Sponsor on GitHub',
+        color: 'primary',
+        radius: 'md',
+        size: 'md',
+        external: true,
+        href: 'https://github.com/sponsors/thetutlage/sponsorships?sponsor=thetutlage&tier_id=161747&preview=false',
+        target: '_blank',
+      })
     </div>
+
+    <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
+      <div
+        class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-gray-300 dark:bg-woodsmoke-900 border-l border-r border-gray-300 dark:border-woodsmoke-900"
+      >
+        @each(sponsor in featuredSponsors.all())
+          <a
+            href="{{ sponsor.url }}"
+            target="_blank"
+            class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
+          >
+            <span
+              class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-600 dark:text-woodsmoke-100"
+            >
+              {{{ sponsor.logo }}}
+              <span class="sr-only">{{ sponsor.name }}</span>
+            </span>
+          </a>
+        @end
+
+        <a
+          href="/"
+          class="flex items-center justify-center p-6 min-h-25 uppercase font-mono text-18 group bg-gray-100 dark:bg-woodsmoke-1000"
+        >
+          <span
+            class="scale-75 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 select-none"
+          >
+            your logo
+          </span>
+        </a>
+      </div>
+    </div>
+  </div>
 </div>

@@ -9,7 +9,7 @@
   @assign($context.groupCounter = $context.groupCounter + 1)
   @inject({
     ...$context,
-    id: `${$context.id}_${$context.groupCounter}`
+    id: `${$context.id}_${$context.groupCounter}`,
   })
 @else
   {{--

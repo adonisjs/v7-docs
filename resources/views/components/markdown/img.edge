@@ -1,9 +1,12 @@
 @let(canBeResolved = !!$renderingContext.vFile?.path)
-<img
-  {{ $props.only([]).merge({
-  ...node.properties,
-  src: canBeResolved
-    ? resolveAsset($renderingContext.vFile.path, node.properties.src)
-    : node.properties.src
-}).toAttrs() }}
-/>
+<img {{
+  $props
+    .only([])
+    .merge({
+      ...node.properties,
+      src: canBeResolved
+        ? resolveAsset($renderingContext.vFile.path, node.properties.src)
+        : node.properties.src,
+    })
+    .toAttrs()
+}} />

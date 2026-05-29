@@ -44,7 +44,7 @@
 }
 
 .prose h2 {
-  @apply text-[22px] md:text-[26px];  
+  @apply text-[22px] md:text-[26px];
   letter-spacing: -0.5px;
   line-height: 31.8px;
   margin-bottom: 16px;
@@ -58,23 +58,27 @@
   padding: 0;
 }
 
-.prose h2, .prose h3 {
+.prose h2,
+.prose h3 {
   position: relative;
   @apply flex;
 }
 
-.prose h2:hover a::before, .prose h3:hover a::before {
+.prose h2:hover a::before,
+.prose h3:hover a::before {
   opacity: 1;
 }
 
-.prose h2 a, .prose h3 a {
+.prose h2 a,
+.prose h3 a {
   position: relative;
   @apply size-6 md:size-7;
   display: inline-block;
   @apply md:-ml-7 top-1 md:top-0.5 flex-none;
 }
 
-.prose h2 a::before, .prose h3 a::before {
+.prose h2 a::before,
+.prose h3 a::before {
   content: '#';
   position: absolute;
   top: 50%;
@@ -522,7 +526,7 @@ html.dark .code_snippet pre code span {
   bottom: 0;
   @apply border-l border-gray-300;
 }
-  
+
 .prose .steppers > li {
   @apply dark:before:border-woodsmoke-800/70;
 }
@@ -544,7 +548,7 @@ html.dark .code_snippet pre code span {
 }
 
 .prose .steppers > li {
-  @apply dark:after:bg-woodsmoke-800
+  @apply dark:after:bg-woodsmoke-800;
 }
 
 .prose .code_snippet span.line span {

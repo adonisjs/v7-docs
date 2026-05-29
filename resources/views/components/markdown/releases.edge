@@ -1,7 +1,5 @@
 @each(block in releaseBlocks)
-  <h2>
-    {{ DateTime.fromJSDate(block.date).toFormat('LLL yyyy') }}
-  </h2>
+  <h2>{{ DateTime.fromJSDate(block.date).toFormat('LLL yyyy') }}</h2>
 
   <table class="releases">
     <thead>

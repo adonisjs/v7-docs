@@ -7,9 +7,8 @@
         @if(parsed.icon)
           @svg(parsed.icon, { class: parsed.classes })
         @end
-        <span class="code_snippet_title">
-          {{ parsed.title }}
-        </span>
+
+        <span class="code_snippet_title">{{ parsed.title }}</span>
       </div>
       <button
         class="copy copy cursor-pointer p-1.5 backdrop-blur rounded-md overflow-hidden"
@@ -22,44 +21,47 @@
           height: '20px',
           'x-show': `state === 'idle'`,
           'x-cloak': true,
-          class: 'text-gray-500 hover:text-gray-700 dark:text-woodsmoke-400 dark:hover:text-woodsmoke-200'
+          class:
+            'text-gray-500 hover:text-gray-700 dark:text-woodsmoke-400 dark:hover:text-woodsmoke-200',
         })
         @svg('tabler:check', {
           width: '20px',
           height: '20px',
           'x-cloak': true,
           'x-show': `state === 'copied'`,
-          class: 'text-green-600 dark:text-green-400'
+          class: 'text-green-600 dark:text-green-400',
         })
       </button>
     </div>
   @end
+
   <div class="relative overflow-auto">
-<pre>
+    <pre>
 @markdownSlot()
 </pre>
-  @unless(node.properties.title)
-    <button
-      class="copy cursor-pointer absolute z-0 top-2 right-2.5 p-1.5 backdrop-blur rounded-md overflow-hidden"
-      title="Copy"
-      @click.prevent="copy"
-      aria-label="Copy the contents from the code block"
-    >
-      @svg('tabler:copy', {
-        width: '20px',
-        height: '20px',
-        'x-show': `state === 'idle'`,
-        'x-cloak': true,
-        class: 'text-gray-500 hover:text-gray-700 dark:text-woodsmoke-400 dark:hover:text-woodsmoke-200'
-      })
-      @svg('tabler:check', {
-        width: '20px',
-        height: '20px',
-        'x-cloak': true,
-        'x-show': `state === 'copied'`,
-        class: 'text-green-600 dark:text-green-400'
-      })
-    </button>
-  @end
-</div>
+    @unless(node.properties.title)
+      <button
+        class="copy cursor-pointer absolute z-0 top-2 right-2.5 p-1.5 backdrop-blur rounded-md overflow-hidden"
+        title="Copy"
+        @click.prevent="copy"
+        aria-label="Copy the contents from the code block"
+      >
+        @svg('tabler:copy', {
+          width: '20px',
+          height: '20px',
+          'x-show': `state === 'idle'`,
+          'x-cloak': true,
+          class:
+            'text-gray-500 hover:text-gray-700 dark:text-woodsmoke-400 dark:hover:text-woodsmoke-200',
+        })
+        @svg('tabler:check', {
+          width: '20px',
+          height: '20px',
+          'x-cloak': true,
+          'x-show': `state === 'copied'`,
+          class: 'text-green-600 dark:text-green-400',
+        })
+      </button>
+    @end
+  </div>
 </div>

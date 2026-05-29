@@ -1,26 +1,36 @@
 <div class="option border-b border-gray-300 dark:border-woodsmoke-800/40">
   <div class="mb-1 flex">
-    <code class="text-green-800! dark:text-green-400! mr-2 bg-transparent! dark:bg-green-950/20! font-bold! dark:font-normal!">{{ name }}</code>
+    <code
+      class="text-green-800! dark:text-green-400! mr-2 bg-transparent! dark:bg-green-950/20! font-bold! dark:font-normal!"
+    >
+      {{ name }}
+    </code>
     <div>
       @if(required)
         <span
           class="font-mono font-medium text-13 py-0.5 px-2 bg-red-100/50 dark:bg-red-400/10 text-red-600 dark:text-red-300 rounded-sm mr-1.5"
           title="Required"
-        >required</span>
+        >
+          required
+        </span>
       @end
       @if(dataType)
         <span
           class="font-mono font-medium text-13 py-0.5 px-2 bg-gray-200 dark:bg-woodsmoke-800/70 dark:text-woodsmoke-50 rounded-sm mr-1.5"
           title="Data type"
-        >{{ dataType }}</span>
+        >
+          {{ dataType }}
+        </span>
       @end
       @if(node.properties['default-value'])
         <span
           class="font-mono font-medium text-13 py-0.5 px-2 bg-blue-100/50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-50 rounded-sm mr-1.5"
           title="Default value"
-        >{{ node.properties['default-value'] }}</span>
+        >
+          {{ node.properties['default-value'] }}
+        </span>
       @end
     </div>
   </div>
   @markdownSlot()
-  </div>
+</div>

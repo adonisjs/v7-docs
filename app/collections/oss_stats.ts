@@ -18,7 +18,7 @@ export const ossStats = Collection.create({
     sources: [
       async () => {
         const headers: Record<string, string> = {
-          accept: 'application/vnd.github+json',
+          'accept': 'application/vnd.github+json',
           'user-agent': 'adonisjs-docs',
         }
         const ghToken = env.get('GH_TOKEN')

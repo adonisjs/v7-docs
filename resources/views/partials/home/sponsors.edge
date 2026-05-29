@@ -3,25 +3,53 @@
 @let(aggregates = sponsors.aggregates())
 
 <div class="space-y-20 mt-20">
-    <div class="mt-7 md:mt-0 px-5 lg:px-15 border-b border-gray-300 dark:border-woodsmoke-900 pb-25">
-        <span class="uppercase font-mono text-gray-900 font-bold dark:font-normal dark:text-woodsmoke-500 tracking-tight mb-6 block">Active sponsors ({{aggregates.active}})</span>
-        <div class="flex flex-wrap gap-2 sm:gap-4">
-            @each(sponsor in activeSponsors)
-            <div class="border border-gray-300 dark:border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
-                <img class="opacity-90 dark:opacity-60 rounded-sm" src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title="{{sponsor.sponsorName || sponsor.sponsorLogin}}">
-            </div>
-            @end
+  <div class="mt-7 md:mt-0 px-5 lg:px-15 border-b border-gray-300 dark:border-woodsmoke-900 pb-25">
+    <span
+      class="uppercase font-mono text-gray-900 font-bold dark:font-normal dark:text-woodsmoke-500 tracking-tight mb-6 block"
+    >
+      Active sponsors ({{ aggregates.active }})
+    </span>
+    <div class="flex flex-wrap gap-2 sm:gap-4">
+      @each(sponsor in activeSponsors)
+        <div
+          class="border border-gray-300 dark:border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15"
+        >
+          <img
+            class="opacity-90 dark:opacity-60 rounded-sm"
+            src="{{ sponsor.sponsorAvatarUrl }}&s=128"
+            width="60"
+            height="60"
+            loading="lazy"
+            alt="{{ sponsor.sponsorName || sponsor.sponsorLogin }}"
+            title="{{ sponsor.sponsorName || sponsor.sponsorLogin }}"
+          />
         </div>
+      @end
     </div>
+  </div>
 
-    <div class="mt-12 md:mt-0 px-5 lg:px-15 border-gray-300 dark:border-woodsmoke-900">
-        <span class="uppercase font-mono text-gray-900 font-bold dark:font-normal dark:text-woodsmoke-500 tracking-tight mb-6 block">Past sponsors ({{aggregates.past}})</span>
-        <div class="flex flex-wrap gap-2 sm:gap-4">
-            @each(sponsor in pastSponsors)
-            <div class="border border-gray-300 dark:border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15">
-                <img class="opacity-90 dark:opacity-60 rounded-sm" src="{{sponsor.sponsorAvatarUrl}}&s=128" width="60" height="60" loading="lazy" alt={{sponsor.sponsorName || sponsor.sponsorLogin}} title={{sponsor.sponsorName || sponsor.sponsorLogin}}>
-            </div>
-            @end
+  <div class="mt-12 md:mt-0 px-5 lg:px-15 border-gray-300 dark:border-woodsmoke-900">
+    <span
+      class="uppercase font-mono text-gray-900 font-bold dark:font-normal dark:text-woodsmoke-500 tracking-tight mb-6 block"
+    >
+      Past sponsors ({{ aggregates.past }})
+    </span>
+    <div class="flex flex-wrap gap-2 sm:gap-4">
+      @each(sponsor in pastSponsors)
+        <div
+          class="border border-gray-300 dark:border-woodsmoke-900 rounded-md overflow-hidden p-0.5 size-12 sm:size-15"
+        >
+          <img
+            class="opacity-90 dark:opacity-60 rounded-sm"
+            src="{{ sponsor.sponsorAvatarUrl }}&s=128"
+            width="60"
+            height="60"
+            loading="lazy"
+            alt="{{ sponsor.sponsorName || sponsor.sponsorLogin }}"
+            title="{{ sponsor.sponsorName || sponsor.sponsorLogin }}"
+          />
         </div>
+      @end
     </div>
+  </div>
 </div>

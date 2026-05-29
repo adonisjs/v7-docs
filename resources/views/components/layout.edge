@@ -4,42 +4,47 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>
-      {{ title ? (category ? title + ' (' + category + ') - AdonisJS Documentation' : title + ' - AdonisJS Documentation') : 'AdonisJS Documentation' }}
+      {{
+        title
+          ? category
+            ? title + ' (' + category + ') - AdonisJS Documentation'
+            : title + ' - AdonisJS Documentation'
+          : 'AdonisJS Documentation'
+      }}
     </title>
     @include('partials/seo_tags')
     @include('partials/favicons')
     <script>
-      ;(function () {
+      (function () {
         try {
-          var root = document.documentElement
-          var stored = window.localStorage.getItem('theme')
+          var root = document.documentElement;
+          var stored = window.localStorage.getItem('theme');
 
           if (stored === 'dark') {
-            root.classList.add('dark')
+            root.classList.add('dark');
           } else if (stored === 'light') {
-            root.classList.remove('dark')
+            root.classList.remove('dark');
           } else {
-            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+            var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             if (prefersDark) {
-              root.classList.add('dark')
+              root.classList.add('dark');
             } else {
-              root.classList.remove('dark')
+              root.classList.remove('dark');
             }
           }
         } catch (e) {}
-      })()
+      })();
     </script>
     @vite(['resources/js/app.js'])
     @stack('dumper')
   </head>
   <body class="font-sans antialiased tracking-wide text-gray-600 dark:text-woodsmoke-300 relative">
     @include('partials/header')
-    <main>
-      {{{ await $slots.main() }}}
-    </main>
+    <main>{{{ await $slots.main() }}}</main>
     @include('partials/footer')
 
-    <div class="pointer-events-none absolute inset-0 h-full z-99 mix-blend-overlay overscroll-contain bg-noise bg-size-[64px] opacity-20">
-    </div>
+    <div
+      class="pointer-events-none absolute inset-0 h-full z-99 mix-blend-overlay overscroll-contain bg-noise bg-size-[64px] opacity-20"
+    ></div>
   </body>
 </html>

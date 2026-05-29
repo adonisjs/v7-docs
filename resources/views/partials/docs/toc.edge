@@ -6,16 +6,14 @@
       >
         @include('partials/docs/actions')
 
-        <div
-          class="doc-right-nav mt-6 min-h-54"
-          x-data="trackScroll"
-        >
-          <p class="block font-bold dark:font-medium text-gray-950 dark:text-white text-xs uppercase tracking-tight pt-2.5 mb-4 font-mono">
+        <div class="doc-right-nav mt-6 min-h-54" x-data="trackScroll">
+          <p
+            class="block font-bold dark:font-medium text-gray-950 dark:text-white text-xs uppercase tracking-tight pt-2.5 mb-4 font-mono"
+          >
             On this page
           </p>
           {{{ markdownDocument.toc }}}
         </div>
-
         @include('partials/docs/carbon_ad')
       </div>
     </div>

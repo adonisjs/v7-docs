@@ -1,27 +1,28 @@
 @let(filePath = $renderingContext.vFile.path)
 @let(hrefParts = href.split('#'))
 @let(isExternal = href.startsWith('http://') || href.startsWith('https://'))
-
 {{-- Reverse mapping markdown files to their permalink --}}
 @if(!isExternal && (hrefParts[0].endsWith('.md') || hrefParts[0].endsWith('.mdc')))
   @let(transformedPath = await resolveLink(filePath, hrefParts[0]))
-
   @if(transformedPath)
     @assign(node.properties.href = `${transformedPath}${hrefParts[1] ? `#${hrefParts[1]}` : ''}`)
   @else
-    @eval($renderingContext.vFile.message(`Cannot resolve link [${hastToText(node)}](${hrefParts[0]})`))
+    @eval($renderingContext.vFile.message(
+      `Cannot resolve link [${hastToText(node)}](${hrefParts[0]})`,
+    ))
   @end
 @end
-
 {{-- Report about missing link --}}
 @if(href === '')
-  @eval($renderingContext.vFile.message(`Missing link [${hastToText(node)}](${href})`))
+  @eval($renderingContext.vFile.message(
+    `Missing link [${hastToText(node)}](${href})`,
+  ))
 @end
-
 {{-- Open external links in new tab --}}
 @if(href.startsWith('http://') || href.startsWith('https://'))
   @assign(node.properties.target = '_blank')
 @end
+
 <a {{{ $markdown.utils.stringifyAttributes(node.properties) }}}>
   @markdownSlot()
 </a>

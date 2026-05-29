@@ -1,32 +1,40 @@
 @let(pattern = /\/(react|vue|hypermedia)\//)
-
-@let(variants = [{
-title: 'Hypermedia',
-active: doc.variant === 'Hypermedia',
-url: request.url().replace(pattern, '/hypermedia/'),
-}, {
-title: 'React',
-active: doc.variant === 'React',
-url: request.url().replace(pattern, '/react/'),
-}])
-{{-- , {
-title: 'Vue',
-active: doc.variant === 'Vue',
-url: request.url().replace(pattern, '/vue/'),
-} --}}
-
+@let(variants = [
+  {
+    title: 'Hypermedia',
+    active: doc.variant === 'Hypermedia',
+    url: request.url().replace(pattern, '/hypermedia/'),
+  },
+  {
+    title: 'React',
+    active: doc.variant === 'React',
+    url: request.url().replace(pattern, '/react/'),
+  },
+])
+{{--
+  , {
+  title: 'Vue',
+  active: doc.variant === 'Vue',
+  url: request.url().replace(pattern, '/vue/'),
+  }
+--}}
 <div class="flex gap-3 mb-6 md:mb-8">
   @each(variant in variants)
     @!link({
-    href: variant.url,
-    class: [
-    'text-12', 'px-3.5', 'py-1.5', 'border', 'rounded-full',
-    {
-    'text-gray-400! dark:text-woodsmoke-300! border-gray-400 dark:border-woodsmoke-800/70 dark:bg-woodsmoke-900/40': !variant.active,
-    }
-    ],
-    'up-target': '[up-main], [up-section-toc], [up-section-sidebar]',
-    text: variant.title
+      href: variant.url,
+      class: [
+        'text-12',
+        'px-3.5',
+        'py-1.5',
+        'border',
+        'rounded-full',
+        {
+          'text-gray-400! dark:text-woodsmoke-300! border-gray-400 dark:border-woodsmoke-800/70 dark:bg-woodsmoke-900/40':
+            !variant.active,
+        },
+      ],
+      'up-target': '[up-main], [up-section-toc], [up-section-sidebar]',
+      text: variant.title,
     })
   @end
 </div>

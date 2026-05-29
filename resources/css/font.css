@@ -1,53 +1,59 @@
 @font-face {
-    font-family: 'Instrument Sans';
-    src: url('../fonts/InstrumentSans-Regular.woff2') format('woff2'),
-        url('../fonts/InstrumentSans-Regular.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Instrument Sans';
+  src:
+    url('../fonts/InstrumentSans-Regular.woff2') format('woff2'),
+    url('../fonts/InstrumentSans-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: 'Instrument Sans';
-    src: url('../fonts/InstrumentSans-SemiBold.woff2') format('woff2'),
-        url('../fonts/InstrumentSans-SemiBold.woff') format('woff');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Instrument Sans';
+  src:
+    url('../fonts/InstrumentSans-SemiBold.woff2') format('woff2'),
+    url('../fonts/InstrumentSans-SemiBold.woff') format('woff');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: 'Instrument Sans';
-    src: url('../fonts/InstrumentSans-Medium.woff2') format('woff2'),
-        url('../fonts/InstrumentSans-Medium.woff') format('woff');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Instrument Sans';
+  src:
+    url('../fonts/InstrumentSans-Medium.woff2') format('woff2'),
+    url('../fonts/InstrumentSans-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: 'Instrument Sans';
-    src: url('../fonts/InstrumentSans-Bold.woff2') format('woff2'),
-        url('../fonts/InstrumentSans-Bold.woff') format('woff');
-    font-weight: bold;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Instrument Sans';
+  src:
+    url('../fonts/InstrumentSans-Bold.woff2') format('woff2'),
+    url('../fonts/InstrumentSans-Bold.woff') format('woff');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: 'JetBrains Mono';
-    src: url('../fonts/JetBrainsMono-Regular.woff2') format('woff2'),
-        url('../fonts/JetBrainsMono-Regular.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'JetBrains Mono';
+  src:
+    url('../fonts/JetBrainsMono-Regular.woff2') format('woff2'),
+    url('../fonts/JetBrainsMono-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: 'Display';
-    src: url('../fonts/LibreCaslon-Regular.woff2') format('woff2'),
-        url('../fonts/LibreCaslon-Regular.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
+  font-family: 'Display';
+  src:
+    url('../fonts/LibreCaslon-Regular.woff2') format('woff2'),
+    url('../fonts/LibreCaslon-Regular.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
 }

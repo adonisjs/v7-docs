@@ -2,7 +2,6 @@
 @let(description = descriptionFromSlot.trim() ? descriptionFromSlot : $props.get('text'))
 @let(classes = [])
 
-<section {{ $props
-  .except(['text'])
-  .merge({ class: classes })
-  .toAttrs() }}>{{{ description }}}</section>
+<section {{ $props.except(['text']).merge({ class: classes }).toAttrs() }}>
+  {{{ description }}}
+</section>

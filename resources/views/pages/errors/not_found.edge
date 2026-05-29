@@ -4,9 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     @include('partials/favicons')
-    <title>
-      AdonisJS - 404 - Page not found
-    </title>
+    <title>AdonisJS - 404 - Page not found</title>
     @vite(['resources/js/app.js'])
     @stack('dumper')
   </head>
@@ -15,16 +13,30 @@
     <div class="flex flex-col items-center justify-center h-dvh text-center px-5">
       <div class="flex items-center gap-4">
         <p class="text-9xl font-bold font-mono text-indigo-500">4</p>
-        <svg width="120" height="120" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg
+          width="120"
+          height="120"
+          viewBox="0 0 160 160"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
           <path
             d="M80 160C124.183 160 160 124.183 160 80C160 35.8172 124.183 0 80 0C35.8172 0 0 35.8172 0 80C0 124.183 35.8172 160 80 160Z"
-            fill="url(#paint0_linear_3162_289)" />
+            fill="url(#paint0_linear_3162_289)"
+          />
           <path
             d="M122.4 113.2C108.55 123.588 94.3953 129 80 129C65.6047 129 51.4496 123.588 37.5996 113.2L42.4004 106.8C55.217 116.412 67.7287 121 80 121C92.2713 121 104.783 116.412 117.6 106.8L122.4 113.2ZM62.8281 52.8281L55.6562 60L62.8281 67.1719L57.1719 72.8281L50 65.6562L42.8281 72.8281L37.1719 67.1719L44.3438 60L37.1719 52.8281L42.8281 47.1719L50 54.3438L57.1719 47.1719L62.8281 52.8281ZM122.828 52.8281L115.656 60L122.828 67.1719L117.172 72.8281L110 65.6562L102.828 72.8281L97.1719 67.1719L104.344 60L97.1719 52.8281L102.828 47.1719L110 54.3438L117.172 47.1719L122.828 52.8281Z"
-            fill="#010101" />
+            fill="#010101"
+          />
           <defs>
-            <linearGradient id="paint0_linear_3162_289" x1="4" y1="3.33333" x2="151.333" y2="166.667"
-              gradientUnits="userSpaceOnUse">
+            <linearGradient
+              id="paint0_linear_3162_289"
+              x1="4"
+              y1="3.33333"
+              x2="151.333"
+              y2="166.667"
+              gradientUnits="userSpaceOnUse"
+            >
               <stop stop-color="#6137DF" />
               <stop offset="0.18" stop-color="#5A45FF" />
               <stop offset="0.315" stop-color="#2F3466" />
@@ -39,9 +51,7 @@
         <p class="text-9xl font-bold font-mono text-indigo-500">4</p>
       </div>
 
-      <h1 class="text-4xl font-display font-medium text-white mt-8">
-        Page not found
-      </h1>
+      <h1 class="text-4xl font-display font-medium text-white mt-8">Page not found</h1>
       <p class="max-w-lg text-center mt-3 leading-7">
         The page you are looking for does not exist or have been moved
       </p>
@@ -51,12 +61,12 @@
         text: 'Go to homepage',
         radius: 'sm',
         size: 'sm',
-        class: 'mt-4 text-woodsmoke-300'
+        class: 'mt-4 text-woodsmoke-300',
       })
     </div>
 
     <div
-      class="pointer-events-none absolute inset-0 h-full z-99 mix-blend-overlay overscroll-contain bg-noise bg-size-[64px] opacity-50">
-    </div>
+      class="pointer-events-none absolute inset-0 h-full z-99 mix-blend-overlay overscroll-contain bg-noise bg-size-[64px] opacity-50"
+    ></div>
   </body>
 </html>
