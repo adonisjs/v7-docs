@@ -686,8 +686,11 @@ The `share` method may be called before the request passes through all middlewar
 
 ### Accessing shared data
 
-Shared data is automatically included in the props for every page. When you define page props using the `InertiaProps` type helper, it includes both your page-specific props and all shared data.
+Shared data is automatically included in the props for every page. In React, when you define page props using the `InertiaProps` type helper, it includes both your page-specific props and all shared data. In Vue, use `usePage`.
 
+::::tabs
+
+:::tab{title="React"}
 ```tsx title="inertia/pages/posts/index.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
@@ -712,6 +715,45 @@ export default function PostsIndex(props: PageProps) {
   )
 }
 ```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/pages/posts/index.vue"
+<script setup lang="ts">
+import { computed, watch } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+import { Data } from '@generated/data'
+
+defineProps<{
+  posts: Data.Post[]
+}>()
+
+/**
+ * Access shared data.
+ */
+const page = usePage<Data.SharedProps>()
+
+const user = computed(() => page.props.user)
+
+watch(
+  () => page.props.flash,
+  (flashMessages) => {
+    if (flashMessages.error) {
+      console.log('Error:', flashMessages.error)
+    }
+  },
+  { immediate: true }
+)
+</script>
+
+<template>
+  <p v-if="user">Welcome, {{ user.name }}</p>
+  <!-- render posts -->
+</template>
+```
+:::
+
+::::
 
 ## Pagination
 
