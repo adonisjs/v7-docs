@@ -46,7 +46,7 @@
     "sharp": "^0.34.5",
     "typescript": "~6.0",
     "unpoly": "^3.14.3",
-    "vite": "^7.3.1",
+    "vite": "^7.3.3",
     "youch": "^4.1.1"
   },
   "dependencies": {
