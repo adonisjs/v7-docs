@@ -11,7 +11,9 @@ This guide covers real-time server-to-client communication with Transmit in Adon
 - Define channels and authorize access to private channels
 - Set up the client library to receive events in real time
 - Synchronize events across multiple server instances using transports
+- Authenticate clients for private channel subscriptions
 - Listen to lifecycle hooks for monitoring connections
+- Test broadcasts and channel authorization with Japa
 
 ## Overview
 
@@ -233,6 +235,38 @@ Authorization callbacks support both synchronous and asynchronous logic. If the 
 
 :::tip
 Channels without an `authorize` callback are public. Any client can subscribe to them. Only register authorization for channels that require access control.
+:::
+
+### Authenticating private channels
+
+Authorization callbacks run during the subscribe request, not when the SSE connection is established. For `ctx.auth.user` to be available inside your `authorize` callbacks, protect the `__transmit/subscribe` route with your authentication middleware.
+
+```ts title="start/routes.ts"
+import transmit from '@adonisjs/transmit/services/main'
+import { middleware } from '#start/kernel'
+
+transmit.registerRoutes((route) => {
+  if (route.getPattern() === '__transmit/subscribe') {
+    route.middleware(middleware.auth())
+  }
+})
+```
+
+When using token-based authentication, attach the token on the client using the `beforeSubscribe` hook. The hook receives the outgoing `Request` and runs before each subscribe call.
+
+```ts title="resources/js/app.ts"
+import { Transmit } from '@adonisjs/transmit-client'
+
+const transmit = new Transmit({
+  baseUrl: window.location.origin,
+  beforeSubscribe: (request) => {
+    request.headers.set('Authorization', `Bearer ${getToken()}`)
+  },
+})
+```
+
+:::note
+The SSE connection at `__transmit/events` is opened by the browser's native `EventSource`, which cannot send custom headers. For token-based auth, authenticate the `subscribe` route instead. Channel authorization still protects private channels because clients must pass the `authorize` callback before receiving events. If your app uses cookie-based sessions, authentication works automatically because subscribe requests include cookies (`credentials: 'include'`). If you protect the unsubscribe route as well, use the `beforeUnsubscribe` hook the same way.
 :::
 
 ## Client-side setup
@@ -469,6 +503,115 @@ transmit.on('unsubscribe', ({ uid, channel }) => {
 ```
 
 The `connect`, `disconnect`, `subscribe`, and `unsubscribe` event callbacks also receive a `context` property containing the `HttpContext` of the request.
+
+## Testing
+
+The server-side transmit instance exposes lifecycle hooks you can listen to inside your tests. The `transmit.on` method returns a function to stop listening, which makes it easy to collect broadcasts emitted during a request and assert on them.
+
+The following examples use [Japa](https://japa.dev) with the `@japa/api-client` plugin.
+
+### Asserting broadcasts
+
+Register a listener before making a request, perform the action that triggers a broadcast, then stop listening and assert on the collected events.
+
+```ts title="tests/functional/posts.spec.ts"
+import transmit from '@adonisjs/transmit/services/main'
+import User from '#models/user'
+import { test } from '@japa/runner'
+
+test.group('Posts', () => {
+  test('broadcasts the created post', async ({ client, assert }) => {
+    const user = await User.create({
+      fullName: 'Jane',
+      email: 'jane@example.com',
+      password: 'secret',
+    })
+
+    const broadcasts: { channel: string; payload: unknown }[] = []
+    const stopListening = transmit.on('broadcast', (event) => broadcasts.push(event))
+
+    const response = await client.post('/posts').loginAs(user).json({
+      title: 'Hello world',
+    })
+
+    stopListening()
+
+    response.assertStatus(201)
+    assert.lengthOf(broadcasts, 1)
+    assert.equal(broadcasts[0].channel, `users/${user.id}`)
+  })
+})
+```
+
+:::note
+Call the function returned by `transmit.on` immediately after the request to avoid collecting broadcasts from other tests running in the same process.
+:::
+
+### Testing channel authorization
+
+You can test channel authorization by sending subscribe requests directly to the `__transmit/subscribe` route. The route returns:
+
+- `401` when the client is not authenticated
+- `204` when authenticated and authorized
+- `400` when authenticated but denied by the `authorize` callback
+
+```ts title="tests/functional/transmit.spec.ts"
+import User from '#models/user'
+import { test } from '@japa/runner'
+
+test.group('Transmit', () => {
+  test('rejects unauthenticated subscriptions', async ({ client }) => {
+    const response = await client.post('/__transmit/subscribe').json({
+      uid: 'test-client-uid',
+      channel: 'users/1',
+    })
+
+    response.assertStatus(401)
+  })
+
+  test('allows owners to subscribe to their channel', async ({ client }) => {
+    const user = await User.create({
+      fullName: 'Jane',
+      email: 'jane@example.com',
+      password: 'secret',
+    })
+
+    const response = await client
+      .post('/__transmit/subscribe')
+      .loginAs(user)
+      .json({
+        uid: 'test-client-uid',
+        channel: `users/${user.id}`,
+      })
+
+    response.assertStatus(204)
+  })
+
+  test('denies access to another user channel', async ({ client }) => {
+    const owner = await User.create({
+      fullName: 'Jane',
+      email: 'jane@example.com',
+      password: 'secret',
+    })
+
+    const otherUser = await User.create({
+      fullName: 'John',
+      email: 'john@example.com',
+      password: 'secret',
+    })
+
+    const response = await client
+      .post('/__transmit/subscribe')
+      .loginAs(otherUser)
+      .json({
+        uid: 'test-client-uid',
+        channel: `users/${owner.id}`,
+      })
+
+    response.assertStatus(400)
+  })
+})
+```
 
 ## Getting channel subscribers
 
