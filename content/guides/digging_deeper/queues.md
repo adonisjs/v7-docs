@@ -12,6 +12,7 @@ This guide covers background job processing with queues in AdonisJS. You will le
 
 - Install and configure the queue system with Redis or Database backends
 - Create jobs and dispatch them for background processing
+- Prevent duplicate jobs with dispatch-time deduplication
 - Delay jobs, set priorities, and dispatch in batches
 - Configure retry strategies with exponential, linear, or fixed backoff
 - Schedule recurring jobs using cron expressions or intervals
@@ -187,7 +188,7 @@ When selecting the database driver during installation, a migration is automatic
 
 ```ts title="database/migrations/xxxx_create_queue_tables.ts"
 import { BaseSchema } from '@adonisjs/lucid/schema'
-import { QueueSchemaService } from '@boringnode/queue'
+import { QueueSchemaService } from '@adonisjs/queue'
 
 export default class extends BaseSchema {
   async up() {
@@ -521,6 +522,66 @@ await ProcessPayment.dispatch(payload).with('redis')
 
 ::::
 
+### Deduplicating jobs
+
+**Job deduplication** prevents multiple single-job dispatches from enqueueing the same work. This is useful when HTTP retries, webhook retries, or repeated button clicks can dispatch the same background task more than once.
+
+The `dedup` method accepts a user-defined `id`. Internally, the queue prefixes it with the job name, so two different job classes can use the same `id` without colliding.
+
+```ts title="app/controllers/orders_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import Order from '#models/order'
+import ProcessPayment from '#jobs/process_payment'
+
+export default class OrdersController {
+  async retryPayment({ params, response }: HttpContext) {
+    const order = await Order.findOrFail(params.id)
+
+    const result = await ProcessPayment.dispatch({
+      orderId: order.id,
+      amount: order.total,
+      currency: order.currency,
+    })
+      .toQueue('payments')
+      .dedup({ id: `order:${order.id}`, ttl: '10m' })
+
+    return response.accepted({
+      jobId: result.jobId,
+      deduped: result.deduped,
+    })
+  }
+}
+```
+
+When `.dedup()` is used, the dispatch result includes a `deduped` outcome. Use this value when your controller or service needs to react differently to a skipped or replaced dispatch.
+
+| Outcome | Meaning |
+| --- | --- |
+| `added` | A new job was inserted |
+| `skipped` | A duplicate job already exists and the new dispatch was ignored |
+| `replaced` | A pending or delayed duplicate kept its job id, but received the latest payload |
+| `extended` | A duplicate was skipped and its deduplication window was refreshed |
+
+Deduplication supports the following dispatch modes:
+
+| Method call | Behavior |
+| --- | --- |
+| `.dedup({ id })` | Skips duplicates while an existing job with the same key is still present |
+| `.dedup({ id, ttl })` | Skips duplicates within a time window |
+| `.dedup({ id, ttl, extend: true })` | Skips duplicates and refreshes the time window on each duplicate |
+| `.dedup({ id, ttl, replace: true })` | Replaces the payload of an existing pending or delayed job |
+| `.dedup({ id, ttl, extend: true, replace: true })` | Debounces dispatches by replacing the payload and refreshing the time window |
+
+The `extend` and `replace` options require a positive `ttl`. When using `replace`, only the job payload is updated. The existing job keeps its queue, priority, delay, and group id. Active jobs and retained completed or failed jobs are skipped instead of being modified.
+
+:::warning
+Deduplication is only applied by the Redis and Database adapters for single-job dispatches. The Sync adapter runs every dispatch inline, and batch dispatching or scheduled jobs do not apply deduplication.
+
+Use Redis or Database when duplicate prevention matters. For batch or scheduled workflows, enforce uniqueness in your application logic, database constraints, or a dedicated lock.
+:::
+
+The user-provided `id` must be 400 characters or fewer. The final key, built as `<jobName>::<id>`, must be 510 characters or fewer.
+
 ### Batch dispatching
 
 When you need to dispatch many jobs of the same type, use `dispatchMany` for better performance. It uses batched operations (Redis pipelines or SQL batch inserts) under the hood.
@@ -796,6 +857,8 @@ node ace queue:scheduler:clear
 
 Jobs are not processed until you start a worker. The worker is a long-running process that polls the queue for available jobs and executes them.
 
+Workers also send heartbeats for active jobs. These heartbeats renew the job ownership timestamp while the handler is still running, so healthy long-running jobs are not recovered as stalled just because they run longer than `stalledThreshold`. A worker can only renew jobs it still owns, so a late heartbeat cannot extend a job that was already recovered by another worker.
+
 Start the worker using the `queue:work` Ace command:
 
 ```sh
@@ -851,7 +914,7 @@ Global maximum execution time for any job. Can be overridden per job via `JobOpt
 :::
 
 :::option{name="stalledThreshold" dataType="Duration"}
-How long a job can run before it is considered stalled (the worker may have crashed). Defaults to `'30s'`.
+How long a job can go without a heartbeat before it is considered stalled. This is a crash-detection window, not a maximum job runtime. Use `timeout` or `JobOptions.timeout` when you want to limit how long a job may run. Defaults to `'30s'`.
 :::
 
 :::option{name="stalledInterval" dataType="Duration"}
