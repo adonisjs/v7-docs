@@ -13,10 +13,5 @@
     "logo": "./logos/ezycourse.svg",
     "name": "Ezycourse",
     "url": "https://ezycourse.com/"
-  },
-  {
-    "logo": "./logos/relancer.svg",
-    "name": "Relancer",
-    "url": "https://relancer.com/"
   }
 ]

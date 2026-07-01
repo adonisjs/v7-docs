@@ -1,33 +1,34 @@
 @if(markdownDocument.toc)
   <aside class="relative hidden xl:block" up-section-toc>
     <div class="absolute inset-0 pl-3">
-      <div
-        class="sticky top-28 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto pb-6"
-      >
+      <div class="sticky top-28 max-h-[calc(100dvh-(var(--spacing)*16))] overflow-y-auto pb-6">
         <div class="mb-7 backdrop-blur-2xl">
-          <div class="flex justify-between py-3 px-3 border-l -mb-px border-gray-300 dark:border-woodsmoke-900">
+          <div
+            class="flex justify-between py-3 px-3 border-l -mb-px border-gray-300 dark:border-woodsmoke-900"
+          >
             @!link({
-              href: 'https://adonisjs.com/partner',
-              text: 'Partner',
-              class: 'text-xs font-medium inline-block hover:underline text-gray-600 dark:text-woodsmoke-300 text-right',
-            })
-
-            @!link({
-              href: 'https://adonisjs.com/partner',
-              text: 'Become a partner',
-              class: 'text-xs font-medium inline-block hover:underline text-gray-600 dark:text-woodsmoke-300 text-right',
+              href: 'https://adonisjs.com/sponsor',
+              text: 'Become a sponsor',
+              class:
+                'text-xs font-medium inline-block hover:underline text-gray-600 dark:text-woodsmoke-300 text-right',
             })
           </div>
           <div class="grid grid-cols-2 border-t-2 border-amber-600 relative">
-            <span class="absolute z-1 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-100 backdrop-blur-2xl dark:bg-woodsmoke-950 px-1.5 text-[10px] uppercase font-mono font-bold tracking-widest text-amber-800 dark:text-amber-600 rounded-sm">Bronze</span>
+            <span
+              class="absolute z-1 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-100 backdrop-blur-2xl dark:bg-woodsmoke-950 px-1.5 text-[10px] uppercase font-mono font-bold tracking-widest text-amber-800 dark:text-amber-600 rounded-sm"
+            >
+              Bronze
+            </span>
             @each(sponsor in featuredSponsors.all())
-              <a href="{{ sponsor.url }}" target="_blank"
-                class="flex items-center justify-center px-1 h-12 group border-l border-b -mb-px border-gray-300 dark:border-woodsmoke-900 group">
+              <a
+                href="{{ sponsor.url }}"
+                target="_blank"
+                class="flex items-center justify-center px-1 h-12 group border-l border-b -mb-px border-gray-300 dark:border-woodsmoke-900 group"
+              >
                 <span
-                  class="scale-50 sm:group-hover:scale-52 transition-transform duration-400 text-gray-700 dark:text-woodsmoke-100">
-                  <span class="w-full block">
-                    {{{ sponsor.logo }}}
-                  </span>
+                  class="scale-50 sm:group-hover:scale-52 transition-transform duration-400 text-gray-700 dark:text-woodsmoke-100"
+                >
+                  <span class="w-full block">{{{ sponsor.logo }}}</span>
                   <span class="sr-only">{{ sponsor.name }}</span>
                 </span>
               </a>
