@@ -21,18 +21,19 @@
       })
     </div>
 
-    <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15">
+    <div class="border-t border-b border-gray-300 dark:border-woodsmoke-900 mt-10.5 px-5 lg:px-15 relative">
+      <span class="absolute top-0 -translate-y-1/2 bg-gray-100 backdrop-blur-2xl dark:bg-woodsmoke-950 px-2.5 py-1 text-12 uppercase font-mono text-amber-700 dark:text-amber-600 rounded-sm">Bronze</span>
       <div
-        class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-px bg-gray-300 dark:bg-woodsmoke-900 border-l border-r border-gray-300 dark:border-woodsmoke-900"
+        class="grid grid-cols-2 sm:grid-cols-3 md:flex flex-wrap border-l border-r border-gray-300 dark:border-woodsmoke-900"
       >
         @each(sponsor in featuredSponsors.all())
           <a
             href="{{ sponsor.url }}"
             target="_blank"
-            class="flex items-center justify-center py-6 px-2 min-h-25 group bg-gray-100 dark:bg-woodsmoke-1000"
+            class="flex items-center justify-center py-4 px-4 min-h-20 group border-r border-b -mb-px border-gray-300 dark:border-woodsmoke-900 group"
           >
             <span
-              class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-600 dark:text-woodsmoke-100"
+              class="scale-65 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 text-gray-700 dark:text-woodsmoke-100"
             >
               {{{ sponsor.logo }}}
               <span class="sr-only">{{ sponsor.name }}</span>
@@ -42,10 +43,10 @@
 
         <a
           href="/"
-          class="flex items-center justify-center p-6 min-h-25 uppercase font-mono text-18 group bg-gray-100 dark:bg-woodsmoke-1000"
+          class="flex items-center justify-center py-4 px-8 min-h-20 uppercase font-mono text-18 group border-r border-b -mb-px border-gray-300 dark:border-woodsmoke-900"
         >
           <span
-            class="scale-75 sm:scale-85 sm:group-hover:scale-90 transition-transform duration-400 select-none"
+            class="scale-75 sm:scale-80 sm:group-hover:scale-85 transition-transform duration-400 select-none"
           >
             your logo
           </span>

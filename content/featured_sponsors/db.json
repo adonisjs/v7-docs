@@ -18,10 +18,5 @@
     "logo": "./logos/relancer.svg",
     "name": "Relancer",
     "url": "https://relancer.com/"
-  },
-  {
-    "logo": "./logos/testmu.svg",
-    "name": "TestMu AI",
-    "url": "https://www.testmuai.com/"
   }
 ]

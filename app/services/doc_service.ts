@@ -3,6 +3,7 @@ import { errors } from '@adonisjs/core'
 import { findDoc, resolveAsset, resolveLink } from '#collections/docs'
 import { adonisJsReleases } from '#collections/releases'
 import { ossStats } from '#collections/oss_stats'
+import { featuredSponsors } from '#collections/featured_sponsors'
 import env from '#start/env'
 
 export class DocService {
@@ -20,6 +21,7 @@ export class DocService {
         carbonAdUrl: env.get('CARBON_AD_URL'),
         releaseBlocks: releases.groupedByMonth(),
         ossStats: await ossStats.load(),
+        featuredSponsors: await featuredSponsors.load(),
         ...doc,
         permalink,
       })
