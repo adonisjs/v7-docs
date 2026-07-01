@@ -1,5 +1,6 @@
 import edge from 'edge.js'
-import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 import { DateTime } from 'luxon'
 import { tv } from 'tailwind-variants'
 import { toText } from 'hast-util-to-text'
@@ -43,6 +44,32 @@ edge.use(edgeMarkdown, {
 addCollection(mynauiIcons)
 addCollection(uiwIcons)
 addCollection(tablerIcons)
+
+/**
+ * Inline brand logos from "resources/assets/icons/providers" at render
+ * time through the "providerLogo(name)" helper. Reading on demand means
+ * an edited SVG shows up without restarting the dev server (the results
+ * are cached only in production). The SVGs use "currentColor", so their
+ * color is controlled by the surrounding element (e.g. white on a
+ * brand-colored tile).
+ */
+const providerLogosDir = app.makePath('resources/assets/icons/providers')
+const providerLogoCache = new Map<string, string>()
+
+edge.global('providerLogo', function (name: string) {
+  if (app.inProduction && providerLogoCache.has(name)) {
+    return providerLogoCache.get(name)
+  }
+
+  const filePath = join(providerLogosDir, `${name}.svg`)
+  const svg = existsSync(filePath) ? readFileSync(filePath, 'utf-8').trim() : ''
+
+  if (app.inProduction) {
+    providerLogoCache.set(name, svg)
+  }
+
+  return svg
+})
 
 edge.global('tv', tv)
 edge.global('hastToText', toText)

@@ -6,7 +6,7 @@ description: Learn how to send emails from your AdonisJS application using the @
 
 This guide covers sending emails from your AdonisJS application. You will learn how to:
 
-- Configure mail transports for services like SMTP, Resend, Mailgun, and SES
+- Configure mail transports for services like SMTP, Resend, Postmark, Mailgun, SparkPost, Brevo, and SES
 - Send emails using the fluent Message API
 - Queue emails for background delivery
 - Organize emails into reusable mail classes
@@ -117,15 +117,18 @@ export default mailConfig
 
 ## Transport configuration
 
-Each transport accepts provider-specific options. The following sections document the available transports and their configuration.
+Each transport accepts provider-specific options. Pick a provider in the switcher below to configure it. Each panel shows the install command for a new setup, along with the full mailer configuration (including optional settings) and the environment variables you need to add a provider to an existing setup.
 
-See also: [TypeScript types for config object](https://github.com/adonisjs/mail/blob/10.x/src/types.ts#L243)
+::::mail-providers
 
-:::disclosure{title="SMTP"}
+:::mail-provider{name="SMTP" logo="smtp" summary="Any standard SMTP server."}
+Install the package with the SMTP transport.
 
-SMTP configuration options are forwarded directly to Nodemailer.
+```sh
+node ace add @adonisjs/mail --transports=smtp
+```
 
-See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp)
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
@@ -138,7 +141,7 @@ See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp)
       auth: {
         type: 'login',
         user: env.get('SMTP_USERNAME'),
-        pass: env.get('SMTP_PASSWORD')
+        pass: env.get('SMTP_PASSWORD'),
       },
 
       tls: {},
@@ -147,23 +150,36 @@ See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp)
       pool: false,
       maxConnections: 5,
       maxMessages: 100,
-    })
-  }
+    }),
+  },
 }
 ```
 
+```dotenv title=".env"
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USERNAME=
+SMTP_PASSWORD=
+```
+
+SMTP options are forwarded directly to Nodemailer. See also: [Nodemailer SMTP documentation](https://nodemailer.com/smtp)
 :::
 
-:::disclosure{title="Resend"}
+:::mail-provider{name="Resend" logo="resend" color="#000000" summary="Modern email API for developers."}
+Install the package with the Resend transport.
 
-Configuration options are sent to Resend's [`/emails`](https://resend.com/docs/api-reference/emails/send-email) API endpoint.
+```sh
+node ace add @adonisjs/mail --transports=resend
+```
+
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
   mailers: {
     resend: transports.resend({
-      baseUrl: 'https://api.resend.com',
       key: env.get('RESEND_API_KEY'),
+      baseUrl: 'https://api.resend.com',
 
       /**
        * Optional: Can be overridden at runtime
@@ -171,27 +187,69 @@ Configuration options are sent to Resend's [`/emails`](https://resend.com/docs/a
       tags: [
         {
           name: 'category',
-          value: 'confirm_email'
-        }
-      ]
-    })
-  }
+          value: 'confirm_email',
+        },
+      ],
+    }),
+  },
 }
 ```
 
+```dotenv title=".env"
+RESEND_API_KEY=
+```
+
+Configuration options are sent to Resend's [`/emails`](https://resend.com/docs/api-reference/emails/send-email) API endpoint.
 :::
 
-:::disclosure{title="Mailgun"}
+:::mail-provider{name="Postmark" logo="postmark" color="#ffde00" summary="Reliable transactional email delivery."}
+Postmark is not part of the `node ace add` scaffolding, so register the mailer and its environment variable manually.
 
-Configuration options are sent to Mailgun's [`/messages.mime`](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages-mime) API endpoint.
+```ts title="config/mail.ts"
+{
+  mailers: {
+    postmark: transports.postmark({
+      key: env.get('POSTMARK_API_KEY'),
+      baseUrl: 'https://api.postmarkapp.com',
+
+      /**
+       * Optional: Can be overridden at runtime
+       */
+      messageStream: 'outbound',
+      tag: 'welcome',
+      trackOpens: true,
+      trackLinks: 'HtmlAndText',
+      metadata: {
+        userId: '1',
+      },
+    }),
+  },
+}
+```
+
+```dotenv title=".env"
+POSTMARK_API_KEY=
+```
+
+Configuration options are sent to Postmark's [`/email`](https://postmarkapp.com/developer/api/email-api#send-a-single-email) API endpoint.
+:::
+
+:::mail-provider{name="Mailgun" logo="mailgun" color="#f04126" summary="Powerful email automation and APIs."}
+Install the package with the Mailgun transport.
+
+```sh
+node ace add @adonisjs/mail --transports=mailgun
+```
+
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
   mailers: {
     mailgun: transports.mailgun({
-      baseUrl: 'https://api.mailgun.net/v3',
       key: env.get('MAILGUN_API_KEY'),
       domain: env.get('MAILGUN_DOMAIN'),
+      baseUrl: 'https://api.mailgun.net/v3',
 
       /**
        * Optional: Can be overridden at runtime
@@ -207,24 +265,35 @@ Configuration options are sent to Mailgun's [`/messages.mime`](https://documenta
       variables: {
         appId: '',
         userId: '',
-      }
-    })
-  }
+      },
+    }),
+  },
 }
 ```
 
+```dotenv title=".env"
+MAILGUN_API_KEY=
+MAILGUN_DOMAIN=
+```
+
+Configuration options are sent to Mailgun's [`/messages.mime`](https://documentation.mailgun.com/docs/mailgun/api-reference/send/mailgun/messages/post-v3--domain-name--messages-mime) API endpoint.
 :::
 
-:::disclosure{title="SparkPost"}
+:::mail-provider{name="SparkPost" logo="sparkpost" color="#fa6423" summary="High-volume, predictive email delivery."}
+Install the package with the SparkPost transport.
 
-Configuration options are sent to SparkPost's [`/transmissions`](https://developers.sparkpost.com/api/transmissions/#header-request-body) API endpoint.
+```sh
+node ace add @adonisjs/mail --transports=sparkpost
+```
+
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
   mailers: {
     sparkpost: transports.sparkpost({
-      baseUrl: 'https://api.sparkpost.com/api/v1',
       key: env.get('SPARKPOST_API_KEY'),
+      baseUrl: 'https://api.sparkpost.com/api/v1',
 
       /**
        * Optional: Can be overridden at runtime
@@ -237,32 +306,34 @@ Configuration options are sent to SparkPost's [`/transmissions`](https://develop
       sandbox: false,
       skipSuppression: false,
       ipPool: '',
-    })
-  }
+    }),
+  },
 }
 ```
 
+```dotenv title=".env"
+SPARKPOST_API_KEY=
+```
+
+Configuration options are sent to SparkPost's [`/transmissions`](https://developers.sparkpost.com/api/transmissions/#header-request-body) API endpoint.
 :::
 
-:::disclosure{title="Amazon SES"}
-
-SES configuration options are forwarded to Nodemailer. You must install the AWS SDK separately.
+:::mail-provider{name="Amazon SES" logo="ses" color="#de2d34" transport="transports.ses" summary="Scalable, low-cost email built on AWS."}
+Install the package with the SES transport, then install the AWS SDK.
 
 ```sh
+node ace add @adonisjs/mail --transports=ses
 npm i @aws-sdk/client-sesv2
 ```
 
-See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
   mailers: {
     ses: transports.ses({
-      /**
-       * AWS SDK configuration
-       */
       apiVersion: '2010-12-01',
-      region: 'us-east-1',
+      region: env.get('AWS_REGION'),
       credentials: {
         accessKeyId: env.get('AWS_ACCESS_KEY_ID'),
         secretAccessKey: env.get('AWS_SECRET_ACCESS_KEY'),
@@ -273,12 +344,54 @@ See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
        */
       sendingRate: 10,
       maxConnections: 5,
-    })
-  }
+    }),
+  },
 }
 ```
 
+```dotenv title=".env"
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+```
+
+SES options are forwarded to Nodemailer. See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
 :::
+
+:::mail-provider{name="Brevo" logo="brevo" color="#0b996e" summary="Email and marketing platform (formerly Sendinblue)."}
+Install the package with the Brevo transport.
+
+```sh
+node ace add @adonisjs/mail --transports=brevo
+```
+
+Or register the mailer and environment variables in an existing setup.
+
+```ts title="config/mail.ts"
+{
+  mailers: {
+    brevo: transports.brevo({
+      key: env.get('BREVO_API_KEY'),
+      baseUrl: 'https://api.brevo.com/v3',
+
+      /**
+       * Optional: Can be overridden at runtime
+       */
+      tags: ['transactional', 'adonisjs_app'],
+      scheduledAt: new Date(2024, 8, 18),
+    }),
+  },
+}
+```
+
+```dotenv title=".env"
+BREVO_API_KEY=
+```
+
+Configuration options are sent to Brevo's [`/smtp/email`](https://developers.brevo.com/reference/sendtransacemail) API endpoint.
+:::
+
+::::
 
 ## Sending your first email
 
@@ -959,34 +1072,34 @@ if (verifyEmail) {
 
 Create custom transports to integrate mail providers not included in the package. A transport wraps a Nodemailer transport and normalizes its response.
 
-```ts title="app/mail/transports/postmark.ts"
+```ts title="app/mail/transports/mandrill.ts"
 import nodemailer from 'nodemailer'
-import postmarkTransport from 'nodemailer-postmark-transport'
+import mandrillTransport from 'nodemailer-mandrill-transport'
 import { MailResponse } from '@adonisjs/mail'
 import type { NodeMailerMessage, MailTransportContract } from '@adonisjs/mail/types'
 
-export type PostmarkConfig = {
+export type MandrillConfig = {
   auth: {
     apiKey: string
   }
 }
 
-export class PostmarkTransport implements MailTransportContract {
-  #config: PostmarkConfig
+export class MandrillTransport implements MailTransportContract {
+  #config: MandrillConfig
 
-  constructor(config: PostmarkConfig) {
+  constructor(config: MandrillConfig) {
     this.#config = config
   }
 
   async send(
     message: NodeMailerMessage,
-    config?: PostmarkConfig
+    config?: MandrillConfig
   ): Promise<MailResponse> {
     /**
      * Create nodemailer transport with merged config
      */
     const transporter = nodemailer.createTransport(
-      postmarkTransport({ ...this.#config, ...config })
+      mandrillTransport({ ...this.#config, ...config })
     )
 
     const response = await transporter.sendMail(message)
@@ -1001,13 +1114,13 @@ export class PostmarkTransport implements MailTransportContract {
 
 Create a factory function for use in the config file:
 
-```ts title="app/mail/transports/postmark.ts"
+```ts title="app/mail/transports/mandrill.ts"
 import type { MailManagerTransportFactory } from '@adonisjs/mail/types'
 
-export function postmarkTransport(
-  config: PostmarkConfig
+export function mandrillTransport(
+  config: MandrillConfig
 ): MailManagerTransportFactory {
-  return () => new PostmarkTransport(config)
+  return () => new MandrillTransport(config)
 }
 ```
 
@@ -1016,13 +1129,13 @@ Register the transport in your config:
 ```ts title="config/mail.ts"
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/mail'
-import { postmarkTransport } from '#app/mail/transports/postmark'
+import { mandrillTransport } from '#app/mail/transports/mandrill'
 
 const mailConfig = defineConfig({
   mailers: {
-    postmark: postmarkTransport({
+    mandrill: mandrillTransport({
       auth: {
-        apiKey: env.get('POSTMARK_API_KEY'),
+        apiKey: env.get('MANDRILL_API_KEY'),
       },
     }),
   },

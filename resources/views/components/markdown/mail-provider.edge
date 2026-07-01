@@ -1,0 +1,17 @@
+<div
+  class="mail_provider_panel"
+  role="tabpanel"
+  aria-labelledby="mail-transport-tab-{{ node.properties.index }}"
+  {{ node.properties.index === 0 ? '' : 'hidden' }}
+>
+  <div class="mail_provider_heading">
+    <span class="mail_provider_name">{{ node.properties.name }}</span>
+    <code class="mail_provider_transport">
+      {{ node.properties.transport || 'transports.' + node.properties.logo }}
+    </code>
+  </div>
+  @if(node.properties.summary)
+    <p class="mail_provider_summary">{{ node.properties.summary }}</p>
+  @end
+  @markdownSlot()
+</div>

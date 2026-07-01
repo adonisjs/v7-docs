@@ -580,3 +580,81 @@ html.dark .code_snippet pre code span {
     width: 140%;
   }
 }
+
+/* Mail provider switcher */
+.prose .mail_providers {
+  display: block;
+  margin-top: 32px;
+  margin-bottom: 32px;
+  overflow: hidden;
+  @apply rounded-xl border border-gray-300 dark:border-woodsmoke-800/70;
+}
+
+/**
+ * The tab-container element renders its tablist inside a shadow-DOM
+ * wrapper. Let that wrapper span the full width so the header strip
+ * background covers the entire widget.
+ */
+.prose .mail_providers::part(tablist-tab-wrapper) {
+  flex: 1;
+}
+
+.prose .mail_providers_tabs {
+  @apply flex items-center gap-2.5 flex-wrap px-5 py-4;
+  @apply bg-gray-200/60 dark:bg-woodsmoke-900;
+  @apply border-b border-gray-300 dark:border-woodsmoke-800/70;
+}
+
+.prose .mail_providers_tab {
+  @apply flex items-center justify-center size-10 rounded-xl cursor-pointer text-white;
+  background-color: var(--tab-color);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition:
+    outline-color 0.15s ease-in-out,
+    transform 0.15s ease-in-out;
+}
+
+.prose .mail_providers_tab svg {
+  width: 20px;
+  height: 20px;
+}
+
+.prose .mail_providers_tab:hover {
+  transform: translateY(-1px);
+}
+
+.prose .mail_providers_tab[aria-selected='true'] {
+  outline-color: var(--color-woodsmoke-300);
+}
+
+.prose .mail_provider_panel {
+  @apply px-5 pt-5 pb-2;
+}
+
+.prose .mail_provider_panel:focus {
+  outline: none;
+}
+
+.prose .mail_provider_heading {
+  @apply flex items-center gap-2.5;
+}
+
+.prose .mail_provider_name {
+  @apply text-2xl font-semibold text-gray-950 dark:text-white;
+}
+
+.prose .mail_provider_transport {
+  @apply text-13 font-mono px-2 py-0.5 rounded-md;
+  @apply bg-indigo-100/70 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300;
+}
+
+.prose .mail_provider_summary {
+  @apply text-gray-500 dark:text-woodsmoke-400 mt-2 mb-0;
+}
+
+.prose .mail_providers .code_snippet {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}

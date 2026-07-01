@@ -1,0 +1,19 @@
+<tab-container class="mail_providers" data-pagefind-ignore>
+  <div role="tablist" class="mail_providers_tabs" aria-label="Mail transport">
+    @each((provider, index) in node.children)
+      @assign(provider.properties.index = index)
+      <button
+        type="button"
+        role="tab"
+        id="mail-transport-tab-{{ index }}"
+        class="mail_providers_tab"
+        aria-label="{{ provider.properties.name }}"
+        title="{{ provider.properties.name }}"
+        style="--tab-color: {{ provider.properties.color || 'var(--color-woodsmoke-900)' }}"
+      >
+        {{{ providerLogo(provider.properties.logo || 'smtp') }}}
+      </button>
+    @end
+  </div>
+  @markdownSlot()
+</tab-container>
