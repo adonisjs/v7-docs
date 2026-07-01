@@ -117,7 +117,7 @@ export default mailConfig
 
 ## Transport configuration
 
-Each transport accepts provider-specific options. Pick a provider in the switcher below to configure it. Each panel shows the install command for a new setup, along with the full mailer configuration (including optional settings) and the environment variables you need to add a provider to an existing setup.
+Each transport accepts provider-specific options. Pick a provider in the switcher below to configure it.
 
 ::::mail-providers
 
