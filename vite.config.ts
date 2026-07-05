@@ -10,7 +10,11 @@ export default defineConfig({
        * Entrypoints of your application. Each entrypoint will
        * result in a separate bundle.
        */
-      entrypoints: ['resources/js/app.js', 'resources/assets/icons/icons_manifest.json'],
+      entrypoints: ['resources/js/app.js'],
+      assets: {
+        chunks: ['resources/assets/**/*.(svg|jpg|png|jpeg)', 'content/**/**/*.(png|jpg|jpeg)'],
+        assets: ['resources/assets/icons/icons_manifest.json'],
+      },
 
       /**
        * Paths to watch and reload the browser on file change

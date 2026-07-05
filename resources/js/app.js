@@ -27,8 +27,8 @@ up.compiler('[data-tippy-content]', function (element) {
   return () => instance.destroy()
 })
 
-import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
-import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
+// import.meta.glob('../../content/**/*.(png|jpg|jpeg)')
+// import.meta.glob('../assets/**/*.(svg|jpg|png|jpeg)')
 
 function closeSearchModal() {
   const modal = document.querySelector('pagefind-modal')
