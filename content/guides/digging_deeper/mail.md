@@ -864,6 +864,18 @@ await mail.send((message) => {
 })
 ```
 
+Mailbox providers like Gmail and Yahoo require bulk senders to support [one-click unsubscribe (RFC 8058)](https://www.rfc-editor.org/rfc/rfc8058). It lets the provider unsubscribe a recipient by sending a single HTTP `POST` to your unsubscribe URL, so the recipient never has to leave their inbox or load a confirmation page.
+
+Enable it by passing `{ oneClick: true }` as the second argument to `listUnsubscribe`. Alongside your `List-Unsubscribe` URL, AdonisJS will emit the `List-Unsubscribe-Post: List-Unsubscribe=One-Click` header that signals one-click support. The URL you pass must be an `https` endpoint that accepts a `POST` request and unsubscribes the recipient immediately.
+
+```ts title="app/controllers/newsletters_controller.ts"
+await mail.send((message) => {
+  message.listUnsubscribe('https://example.com/unsubscribe?token=abc', {
+    oneClick: true // [!code ++]
+  })
+})
+```
+
 See also: [Nodemailer list headers documentation](https://nodemailer.com/message/list-headers)
 
 ## Class-based emails
