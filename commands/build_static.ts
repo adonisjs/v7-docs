@@ -6,8 +6,9 @@ import { inject } from '@adonisjs/core'
 import { Router } from '@adonisjs/core/http'
 import { IncomingMessage } from 'node:http'
 import { type Infer } from '@vinejs/vine/types'
+import { parseFrontMatter } from 'remark-mdc'
 import { BaseCommand } from '@adonisjs/core/ace'
-import { type singleDoc } from '#collections/docs'
+import { type singleDoc, type categoryDocs } from '#collections/docs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
 import { RequestFactory } from '@adonisjs/core/factories/http'
@@ -109,6 +110,93 @@ export default class BuildStatic extends BaseCommand {
 
     await this.#createRedirects(allGroups)
     await this.#createSitemap(allGroups)
+    await this.#createLlmsFiles([
+      { label: 'Getting started', groups: start.all() },
+      { label: 'Guides', groups: guides.all() },
+      { label: 'Reference', groups: reference.all() },
+    ])
+  }
+
+  /**
+   * Reads a doc's source markdown and splits its frontmatter from the body
+   * using the same parser as the markdown rendering pipeline. Used to build
+   * the llms.txt files.
+   */
+  async #readDocSource(contentPath: string) {
+    const raw = await readFile(contentPath, 'utf-8')
+    const { content, data } = parseFrontMatter(raw)
+    return {
+      description: typeof data.description === 'string' ? data.description.trim() : undefined,
+      body: content.trim(),
+    }
+  }
+
+  /**
+   * Generates the "/llms.txt" index (a curated list of Markdown links, one per
+   * doc, following the https://llmstxt.org spec) and the "/llms-full.txt" file
+   * (the entire documentation concatenated into a single Markdown file).
+   */
+  async #createLlmsFiles(
+    sections: Array<{
+      label: string
+      groups: Array<Infer<typeof categoryDocs>>
+    }>
+  ) {
+    const action = this.logger.action('Generating llms.txt and llms-full.txt')
+
+    try {
+      const index: string[] = [
+        '# AdonisJS',
+        '',
+        '> AdonisJS is a TypeScript-first web framework for Node.js for creating full-stack web apps and API servers. It ships with a set of first-party packages for routing, validation, the Lucid ORM, authentication, testing, and more.',
+        '',
+        'This file indexes the official documentation as Markdown for LLMs. Every page is also available as raw Markdown by appending `.md` to its URL. A single file containing the entire documentation is available at ' +
+          `${appUrl}/llms-full.txt.`,
+        '',
+      ]
+      const full: string[] = []
+
+      for (const section of sections) {
+        for (const group of section.groups) {
+          const heading = group.category === 'Root' ? section.label : group.category
+          const entries: string[] = []
+
+          for (const doc of group.children) {
+            if (doc.draft) {
+              continue
+            }
+
+            const variants = doc.permalink
+              ? [{ permalink: doc.permalink, contentPath: doc.contentPath!, title: doc.title }]
+              : doc.variations!.map((variation) => ({
+                  permalink: variation.permalink,
+                  contentPath: variation.contentPath,
+                  title: `${doc.title} (${variation.name})`,
+                }))
+
+            for (const variant of variants) {
+              const { description, body } = await this.#readDocSource(variant.contentPath)
+              const note = description ? `: ${description}` : ''
+              entries.push(`- [${variant.title}](${appUrl}/${variant.permalink}.md)${note}`)
+              full.push(body)
+            }
+          }
+
+          if (entries.length) {
+            index.push(`## ${heading}`, '', ...entries, '')
+          }
+        }
+      }
+
+      await writeFile(this.app.makePath('build/public/llms.txt'), index.join('\n').trimEnd() + '\n')
+      await writeFile(
+        this.app.makePath('build/public/llms-full.txt'),
+        full.join('\n\n---\n\n') + '\n'
+      )
+      action.succeeded()
+    } catch (error: any) {
+      action.failed(error.message)
+    }
   }
 
   async #createSitemap(
