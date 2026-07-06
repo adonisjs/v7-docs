@@ -241,7 +241,7 @@ import emitter from '@adonisjs/core/services/emitter'
 import { events } from '#generated/events'
 import { listeners } from '#generated/listeners'
 
-emitter.on(events.UserRegistered, listeners.SendVerificationEmail)
+emitter.on(events.UserRegistered, [listeners.SendVerificationEmail])
 ```
 
 ### Dependency injection in listeners
