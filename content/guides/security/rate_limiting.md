@@ -10,6 +10,7 @@ This guide covers rate limiting in AdonisJS applications. You will learn how to:
 - Create throttle middleware for HTTP requests
 - Apply dynamic rate limits based on user authentication
 - Use rate limiting directly for login protection and job queues
+- Enforce several limits at once using multi limiters
 - Handle rate limit exceptions and customize error messages
 - Create custom storage providers
 
@@ -541,6 +542,46 @@ export default class SessionController {
   }
 }
 ```
+
+## Using multiple limiters
+
+Sometimes one limit is not enough. During login, you want a strict limit per email address to protect a single account, and a looser limit per IP address to stop an attacker cycling through many emails from the same machine.
+
+The `limiter.multi` method creates a limiter backed by several sets of options, each with its own key. Every method you call on it is applied to all of them.
+
+```ts title="app/controllers/session_controller.ts"
+import User from '#models/user'
+import limiter from '@adonisjs/limiter/services/main'
+
+const loginLimiter = limiter.multi([
+  { key: `login_${request.ip()}`, requests: 10, duration: '1 min' },
+  {
+    key: `login_${request.ip()}_${email}`,
+    requests: 5,
+    duration: '1 min',
+    blockDuration: '20 mins'
+  },
+])
+
+/**
+ * The callback runs only when both limiters have requests
+ * available, and one request is consumed from each of them
+ * when the credentials are invalid.
+ */
+const [error, user] = await loginLimiter.penalize(() => {
+  return User.verifyCredentials(email, password)
+})
+```
+
+Alongside the `key`, each object accepts the same options as [limiter.use](#creating-a-limiter-instance). Pass a store name as the first argument to override the default store:
+
+```ts
+const loginLimiter = limiter.multi('redis', [
+  { key: `login_${request.ip()}`, requests: 10, duration: '1 min' },
+])
+```
+
+The `consume`, `increment`, `decrement`, `attempt`, `penalize`, `get`, `set`, and `delete` methods all behave like their single limiter counterparts, without the `key` argument, and return an array of responses in the order you defined the limiters. Use the `list` method to access the underlying limiters individually.
 
 ## Manual request consumption
 
