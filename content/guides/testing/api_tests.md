@@ -11,6 +11,7 @@ This guide covers testing JSON API endpoints in AdonisJS applications. You will 
 - Send JSON and form data with requests
 - Work with cookies and sessions during tests
 - Authenticate users using sessions or access tokens
+- Assert Inertia page components, props, and partial reloads
 - Debug requests and responses
 - Assert on response status, body, headers, and more
 
@@ -57,6 +58,26 @@ When using sessions during tests, the session driver must be set to `memory` in 
 
 ```dotenv title=".env.test"
 SESSION_DRIVER=memory
+```
+
+### Configuring Inertia assertions
+
+Add the `inertiaApiClient` plugin alongside the standard API client to use Inertia request helpers and response assertions. Keep any session, authentication, Shield, and database plugins already configured by your starter kit.
+
+```ts title="tests/bootstrap.ts"
+import { assert } from '@japa/assert'
+import { apiClient } from '@japa/api-client'
+import app from '@adonisjs/core/services/app'
+import type { Config } from '@japa/runner/types'
+import { pluginAdonisJS } from '@japa/plugin-adonisjs'
+import { inertiaApiClient } from '@adonisjs/inertia/plugins/api_client'
+
+export const plugins: Config['plugins'] = [
+  assert(),
+  pluginAdonisJS(app),
+  apiClient(),
+  inertiaApiClient(app),
+]
 ```
 
 ## Writing your first test
@@ -228,6 +249,48 @@ const response = await client
   .visit('posts.store')
   .field('title', 'Hello World')
   .field('content', 'This is my first post')
+```
+
+## Testing Inertia responses
+
+Chain `withInertia()` to request an Inertia response, then assert the rendered page component and its props. Use `assertInertiaProps` when the complete props object must match exactly, or `assertInertiaPropsContains` when the test only cares about a subset of page props.
+
+```ts title="tests/functional/posts/index.spec.ts"
+import { test } from '@japa/runner'
+
+test.group('Posts index', () => {
+  test('renders the posts page', async ({ client }) => {
+    const response = await client.get('/posts').withInertia()
+
+    response.assertStatus(200)
+    response.assertInertiaComponent('posts/index')
+    response.assertInertiaPropsContains({
+      filters: { status: 'published' },
+    })
+  })
+})
+```
+
+### Testing partial reloads
+
+Use `withInertiaPartialReload` to request specific props from a page. Both arguments are type-checked, so a misspelled page or prop fails type-checking.
+
+```ts title="tests/functional/posts/index.spec.ts"
+import { test } from '@japa/runner'
+
+test.group('Posts index', () => {
+  test('reloads the posts prop', async ({ client }) => {
+    const response = await client
+      .get('/posts')
+      .withInertiaPartialReload('posts/index', ['posts'])
+
+    response.assertStatus(200)
+    response.assertInertiaComponent('posts/index')
+    response.assertInertiaPropsContains({
+      posts: [],
+    })
+  })
+})
 ```
 
 ## Cookies

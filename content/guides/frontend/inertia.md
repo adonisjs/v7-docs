@@ -6,17 +6,11 @@ description: Learn how to build modern single-page applications using Inertia wi
 
 This guide covers using Inertia with AdonisJS to build single-page applications. You will learn how to:
 
-- Render Inertia pages from controllers and routes and pass props to frontend components
-- Scaffold page components with the `make:page` command
-- Structure the `inertia/` directory and understand key configuration files
-- Generate end-to-end types for pages and shared data
-- Use data loading patterns like optional, deferred, and mergeable props
-- Build forms and navigation with the `Link` and `Form` components
-- Share data globally and scope validation errors with error bags
-- Customize the root Edge template with the `@inertia` and `@inertiaHead` tags
-- Control redirects, browser history, and history encryption
-- Enable server-side rendering (SSR)
-- Understand the request lifecycle in Inertia applications
+- Configure Inertia and render pages with end-to-end type-safe props
+- Navigate between pages, submit forms, and make non-Inertia HTTP requests
+- Share data, display flash messages, and handle validation errors
+- Load data using deferred, mergeable, once, and infinite-scroll props
+- Configure redirects, browser history, and server-side rendering
 
 ## Overview
 
@@ -28,7 +22,7 @@ See also: [How Inertia works](https://inertiajs.com/how-it-works) on the officia
 
 ## Basic example
 
-Let's walk through rendering a posts list end-to-end. The flow has three pieces: a route, a controller that calls `inertia.render()`, and a page component inside `inertia/pages/`.
+Let's walk through rendering a posts list end-to-end. The flow has four pieces: a route, a transformer, a controller that calls `inertia.render()`, and a page component inside `inertia/pages/`.
 
 ::::steps
 
@@ -37,14 +31,40 @@ Let's walk through rendering a posts list end-to-end. The flow has three pieces:
 Routes look identical to any other AdonisJS route. There is no special routing layer for Inertia.
 
 ```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+import { controllers } from '#generated/controllers'
+
 router.get('/posts', [controllers.Posts, 'index'])
+```
+
+:::
+
+:::step{title="Create a transformer"}
+
+Transformers define the data sent to the frontend and generate its TypeScript type. Create a transformer for the `Post` model using the following command.
+
+```sh title="Terminal"
+node ace make:transformer post
+```
+
+Define the fields you want to expose from each post inside the `toObject` method.
+
+```ts title="app/transformers/post_transformer.ts"
+import type Post from '#models/post'
+import { BaseTransformer } from '@adonisjs/core/transformers'
+
+export default class PostTransformer extends BaseTransformer<Post> {
+  toObject() {
+    return this.pick(this.resource, ['id', 'title'])
+  }
+}
 ```
 
 :::
 
 :::step{title="Render a page from the controller"}
 
-The HTTP context exposes an `inertia` object. Call `inertia.render()` with two arguments: the page component path (relative to `inertia/pages/`) and an object of props the component receives.
+The HTTP context exposes an `inertia` object. Transform the posts using the fields from the previous step, and pass the result to `inertia.render()` alongside the page component path.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -56,13 +76,11 @@ export default class PostsController {
     const posts = await Post.all()
 
     return inertia.render('posts/index', {
-      posts: PostTransformer.transform(posts)
+      posts: PostTransformer.transform(posts),
     })
   }
 }
 ```
-
-Use a [transformer](./transformers.md) to serialize model instances into plain objects. Transformers also generate frontend types under the `Data` namespace, keeping props in sync with the backend.
 
 :::
 
@@ -74,8 +92,8 @@ The string `'posts/index'` resolves to `inertia/pages/posts/index.tsx` (or `.vue
 
 :::tab{title="React"}
 ```tsx title="inertia/pages/posts/index.tsx"
-import { InertiaProps } from '~/types'
-import { Data } from '@generated/data'
+import type { InertiaProps } from '~/types'
+import type { Data } from '@generated/data'
 
 type PageProps = InertiaProps<{ posts: Data.Post[] }>
 
@@ -96,7 +114,7 @@ export default function PostsIndex({ posts }: PageProps) {
 :::tab{title="Vue"}
 ```vue title="inertia/pages/posts/index.vue"
 <script setup lang="ts">
-import { Data } from '@generated/data'
+import type { Data } from '@generated/data'
 
 defineProps<{ posts: Data.Post[] }>()
 </script>
@@ -111,7 +129,7 @@ defineProps<{ posts: Data.Post[] }>()
 
 ::::
 
-The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` or `flash` are typed alongside `posts`.
+The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` are typed alongside `posts`.
 
 :::
 
@@ -133,7 +151,7 @@ The component name is type-checked against the generated `InertiaPages` interfac
 
 ### What happens behind the scenes
 
-On the very first request to `/posts`, Inertia returns an HTML shell containing a root `<div>` with the page component name and serialized props as a `data-page` attribute. The frontend bundle reads that attribute and boots React or Vue.
+On the very first request to `/posts`, Inertia returns an HTML shell containing the page object (component name and serialized props) inside a `<script type="application/json">` tag, alongside an empty `<div id="app">` mount element. The frontend bundle reads the JSON payload and boots React or Vue into the mount element.
 
 For every subsequent navigation (link clicks, form submits) Inertia issues a `fetch` request with an `X-Inertia` header. The server runs the same controller but returns a JSON page object instead of HTML. The client swaps in the new component and updates the URL. No full page reload, no separate API.
 
@@ -141,7 +159,7 @@ For every subsequent navigation (link clicks, form submits) Inertia issues a `fe
 
 The `inertia/` directory contains your frontend application. Here is the structure created by the starter kit:
 
-```
+```sh
 inertia/
 ├── app.tsx (or app.vue)     # Frontend application entrypoint
 ├── client.ts                # Tuyau API client setup
@@ -211,10 +229,6 @@ Enables server-side rendering. See [Server-side rendering](#server-side-renderin
 Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`.
 :::
 
-:::option{name="ssr.bundle" type="string"}
-Path to the production SSR bundle generated by Vite. Defaults to `ssr/ssr.js`.
-:::
-
 :::option{name="ssr.pages" type="string[] | (ctx, page) => boolean"}
 Restricts SSR to a subset of pages. Pass an array of component names, or a function that returns a boolean for each page.
 
@@ -252,7 +266,7 @@ The Inertia package registers two Edge tags for this template.
 </html>
 ```
 
-The `@inertia` tag renders a `div` with the encoded page object as a `data-page` attribute. The frontend reads this attribute to boot the SPA. By default, the element is `<div id="app">`. Pass an object to override the tag, id, or class.
+The `@inertia` tag renders two elements: a `<script type="application/json">` tag holding the encoded page object, and the element where your frontend application mounts. The frontend reads the JSON payload to boot the SPA. By default, the mount element is `<div id="app">`. Pass an object to override the tag, id, or class.
 
 ```edge
 @inertia({ as: 'main', id: 'app-root', class: 'min-h-screen' })
@@ -284,54 +298,75 @@ return inertia.render(
 
 ## Generated types
 
-Inertia in AdonisJS is fully type-safe end to end. Two generated artifacts power this:
+After configuring type generation, AdonisJS will type-check:
 
-- The `Data` namespace at `.adonisjs/client/data.d.ts` mirrors transformer output, so props passed from the controller are typed in the page component. See [Transformers](./transformers.md).
-- The `InertiaPages` interface at `.adonisjs/server/pages.d.ts` maps each file in `inertia/pages/` to its component prop types. This is what makes `inertia.render('posts/index', { posts })` autocomplete and type-check the component name and props.
+- Transformer data passed between your controllers and page components. See [Transformers](./transformers.md).
+- Page names and props passed to `inertia.render()`.
+- Route names, parameters, query strings, HTTP methods, and request bodies used by `Link`, `Form`, and `useRouter`.
 
-The `InertiaPages` types are produced by the `indexPages` Assembler hook. Register it in `adonisrc.ts`, passing the framework you use.
+The Inertia starter kit configures type generation for you. If you are adding Inertia to an existing application, register the following hooks in `adonisrc.ts`. Set `framework` to `'react'` or `'vue3'`, and use `source` only when your pages live outside `inertia/pages`.
 
 ```ts title="adonisrc.ts"
+import { indexPages } from '@adonisjs/inertia'
+import { indexEntities } from '@adonisjs/core'
 import { defineConfig } from '@adonisjs/core/app'
-import { indexPages } from '@adonisjs/inertia/index_pages'
+import { generateRegistry } from '@tuyau/core/hooks'
 
 export default defineConfig({
   hooks: {
-    onDevServerStarted: [indexPages({ framework: 'react' })],
-    onBuildStarting: [indexPages({ framework: 'react' })],
+    init: [
+      indexEntities({
+        transformers: { enabled: true, withSharedProps: true },
+      }),
+      indexPages({ framework: 'react' }),
+      generateRegistry(),
+    ],
   },
 })
 ```
 
-The `framework` option accepts `'vue3'` or `'react'`. Pass `source` to scan a directory other than `inertia/pages`.
-
 ### Typing shared data
 
-Shared data returned from the Inertia middleware is available on every page through the `InertiaProps` helper. To make it type-safe, augment the `SharedProps` interface with the inferred return type of your `share()` method.
+Shared data returned from the Inertia middleware is available on every page through the `InertiaProps` helper. Add the following augmentation at the bottom of your middleware file to infer these types from the `share()` method. The starter kit includes this setup by default.
 
 ```ts title="app/middleware/inertia_middleware.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
+import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
-export default class InertiaMiddleware {
+export default class InertiaMiddleware extends BaseInertiaMiddleware {
   share(ctx: HttpContext) {
     return {
       user: ctx.auth?.user,
-      flash: ctx.session?.flashMessages.all(),
     }
   }
 }
 
 declare module '@adonisjs/inertia/types' {
-  interface SharedProps extends InferSharedProps<InertiaMiddleware> {}
+  type MiddlewareSharedProps = InferSharedProps<InertiaMiddleware>
+  export interface SharedProps extends MiddlewareSharedProps {}
 }
 ```
 
-Once augmented, `props.user` and `props.flash` are typed inside every page component without redeclaring them.
+Add the following augmentation to `inertia/types.ts` so `usePage().props` and layout callbacks also receive the shared data types. The starter kit includes this setup by default.
+
+```ts title="inertia/types.ts"
+import type { Data } from '@generated/data'
+
+declare module '@inertiajs/core' {
+  interface InertiaConfig {
+    sharedPageProps: Data.SharedProps
+  }
+}
+```
 
 ## Data loading patterns
 
-Inertia provides several patterns for loading data efficiently. AdonisJS exposes helpers on the `inertia` object to support each pattern.
+Inertia provides several patterns for loading data efficiently. AdonisJS exposes helpers on the `inertia` object to support each pattern. Props may resolve to any serializable value, including `null`.
+
+:::note
+Prop helpers are detected only at the top level of the props object. A helper nested inside a plain object, like `stats: { views: inertia.defer(...) }`, will not be resolved. Give each wrapped value its own top-level key instead.
+:::
 
 :::tip
 Optional and deferred props look similar but behave differently. Optional props are evaluated **only** when the frontend explicitly asks for them through a partial reload. Deferred props are evaluated on a follow-up request that Inertia issues automatically right after the page mounts. Reach for `optional` when the value is rarely needed (a tab a user may never click) and `defer` when the value is always needed but slow to compute (a dashboard chart).
@@ -411,6 +446,88 @@ return inertia.render('dashboard', {
 
 See also: [Deferred props](https://inertiajs.com/deferred-props) on the Inertia documentation.
 
+### Rescuing failed deferred props
+
+Pass `rescue: true` when a deferred prop may fail because of a database outage or an upstream API timeout. AdonisJS will omit the failed prop, allowing the frontend to render a fallback instead of remaining in its loading state.
+
+```ts title="app/controllers/dashboard_controller.ts"
+return inertia.render('dashboard', {
+  /**
+   * If the analytics service is down, the prop is omitted
+   * and the frontend renders its rescue fallback.
+   */
+  analytics: inertia.defer(() => fetchAnalytics(), { rescue: true }),
+})
+```
+
+The second argument to `defer()` accepts either a group name string or an options object with `group` and `rescue` keys, so grouping and rescue combine freely.
+
+On the frontend, the `Deferred` component renders its `rescue` content for any prop the server rescued.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/pages/dashboard.tsx"
+import { Deferred } from '@inertiajs/react'
+import { InertiaProps } from '~/types'
+
+type PageProps = InertiaProps<{
+  analytics?: { pageViews: number }
+}>
+
+export default function Dashboard({ analytics }: PageProps) {
+  return (
+    <Deferred
+      data="analytics"
+      fallback={<p>Loading analytics...</p>}
+      rescue={<p>Analytics are temporarily unavailable.</p>}
+    >
+      <p>{analytics?.pageViews} page views</p>
+    </Deferred>
+  )
+}
+```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/pages/dashboard.vue"
+<script setup lang="ts">
+import { Deferred } from '@inertiajs/vue3'
+
+defineProps<{
+  analytics?: { pageViews: number }
+}>()
+</script>
+
+<template>
+  <Deferred data="analytics">
+    <template #fallback>
+      <p>Loading analytics...</p>
+    </template>
+
+    <template #rescue>
+      <p>Analytics are temporarily unavailable.</p>
+    </template>
+
+    <p>{{ analytics?.pageViews }} page views</p>
+  </Deferred>
+</template>
+```
+:::
+
+::::
+
+Rescued errors never reach the response, but they are not silent. By default, each error is logged through the request logger. Register a listener with `Inertia.onRescue()` in a preload file to route rescued errors to your monitoring service instead.
+
+```ts title="start/inertia.ts"
+import * as Sentry from '@sentry/node'
+import { Inertia } from '@adonisjs/inertia'
+
+Inertia.onRescue((error, { prop }) => {
+  Sentry.captureException(error, { extra: { prop } })
+})
+```
+
 ### Mergeable props
 
 Mergeable props are merged with existing frontend data rather than replacing it. This is useful for infinite scrolling or appending new items to a list.
@@ -455,7 +572,90 @@ return inertia.render('users/index', {
 })
 ```
 
+Merged arrays are appended to the existing data by default. Chain `prepend()` when new items belong at the front, such as a feed where the newest entries appear first. Direction applies to shallow merges only, since `deepMerge()` has no notion of order. The `append()` method exists to state the default explicitly.
+
+```ts title="app/controllers/feed_controller.ts"
+return inertia.render('feed', {
+  /**
+   * New posts are added to the front of the
+   * existing list on the frontend.
+   */
+  posts: inertia.merge(await fetchLatestPosts()).prepend(),
+})
+```
+
+When consecutive responses can contain the same records (an item moved between pages, or a feed shifted while paginating), chain `matchOn()` to merge by a key. An incoming item replaces the existing item with the same key value instead of being appended as a duplicate.
+
+```ts title="app/controllers/notifications_controller.ts"
+return inertia.render('notifications', {
+  /**
+   * A notification whose id already exists on the frontend
+   * replaces the old entry instead of duplicating it.
+   */
+  notifications: inertia.merge(await fetchNotifications()).matchOn('id'),
+})
+```
+
+:::note
+When the frontend explicitly resets a prop (the `reset` option on partial reloads), the server sends that prop as a plain replacement and the client discards the previously merged data. You don't need to handle resets on the server.
+:::
+
 See also: [Merging props](https://inertiajs.com/merging-props) on the Inertia documentation.
+
+### Once props
+
+Once props are computed on the first visit and reused across later visits. Use them for data that is expensive to compute and rarely changes, like lookup tables, country lists, or plan catalogs.
+
+```ts title="app/controllers/products_controller.ts"
+return inertia.render('products/index', {
+  /**
+   * Computed on the first visit. Skipped on later visits
+   * while the client still holds the cached value.
+   */
+  categories: inertia.once(async () => {
+    const categories = await Category.all()
+    return CategoryTransformer.transform(categories)
+  }),
+})
+```
+
+The cached value never expires by default. Pass options as the second argument to control expiry and the cache identity:
+
+::::options
+
+:::option{name="key" type="string"}
+The cache key the client uses to identify the value. Defaults to the prop name. Use the same key for the same data on different pages so they share one cached value.
+:::
+
+:::option{name="expiresIn" type="number | string"}
+Relative time-to-live: milliseconds as a number, or a duration string like `'30m'` or `'2h'`. After expiry, the client discards the cached value and the server recomputes the prop on the next visit.
+:::
+
+:::option{name="expiresAt" type="Date | number"}
+Absolute expiry as a `Date` or epoch milliseconds. Takes precedence over `expiresIn`.
+:::
+
+:::option{name="fresh" type="boolean"}
+Recompute the value for this response even when the client holds a cached copy. Useful right after the underlying data changes, for example in the response following a mutation.
+:::
+
+::::
+
+Once behavior also chains onto the other helpers. Call `.once()` on `optional`, `defer`, `merge`, or `deepMerge` to combine client-side caching with their loading behavior.
+
+```ts title="app/controllers/dashboard_controller.ts"
+return inertia.render('dashboard', {
+  /**
+   * Deferred on the first load, then cached by the client
+   * so later visits skip the computation entirely.
+   */
+  stats: inertia.defer(() => computeStats()).once({ expiresIn: '15m' }),
+})
+```
+
+:::note
+Partial reloads that explicitly request a once prop always recompute it. The cache only short-circuits standard visits, so `router.reload({ only: ['categories'] })` remains a reliable way to force-refresh the value from the frontend.
+:::
 
 ## Link and Form components
 
@@ -554,34 +754,143 @@ defineProps<{ post: { id: number; title: string } }>()
 
 ::::
 
-The `Form` component infers the HTTP method (`POST`, `PUT`, `PATCH`, `DELETE`) from the route name automatically. You do not need to pass a `method` prop — in fact, the AdonisJS wrapper omits `method` and `action` from the accepted props since both are derived from the route definition.
+The `Form` component infers the HTTP method (`POST`, `PUT`, `PATCH`, `DELETE`) from the route name automatically. You do not need to pass a `method` prop. In fact, the AdonisJS wrapper omits `method` and `action` from the accepted props since both are derived from the route definition.
 
 When validation fails on the server, AdonisJS automatically adds validation errors to the session flash messages. The Inertia middleware then shares these errors with the frontend, making them available through the `errors` object in your form.
 
+### Server responses for optimistic submissions
+
+Optimistic submissions do not require a special server response. Process the mutation in your controller and return a normal redirect to the page containing the updated props.
+
+```ts title="app/controllers/launch_tasks_controller.ts"
+import LaunchTask from '#models/launch_task'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class LaunchTasksController {
+  async toggle({ params, response }: HttpContext) {
+    const task = await LaunchTask.findOrFail(params.id)
+
+    task.completed = !task.completed
+    await task.save()
+
+    return response.redirect().back()
+  }
+}
+```
+
 ### Scoping errors with error bags
 
-When a page renders multiple independent forms, errors from one form will leak into the others because they all read from the same `errors` object. To isolate them, set the `errorBag` prop on the form. Inertia sends this name in the `X-Inertia-Error-Bag` header, and the middleware nests the validation errors under that key.
+When a page renders multiple independent forms, set the `errorBag` prop to keep their validation errors separate. The `errors` value passed to the `Form` callback is already scoped to that bag, so you can access each field directly.
 
-```tsx
+```tsx title="inertia/pages/comments/index.tsx"
 <Form route="comments.store" errorBag="newComment">
   {({ errors }) => (
     /**
-     * errors.newComment.body holds errors from this form only.
+     * errors.body holds errors from this form only.
      */
     <textarea name="body" />
   )}
 </Form>
 ```
 
+### Showing multiple errors per field
+
+By default, each field in the `errors` object holds the first validation message as a string. When a field can fail several rules at once (a password with both length and complexity requirements), collect every message by passing `allMessages: true` to `getValidationErrors()` in your middleware.
+
+```ts title="app/middleware/inertia_middleware.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
+
+export default class InertiaMiddleware extends BaseInertiaMiddleware {
+  share(ctx: HttpContext) {
+    return {
+      errors: ctx.inertia.always(
+        this.getValidationErrors(ctx, { allMessages: true }) // [!code highlight]
+      ),
+    }
+  }
+}
+```
+
+Every field is now a `string[]`, including fields with a single message, so the shape stays uniform across the response. Tell the Inertia client about the new shape with a one-line module augmentation:
+
+```ts title="inertia/types.ts"
+declare module '@inertiajs/core' {
+  interface InertiaConfig {
+    errorValueType: string[]
+  }
+}
+```
+
+With both changes in place, render the messages as a list:
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/pages/auth/register.tsx"
+import { Form } from '@adonisjs/inertia/react'
+
+export default function Register() {
+  return (
+    <Form route="auth.register">
+      {({ errors }) => (
+        <>
+          <div>
+            <label htmlFor="password">Password</label>
+            <input type="password" name="password" id="password" />
+            {errors.password && (
+              <ul>
+                {errors.password.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <button type="submit">Create account</button>
+        </>
+      )}
+    </Form>
+  )
+}
+```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/pages/auth/register.vue"
+<script setup lang="ts">
+import { Form } from '@adonisjs/inertia/vue'
+</script>
+
+<template>
+  <Form route="auth.register" v-slot="{ errors }">
+    <div>
+      <label for="password">Password</label>
+      <input type="password" name="password" id="password" />
+      <ul v-if="errors.password">
+        <li v-for="message in errors.password" :key="message">
+          {{ message }}
+        </li>
+      </ul>
+    </div>
+
+    <button type="submit">Create account</button>
+  </Form>
+</template>
+```
+:::
+
+::::
+
 ### Route parameters
 
 Both `Link` and `Form` accept route parameters for routes with dynamic segments. The keys in the object correspond to the parameter names defined in your route:
 
 ```ts title="start/routes.ts"
-// Single parameter — :id
+// Single parameter (:id)
 router.get('posts/:id', [PostsController, 'show']).as('posts.show')
 
-// Multiple parameters — :userId and :postId
+// Multiple parameters (:userId and :postId)
 router.get('users/:userId/posts/:postId', [PostsController, 'show']).as('users.posts.show')
 ```
 
@@ -626,41 +935,197 @@ TypeScript enforces that you provide all required parameters with the correct na
 
 ### Query parameters
 
-The `Link` and `Form` components use the `route` prop for type-safe navigation, but they don't accept query parameters directly. To add query parameters (for example, `?page=2`), generate the URL with `urlFor` and pass it as the `href` prop instead:
+Both components accept query parameters through the `qs` prop in route mode, so adding parameters like `?page=2` keeps the type-safe `route` prop. The query string is serialized into the generated URL for you:
 
+::::tabs
+
+:::tab{title="React"}
 ```tsx
-import { urlFor } from '~/client'
-
-<Link href={urlFor('posts.index', {}, { qs: { page: 2, status: 'published' } })}>
+<Link route="posts.index" qs={{ page: 2, status: 'published' }}>
   Page 2
 </Link>
 ```
-
-:::note
-When using `href`, you lose the type-safe route name checking that the `route` prop provides. Use `route` with route parameters for standard navigation and fall back to `href` with `urlFor` only when you need query parameters.
 :::
+
+:::tab{title="Vue"}
+```vue
+<template>
+  <Link route="posts.index" :qs="{ page: 2, status: 'published' }">
+    Page 2
+  </Link>
+</template>
+```
+:::
+
+::::
+
+When a route declares query string types (inferred from its validator), TypeScript checks the `qs` keys and value types against them. Routes without declared query types accept any object.
+
+### Programmatic navigation
+
+Use the `useRouter` hook for navigation outside of links and forms, such as event handlers, keyboard shortcuts, or redirects after client-side work completes. The returned router carries the same route awareness as the `Link` and `Form` components: URLs and HTTP methods resolve from your route definitions, and the compiler validates route names, parameters, and request bodies.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/pages/posts/index.tsx"
+import { useRouter } from '@adonisjs/inertia/react'
+
+export default function PostsIndex() {
+  const router = useRouter()
+
+  function openPost(id: number) {
+    router.visit({ route: 'posts.show', routeParams: { id } })
+  }
+
+  function archivePost(id: number) {
+    router.patch({ route: 'posts.archive', routeParams: { id } }, { reason: 'outdated' })
+  }
+
+  // ...
+}
+```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/pages/posts/index.vue"
+<script setup lang="ts">
+import { useRouter } from '@adonisjs/inertia/vue'
+
+const router = useRouter()
+
+function openPost(id: number) {
+  router.visit({ route: 'posts.show', routeParams: { id } })
+}
+
+function archivePost(id: number) {
+  router.patch({ route: 'posts.archive', routeParams: { id } }, { reason: 'outdated' })
+}
+</script>
+```
+:::
+
+::::
+
+The `visit` method resolves the HTTP method from the route definition, and you can override it with the `method` prop. The `get`, `post`, `put`, `patch`, and `delete` shortcuts fix the method instead: each one accepts only routes registered for that verb. The request body passed to `post`, `put`, and `patch` follows the route's declared body type, so sending a field the route does not accept is a compile-time error.
+
+Pass `href` instead of `route` to navigate to a URL directly. Href navigation skips route validation and accepts any request payload.
+
+```ts title="inertia/pages/session/logout_button.tsx"
+router.visit({ href: '/logout' }, { method: 'post' })
+```
+
+## Non-Inertia HTTP requests
+
+Use a non-Inertia HTTP request when you need server data without replacing the current page, changing browser history, or updating page props. The AdonisJS `useHttp` wrapper binds the request to a named route and infers its request body, response, and validation errors.
+
+::::steps
+
+:::step{title="Define the request validator"}
+
+Create a VineJS validator for the request body. The generated route types will use this validator to type the data passed to `useHttp`.
+
+```ts title="app/validators/post_lookup.ts"
+import vine from '@vinejs/vine'
+
+export const postLookupValidator = vine.create({
+  id: vine.number(),
+})
+```
+
+:::
+
+:::step{title="Register a named route"}
+
+Give the endpoint a route name. The frontend will use this name instead of constructing the URL and HTTP method manually.
+
+```ts title="start/routes.ts"
+import { controllers } from '#generated/controllers'
+import router from '@adonisjs/core/services/router'
+
+router.post('/api/posts/lookup', [controllers.Posts, 'lookup']).as('posts.lookup')
+```
+
+:::
+
+:::step{title="Return a serialized response"}
+
+Validate the request and return transformed values with `HttpContext.serialize`. The generated route response type will match the values received by the browser after serialization.
+
+```ts title="app/controllers/posts_controller.ts"
+import Post from '#models/post'
+import type { HttpContext } from '@adonisjs/core/http'
+import PostTransformer from '#transformers/post_transformer'
+import { postLookupValidator } from '#validators/post_lookup'
+
+export default class PostsController {
+  async lookup({ request, serialize }: HttpContext) {
+    const { id } = await request.validateUsing(postLookupValidator)
+    const post = await Post.findOrFail(id)
+
+    return serialize({
+      post: PostTransformer.transform(post),
+    })
+  }
+}
+```
+
+:::
+
+:::step{title="Submit the request from React"}
+
+Pass the route name and initial form data to `useHttp`. The `submit` method uses the route's URL and HTTP method, while `data`, `errors`, and `response` are inferred from the validator and controller.
+
+```tsx title="inertia/components/post_lookup.tsx"
+import { useHttp } from '@adonisjs/inertia/react'
+
+export default function PostLookup() {
+  const request = useHttp({ route: 'posts.lookup' }, { id: 1 })
+
+  async function lookup() {
+    await request.submit()
+  }
+
+  return (
+    <div>
+      <button type="button" onClick={lookup} disabled={request.processing}>
+        {request.processing ? 'Loading post…' : 'Load post'}
+      </button>
+
+      {request.errors.id && <p>{request.errors.id}</p>}
+      {request.response && <p>{request.response.post.title}</p>}
+    </div>
+  )
+}
+```
+
+:::
+
+::::
 
 ## Shared data
 
-Shared data is available to every page in your application without explicitly passing it from each controller. This is useful for global data like the authenticated user, flash messages, or application settings.
+Shared data is available to every page in your application without explicitly passing it from each controller. This is useful for global data like the authenticated user, validation errors, or application settings. For one-time notifications, use [flash messages](#flash-messages) instead.
 
-The `InertiaMiddleware` defines what data is shared. This middleware is stored at `app/middleware/inertia_middleware.ts` and contains a `share` method that returns the shared data.
+Return shared data from the `share()` method in `app/middleware/inertia_middleware.ts`.
+
+:::warning
+Add or update methods on the middleware created by the starter kit. Do not replace the middleware class when adding shared data or flash data. Keep the existing `share()`, `flash()`, and `handle()` methods.
+:::
 
 ```ts title="app/middleware/inertia_middleware.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import UserTransformer from '#transformers/user_transformer'
+import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
 
-export default class InertiaMiddleware {
+export default class InertiaMiddleware extends BaseInertiaMiddleware {
   share(ctx: HttpContext) {
     /**
      * The share method may be called before all middleware runs.
      * For example, during a 404 response. Always treat context
      * properties as potentially undefined.
      */
-    const { session, auth } = ctx as Partial<HttpContext>
-
-    const error = session?.flashMessages.get('error')
-    const success = session?.flashMessages.get('success')
+    const { auth } = ctx as Partial<HttpContext>
 
     return {
       /**
@@ -668,10 +1133,6 @@ export default class InertiaMiddleware {
        * even during partial reloads.
        */
       errors: ctx.inertia.always(this.getValidationErrors(ctx)),
-      flash: ctx.inertia.always({
-        error,
-        success,
-      }),
       user: ctx.inertia.always(
         auth?.user ? UserTransformer.transform(auth.user) : undefined
       ),
@@ -682,6 +1143,10 @@ export default class InertiaMiddleware {
 
 :::tip
 The `share` method may be called before the request passes through all middleware or reaches the controller. This happens when rendering error pages or aborting requests early. Always check that context properties exist before accessing them.
+:::
+
+:::note
+Shared props remain available during instant visits without additional configuration.
 :::
 
 ### Accessing shared data
@@ -700,15 +1165,11 @@ type PageProps = InertiaProps<{
 }>
 
 export default function PostsIndex(props: PageProps) {
-  /**
-   * Access shared data alongside page-specific props.
-   */
-  if (props.flash.error) {
-    console.log('Error:', props.flash.error)
-  }
-
   return (
     <div>
+      {/**
+        * Access shared data alongside page-specific props.
+        */}
       {props.user && <p>Welcome, {props.user.name}</p>}
       {/* render posts */}
     </div>
@@ -720,7 +1181,7 @@ export default function PostsIndex(props: PageProps) {
 :::tab{title="Vue"}
 ```vue title="inertia/pages/posts/index.vue"
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { Data } from '@generated/data'
 
@@ -729,21 +1190,11 @@ defineProps<{
 }>()
 
 /**
- * Access shared data.
+ * Shared props are typed, so no generic is needed.
  */
-const page = usePage<Data.SharedProps>()
+const page = usePage()
 
 const user = computed(() => page.props.user)
-
-watch(
-  () => page.props.flash,
-  (flashMessages) => {
-    if (flashMessages.error) {
-      console.log('Error:', flashMessages.error)
-    }
-  },
-  { immediate: true }
-)
 </script>
 
 <template>
@@ -754,6 +1205,128 @@ watch(
 :::
 
 ::::
+
+## Flash messages
+
+Flash messages are one-time notifications stored in the session, like "Post created" after a successful mutation. They are available from `usePage().flash` and will not reappear when navigating back. Validation errors remain available through the shared page props.
+
+Define a `flash()` method in the Inertia middleware to choose which session flash messages are sent to the frontend. Keep the existing `share()` and `handle()` methods when updating the middleware.
+
+```ts title="app/middleware/inertia_middleware.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import BaseInertiaMiddleware from '@adonisjs/inertia/inertia_middleware'
+
+export default class InertiaMiddleware extends BaseInertiaMiddleware {
+  flash(ctx: HttpContext) {
+    const success: string | undefined = ctx.session?.flashMessages.get('success')
+    const error: string | undefined = ctx.session?.flashMessages.get('error')
+
+    return { success, error }
+  }
+}
+```
+
+Flash a message in the controller and redirect. The middleware picks it up on the request that follows.
+
+```ts title="app/controllers/posts_controller.ts"
+async store({ request, response, session }: HttpContext) {
+  await Post.create(request.all())
+
+  session.flash('success', 'Post created')
+  return response.redirect().toRoute('posts.index')
+}
+```
+
+On the frontend, flash data is available on `page.flash`, a sibling of `props`. The starter kit's default layout reads it through `usePage()` and forwards messages to toast notifications, dismissing stale toasts when the URL changes.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/layouts/default.tsx"
+import { toast, Toaster } from 'sonner'
+import { usePage } from '@inertiajs/react'
+import { ReactElement, useEffect } from 'react'
+
+export default function Layout({ children }: { children: ReactElement }) {
+  const { url, flash } = usePage()
+
+  useEffect(() => {
+    toast.dismiss()
+  }, [url])
+
+  useEffect(() => {
+    if (flash.error) {
+      toast.error(flash.error)
+    }
+    if (flash.success) {
+      toast.success(flash.success)
+    }
+  })
+
+  return (
+    <>
+      <main>{children}</main>
+      <Toaster position="top-center" richColors />
+    </>
+  )
+}
+```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/layouts/default.vue"
+<script setup lang="ts">
+import { watch } from 'vue'
+import { usePage } from '@inertiajs/vue3'
+import { toast, Toaster } from 'vue-sonner'
+
+const page = usePage()
+
+watch(() => page.url, () => toast.dismiss())
+
+watch(
+  () => page.flash,
+  (flash) => {
+    if (flash.error) {
+      toast.error(flash.error)
+    }
+    if (flash.success) {
+      toast.success(flash.success)
+    }
+  },
+  { immediate: true }
+)
+</script>
+
+<template>
+  <main><slot /></main>
+  <Toaster position="top-center" richColors />
+</template>
+```
+:::
+
+::::
+
+For handling flash data outside a component, the client also exposes a global `flash` event (`router.on('flash', callback)`) and an `onFlash` callback on individual visits.
+
+See also: [Flash data](https://inertiajs.com/docs/v3/data-props/flash-data) on the Inertia documentation.
+
+Flash data follows the session's flash semantics: a message survives exactly one redirect and is cleared afterwards. When an [asset version mismatch](#asset-versioning) forces a full reload, the messages are reflashed automatically so they are not lost.
+
+### Typing flash data
+
+Add the following augmentation to `inertia/types.ts` to infer `usePage().flash` and flash event payloads from the middleware's `flash()` method. The starter kit includes this setup by default.
+
+```ts title="inertia/types.ts"
+import type { InferFlashData } from '@adonisjs/inertia/types'
+import type InertiaMiddleware from '#middleware/inertia_middleware'
+
+declare module '@inertiajs/core' {
+  interface InertiaConfig {
+    flashDataType: InferFlashData<InertiaMiddleware>
+  }
+}
+```
 
 ## Pagination
 
@@ -786,7 +1359,6 @@ Type the paginated props using the `Data` namespace. The pagination metadata inc
 
 ```tsx title="inertia/pages/posts/index.tsx"
 import { Link } from '@adonisjs/inertia/react'
-import { urlFor } from '~/client'
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 
@@ -816,12 +1388,12 @@ export default function PostsIndex({ posts }: PageProps) {
 
       <nav>
         {metadata.currentPage > 1 && (
-          <Link href={urlFor('posts.index', {}, { qs: { page: metadata.currentPage - 1 } })}>
+          <Link route="posts.index" qs={{ page: metadata.currentPage - 1 }}>
             Previous
           </Link>
         )}
         {metadata.currentPage < metadata.lastPage && (
-          <Link href={urlFor('posts.index', {}, { qs: { page: metadata.currentPage + 1 } })}>
+          <Link route="posts.index" qs={{ page: metadata.currentPage + 1 }}>
             Next
           </Link>
         )}
@@ -831,7 +1403,127 @@ export default function PostsIndex({ posts }: PageProps) {
 }
 ```
 
-The pagination links use `urlFor` with the `qs` option to generate URLs like `/posts?page=2`. See [Transformers](./transformers.md) for details on the `paginate` method and the shape of the metadata object.
+The pagination links use the [`qs` prop](#query-parameters) to generate URLs like `/posts?page=2`. See [Transformers](./transformers.md) for details on the `paginate` method and the shape of the metadata object.
+
+For lists that load continuously instead of page by page, see [Infinite scroll](#infinite-scroll).
+
+## Infinite scroll
+
+Infinite scroll replaces pagination links with a list that keeps extending as the user scrolls. Use `inertia.scroll()` in your controller and render the prop with Inertia's `InfiniteScroll` component.
+
+Pass `inertia.scroll()` a callback that reads the current page from the query string and returns a transformer's `paginate()` output.
+
+```ts title="app/controllers/posts_controller.ts"
+import Post from '#models/post'
+import type { HttpContext } from '@adonisjs/core/http'
+import PostTransformer from '#transformers/post_transformer'
+
+export default class PostsController {
+  async index({ request, inertia }: HttpContext) {
+    return inertia.render('posts/index', {
+      posts: inertia.scroll(async () => {
+        const page = request.input('page', 1)
+        const posts = await Post.query().paginate(page, 10)
+        return PostTransformer.paginate(posts.all(), posts.getMeta())
+      }),
+    })
+  }
+}
+```
+
+On the frontend, type the prop with the `Scroll` marker and wrap the list in the `InfiniteScroll` component, naming the prop through the `data` attribute. The marker enforces the pairing end to end: a prop declared as `Scroll<Data.Post>` type-checks only when the server produces it with `inertia.scroll()`.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/pages/posts/index.tsx"
+import { InfiniteScroll } from '@inertiajs/react'
+import type { Scroll } from '@adonisjs/inertia/types'
+import { InertiaProps } from '~/types'
+import { Data } from '@generated/data'
+
+type PageProps = InertiaProps<{
+  posts: Scroll<Data.Post>
+}>
+
+export default function PostsIndex({ posts }: PageProps) {
+  return (
+    <InfiniteScroll data="posts">
+      {posts.data.map((post) => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+        </article>
+      ))}
+    </InfiniteScroll>
+  )
+}
+```
+:::
+
+:::tab{title="Vue"}
+```vue title="inertia/pages/posts/index.vue"
+<script setup lang="ts">
+import { InfiniteScroll } from '@inertiajs/vue3'
+import type { Scroll } from '@adonisjs/inertia/types'
+import { Data } from '@generated/data'
+
+defineProps<{
+  posts: Scroll<Data.Post>
+}>()
+</script>
+
+<template>
+  <InfiniteScroll data="posts">
+    <article v-for="post in posts.data" :key="post.id">
+      <h2>{{ post.title }}</h2>
+    </article>
+  </InfiniteScroll>
+</template>
+```
+:::
+
+::::
+
+Scroll props compose with the patterns you already know. Chain `matchOn()` to dedupe overlapping pages by a key, which matters when rows shift between requests:
+
+```ts title="app/controllers/posts_controller.ts"
+return inertia.render('posts/index', {
+  /**
+   * A post that appears on two consecutive pages is
+   * rendered once instead of twice.
+   */
+  posts: inertia.scroll(async () => {
+    const posts = await Post.query().paginate(request.input('page', 1), 10)
+    return PostTransformer.paginate(posts.all(), posts.getMeta())
+  }).matchOn('id'),
+})
+```
+
+Chain `deferred()` to skip the first page during the initial render and load it right after the page mounts, matching the [deferred props](#deferred-props) behavior. Since a deferred scroll prop is absent on the first render, declare it optional on the frontend (`posts?: Scroll<Data.Post>`).
+
+### Custom pagination cursors
+
+For data sources without a transformer paginator (cursor pagination, an external API), pass a provider as the second argument. It receives the resolved value, which must expose a `data` array, and returns the cursor description: the query parameter name and the current, next, and previous pages.
+
+```ts title="app/controllers/activities_controller.ts"
+return inertia.render('activities/index', {
+  activities: inertia.scroll(
+    () => fetchActivities(request.input('cursor')),
+    (result) => ({
+      pageName: 'cursor',
+      currentPage: result.meta.cursor,
+      nextPage: result.meta.next,
+      previousPage: null,
+    })
+  ),
+})
+```
+
+:::warning
+A value that is neither a transformer paginator nor accompanied by a provider cannot be paginated, and the server throws an error when rendering. Pass a provider whenever the value doesn't come from a transformer's `paginate()` method.
+:::
+
+See also: [Infinite scrolling](https://inertiajs.com/infinite-scrolling) on the Inertia documentation for the `InfiniteScroll` component options, like custom triggers and manual mode.
 
 ## CSRF protection
 
@@ -851,7 +1543,7 @@ const inertiaConfig = defineConfig({
 })
 ```
 
-Inertia sends the current asset version with every request in the `X-Inertia-Version` header. When the server detects a mismatch on a `GET` request, it responds with a `409` and instructs the client to perform a full page reload at the same URL. Flash messages are reflashed automatically so they survive the reload.
+When the asset version changes during a `GET` visit, Inertia performs a full page reload at the same URL. Background requests, such as polling, postpone the reload until the user's next visit. Flash messages are preserved across the reload.
 
 ## Redirects and history
 
@@ -912,33 +1604,16 @@ See [history encryption](https://inertiajs.com/history-encryption) on the Inerti
 
 ## Server-side rendering
 
-Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO. Enabling SSR requires configuration in both Vite and AdonisJS.
+Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO.
 
-First, enable SSR in your Vite configuration. This tells Vite to create a separate SSR bundle using your `ssr.tsx` or `ssr.vue` entrypoint.
-
-```ts title="vite.config.ts"
-export default defineConfig({
-  plugins: [
-    // [!code highlight:6]
-    inertia({
-      ssr: {
-        enabled: true,
-        entrypoint: 'inertia/ssr.tsx'
-      }
-    }),
-  ],
-})
-```
-
-Then enable SSR in your AdonisJS configuration so the server knows to use the SSR bundle for rendering.
+The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntrypoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
 
 const inertiaConfig = defineConfig({
   ssr: {
-    // [!code highlight:2]
-    enabled: true,
+    enabled: true, // [!code highlight]
     entrypoint: 'inertia/ssr.tsx',
   },
 })
@@ -946,23 +1621,78 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-## Request lifecycle
+If you are adding SSR to an existing application, add the same entrypoint to `serverEntrypoints` in `vite.config.ts`.
 
-Understanding how requests flow through an Inertia application helps when debugging or extending the default behavior.
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite'
+import adonisjs from '@adonisjs/vite/client'
 
-When a user first visits your application, the request follows this path:
+export default defineConfig({
+  plugins: [
+    adonisjs({
+      entrypoints: ['inertia/app.tsx'],
+      serverEntrypoints: ['inertia/ssr.tsx'], // [!code highlight]
+    }),
+  ],
+})
+```
 
-1. The request hits your AdonisJS routes and is handled by a controller
-2. The controller calls `inertia.render()` with a page component and props
-3. The Inertia middleware's `share()` method adds shared data to the props
-4. Since this is the first visit, Inertia returns a full HTML response containing a shell layout with a `div` that holds the serialized page component name and props
-5. The frontend bundle boots, reads the props from the `div`, and renders the React or Vue component
+## Understanding the Inertia request lifecycle
 
-For subsequent navigation (clicking links or submitting forms):
+Inertia requests follow two flows: the **initial page visit** and **subsequent Inertia visits**. Both flows use the same AdonisJS routes, middleware, controllers, and `inertia.render()` calls. The response format changes based on whether the request includes the `X-Inertia` header.
 
-1. Inertia intercepts the navigation and makes a `fetch` request with an `X-Inertia` header
-2. The request flows through routes, controllers, and middleware as before
-3. Since the `X-Inertia` header is present, Inertia returns a JSON response with just the page component name and props
-4. The frontend receives the JSON and swaps the current component with the new one, updating the URL without a full page reload
+### Initial page visit
 
-This architecture gives you the developer experience of a traditional server-rendered app with the user experience of a modern SPA.
+The initial visit is a standard browser document request without an `X-Inertia` header. The browser needs a complete HTML document before it can boot your React or Vue application.
+
+```sh
+Initial visit (HTML response)
+
+  Browser document request
+            │
+            ▼
+  AdonisJS route and middleware
+            │
+            ▼
+  Controller calls inertia.render()
+            │
+            ▼
+  Shared props and flash data are resolved
+            │
+            ▼
+  Root Edge template is rendered
+            │
+            ▼
+  React or Vue boots in the browser
+```
+
+Without server-side rendering, the root template contains the application mount element and a serialized page object. The page object contains the component name, props, URL, and other Inertia state needed to start the frontend application.
+
+When SSR is enabled for the page, the flow remains the same, but the root template also contains the server-rendered component HTML and document head elements.
+
+### Subsequent Inertia visits
+
+After the frontend application has booted, Inertia intercepts navigation from `Link`, `Form`, and router visits. It sends a `fetch` request with the `X-Inertia` header, telling the server that the browser already has the HTML shell.
+
+```sh
+Subsequent visit (JSON response)
+
+  Link, Form, or router visit
+            │
+            ▼
+  Fetch request with X-Inertia header
+            │
+            ▼
+  Same AdonisJS route and middleware
+            │
+            ▼
+  Same controller calls inertia.render()
+            │
+            ▼
+  JSON page object is returned
+            │
+            ▼
+  Inertia replaces the current page component
+```
+
+The server does not render the root Edge template during an Inertia visit. It returns the page object as JSON, and the client replaces the current component, updates browser history, and manages the scroll position without performing a full page reload.

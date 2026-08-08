@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "v7-docs",
+      "cwd": "/Users/virk/code/adonisjs/websites/v7-new-docs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3333
+    }
+  ]
+}
