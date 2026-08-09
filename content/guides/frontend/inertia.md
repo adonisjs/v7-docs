@@ -14,11 +14,11 @@ This guide covers using Inertia with AdonisJS to build single-page applications.
 
 ## Overview
 
-Inertia acts as a bridge between AdonisJS and frontend frameworks like React and Vue. It eliminates the need for client-side routing or complex state management libraries by embracing a server-first architecture. You write controllers and routes exactly as you would in a traditional server-rendered application, but instead of returning HTML or JSON, you render Inertia pages that your frontend framework displays.
+[Inertia acts as a bridge](https://inertiajs.com/how-it-works) between AdonisJS and frontend frameworks like React and Vue. It eliminates the need for client-side routing or complex state management libraries by embracing a server-first architecture. 
 
-This approach gives you the best of both worlds: the simplicity of server-side routing and data fetching combined with the rich interactivity of React or Vue for the view layer. AdonisJS officially supports both frameworks through the Inertia starter kit.
+You write controllers and routes exactly as you would in a traditional server-rendered application, but instead of returning HTML or JSON, you render Inertia pages that your frontend framework displays.
 
-See also: [How Inertia works](https://inertiajs.com/how-it-works) on the official Inertia documentation.
+This approach gives you the best of both worlds. The simplicity of server-side routing and data fetching combined with the rich interactivity of React or Vue for the view layer. AdonisJS officially supports both frameworks through the Inertia starter kit.
 
 ## Basic example
 
@@ -109,6 +109,9 @@ export default function PostsIndex({ posts }: PageProps) {
   )
 }
 ```
+
+The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` are typed alongside `posts`.
+
 :::
 
 :::tab{title="Vue"}
@@ -128,8 +131,6 @@ defineProps<{ posts: Data.Post[] }>()
 :::
 
 ::::
-
-The `InertiaProps` helper merges your page-specific props with [shared data](#shared-data), so global props like `user` are typed alongside `posts`.
 
 :::
 
@@ -366,10 +367,6 @@ Inertia provides several patterns for loading data efficiently. AdonisJS exposes
 
 :::note
 Prop helpers are detected only at the top level of the props object. A helper nested inside a plain object, like `stats: { views: inertia.defer(...) }`, will not be resolved. Give each wrapped value its own top-level key instead.
-:::
-
-:::tip
-Optional and deferred props look similar but behave differently. Optional props are evaluated **only** when the frontend explicitly asks for them through a partial reload. Deferred props are evaluated on a follow-up request that Inertia issues automatically right after the page mounts. Reach for `optional` when the value is rarely needed (a tab a user may never click) and `defer` when the value is always needed but slow to compute (a dashboard chart).
 :::
 
 ### Optional props

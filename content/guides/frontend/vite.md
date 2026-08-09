@@ -227,7 +227,7 @@ import { defineConfig } from '@adonisjs/vite'
 export default defineConfig({
   buildDirectory: 'public/assets',
   assetsUrl: '/assets',
-  // [!code ++:4]
+  // [!code ++:3]
   scriptAttributes: {
     defer: true,
   },
@@ -257,7 +257,7 @@ export default defineConfig({
 
 AdonisJS does not enforce a specific folder structure for frontend assets. However, we recommend storing them in the `resources` directory with subdirectories for each asset type.
 
-```
+```sh
 resources
 ├── css
 │   └── app.css
@@ -287,12 +287,13 @@ Use the `@vite` Edge tag to render script and link tags for your entry points. T
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @vite(['resources/js/app.js'])
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  // [!code highlight]
+  @vite(['resources/js/app.js'])
 </head>
 <body>
-    @!section('content')
+  @!section('content')
 </body>
 </html>
 ```
@@ -341,7 +342,7 @@ export default defineConfig({
   plugins: [
     adonisjs({
       entryPoints: ['resources/js/app.js'],
-      // [!code ++:1]
+      // [!code highlight]
       assets: ['resources/images/**', 'resources/fonts/**'],
     }),
   ]
@@ -353,21 +354,6 @@ After registering the files, you can reference them in your templates using the 
 ```edge title="resources/views/pages/home.edge"
 <img src="{{ asset('resources/images/hero.jpg') }}" alt="Hero image">
 ```
-
-:::warning
-Earlier versions of this integration recommended registering static assets with `import.meta.glob` inside the JavaScript entry point. Vite 8 no longer emits non-JavaScript files through glob imports, so this pattern silently stops working. Move the patterns from your entry point to the `assets` option instead.
-
-```ts title="resources/js/app.js"
-import.meta.glob(['../images/**', '../fonts/**']) // [!code --]
-```
-
-```ts title="vite.config.ts"
-adonisjs({
-  entryPoints: ['resources/js/app.js'],
-  assets: ['resources/images/**', 'resources/fonts/**'], // [!code ++]
-})
-```
-:::
 
 ### Emitting files without processing
 
@@ -385,6 +371,7 @@ export default defineConfig({
       entryPoints: ['resources/js/app.js'],
       assets: {
         chunks: ['resources/images/**'],
+        // [!code highlight]
         assets: ['resources/documents/terms.pdf'],
       },
     }),
@@ -461,7 +448,7 @@ export default class SignupsController {
 ```
 
 :::warning
-The entry path passed to `loadServerModule` must be declared in the `serverEntryPoints` option. Otherwise, the bundled file will not exist in production and the import will fail. Add the path to `serverEntryPoints` inside the `vite.config.ts` file and rebuild the application.
+The entry path passed to `loadServerModule` must be declared in the `serverEntryPoints` option. Otherwise, the bundled file will not exist in production and the import will fail.
 :::
 
 ### Typing server modules
@@ -525,13 +512,13 @@ To enable React Fast Refresh during development, add the `@viteReactRefresh` Edg
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    @viteReactRefresh()
-    @vite(['resources/js/app.js'])
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  @viteReactRefresh()
+  @vite(['resources/js/app.js'])
 </head>
 <body>
-    <div id="root"></div>
+  <div id="root"></div>
 </body>
 </html>
 ```
