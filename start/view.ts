@@ -75,6 +75,22 @@ edge.global('tv', tv)
 edge.global('hastToText', toText)
 edge.global('DateTime', DateTime)
 edge.global('appUrl', appUrl)
+/**
+ * Tags an outbound link (sponsor logos) with the standard UTM params, so
+ * partners can attribute the traffic we send them. Existing query params
+ * on the URL are preserved.
+ */
+edge.global('utm', function (url: string, medium: string = 'sponsor') {
+  try {
+    const outbound = new URL(url)
+    outbound.searchParams.set('utm_medium', medium)
+    outbound.searchParams.set('utm_source', 'adonisjs')
+    return outbound.toString()
+  } catch {
+    return url
+  }
+})
+
 edge.global('ogImageAsset', function (ogImage: string | boolean | undefined, requestUrl: string) {
   if (!ogImage) {
     return null

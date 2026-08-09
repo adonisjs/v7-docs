@@ -13,5 +13,10 @@
     "logo": "./logos/ezycourse.svg",
     "name": "Ezycourse",
     "url": "https://ezycourse.com/"
+  },
+  {
+    "logo": "./logos/testmu.svg",
+    "name": "TestMu AI",
+    "url": "https://www.testmuai.com/"
   }
 ]

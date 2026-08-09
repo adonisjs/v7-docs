@@ -21,7 +21,7 @@
             </span>
             @each(sponsor in featuredSponsors.all())
               <a
-                href="{{ sponsor.url }}"
+                href="{{ utm(sponsor.url) }}"
                 target="_blank"
                 class="flex items-center justify-center px-1 h-12 group border-l border-b -mb-px border-gray-300 dark:border-woodsmoke-900 group"
               >

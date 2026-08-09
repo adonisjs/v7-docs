@@ -34,7 +34,7 @@
       >
         @each(sponsor in featuredSponsors.all())
           <a
-            href="{{ sponsor.url }}"
+            href="{{ utm(sponsor.url) }}"
             target="_blank"
             class="flex items-center justify-center py-4 px-4 min-h-20 group border-r border-b -mb-px border-gray-300 dark:border-woodsmoke-900 group"
           >
@@ -48,7 +48,9 @@
         @end
 
         <a
-          href="/"
+          href="https://adonisjs.com/sponsor"
+          target="_blank"
+          rel="noopener"
           class="flex items-center justify-center py-4 px-8 min-h-20 uppercase font-mono text-18 group border-r border-b -mb-px border-gray-300 dark:border-woodsmoke-900"
         >
           <span
