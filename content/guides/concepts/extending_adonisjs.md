@@ -570,7 +570,7 @@ RouteGroup.macro('apiVersion', function (this: RouteGroup, version: number) {
 :::
 
 :::option{name="RouteMatchers" import="@adonisjs/core/http"}
-The route matchers class defines reusable matchers for route parameters. Extend it to add custom validation and casting rules for route parameters.
+The route matchers class defines reusable matchers for [route parameter validation](../basics/routing.md#built-in-matchers). Extend it to add custom validation and casting rules for route parameters.
 
 **Common use cases**: Add matchers for application-specific identifiers or parameter formats that you want to reuse across multiple routes.
 
