@@ -569,6 +569,48 @@ RouteGroup.macro('apiVersion', function (this: RouteGroup, version: number) {
 [View source](https://github.com/adonisjs/http-server/blob/8.x/src/router/group.ts)
 :::
 
+:::option{name="RouteMatchers" import="@adonisjs/core/http"}
+The route matchers class defines reusable matchers for route parameters. Extend it to add custom validation and casting rules for route parameters.
+
+**Common use cases**: Add matchers for application-specific identifiers or parameter formats that you want to reuse across multiple routes.
+
+**Example**: Add a matcher that accepts positive integers and casts the matched value to a number.
+
+```ts title="src/extensions.ts"
+import { RouteMatchers } from '@adonisjs/core/http'
+
+RouteMatchers.macro('positiveInteger', function () {
+  return {
+    match: /^[1-9][0-9]*$/,
+    cast: (value: string) => Number(value),
+  }
+})
+
+declare module '@adonisjs/core/http' {
+  interface RouteMatchers {
+    positiveInteger(): {
+      match: RegExp
+      cast: (value: string) => number
+    }
+  }
+}
+```
+
+You can use the matcher when defining constraints for route parameters.
+
+```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+
+router
+  .get('/posts/:id', ({ params }) => {
+    return `Post ${params.id}`
+  })
+  .where('id', router.matchers.positiveInteger())
+```
+
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/matchers.ts)
+:::
+
 :::option{name="RouteResource" import="@adonisjs/core/http"}
 Resourceful route instances. Extend this to customize resource route behavior.
 
