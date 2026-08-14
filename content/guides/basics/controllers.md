@@ -10,6 +10,7 @@ This guide covers controllers in AdonisJS applications. You will learn how to:
 - Use the barrel file system for importing controllers
 - Understand the controller lifecycle and request handling
 - Inject dependencies into controllers using the IoC container
+- Wrap a single operation into a single action controller
 - Build RESTful resource-driven controllers following conventions
 - Configure controller locations and barrel file generation
 
@@ -311,6 +312,75 @@ With method injection:
 - The `@inject()` decorator is applied to individual methods rather than the class.
 - The first parameter must always be HTTPContext, with dependencies following after. 
 - This allows each method to have different dependencies based on its specific needs.
+
+## Single action controllers
+
+Not every operation belongs to a resource with multiple actions. Registering a newsletter subscription, exporting a report, or processing an incoming webhook are standalone tasks with no CRUD siblings to group them with. Putting them inside a broader controller forces you to pick a class they only loosely belong to, and the route no longer tells you what the request actually does.
+
+A **single action controller** wraps one piece of functionality into a clearly named class. Name the class after the operation, then define a `handle` method to hold the logic.
+
+```ts title="app/controllers/register_newsletter_subscription_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class RegisterNewsletterSubscriptionController {
+  async handle({ request, response }: HttpContext) {
+    const email = request.input('email')
+
+    // Persist the subscription
+
+    return response.created({ email })
+  }
+}
+```
+
+Pass the method name as an argument to `make:controller` to scaffold the class with the `handle` method already in place. The `--singular` flag is required here, because the generator pluralizes controller names by default and would otherwise produce `RegisterNewsletterSubscriptionsController`.
+
+```bash
+node ace make:controller register_newsletter_subscription handle --singular
+```
+
+```
+# Output
+DONE:    create app/controllers/register_newsletter_subscription_controller.ts
+```
+
+Reference the controller on the route by passing it inside an array without a method name. The router calls the `handle` method by default, so there is no second argument to write.
+
+```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+import { controllers } from '#generated/controllers'
+
+router.post('/newsletter/subscriptions', [controllers.RegisterNewsletterSubscription])
+```
+
+The route is automatically named after the controller, converted to snake_case. The example above is reachable as `register_newsletter_subscription` when generating URLs or redirects. Use the `.as()` method to assign a different [route identifier](./routing.md#route-identifiers).
+
+Single action controllers are regular controllers, so everything covered in this guide still applies to them. You can inject services through the constructor, attach middleware to the route, and rely on the same per-request lifecycle.
+
+```ts title="app/controllers/register_newsletter_subscription_controller.ts"
+// [!code ++:2]
+import { inject } from '@adonisjs/core'
+import NewsletterService from '#services/newsletter_service'
+import type { HttpContext } from '@adonisjs/core/http'
+
+@inject() // [!code ++]
+export default class RegisterNewsletterSubscriptionController {
+  constructor(protected newsletterService: NewsletterService) {} // [!code ++]
+
+  async handle({ request, response }: HttpContext) {
+    const email = request.input('email')
+    const subscription = await this.newsletterService.subscribe(email)
+
+    return response.created(subscription)
+  }
+}
+```
+
+:::tip
+Name single action controllers after the operation they perform (`RegisterNewsletterSubscriptionController`, `ExportInvoicesController`) rather than after a resource. The verb in the class name is what makes the route readable at a glance.
+:::
+
+See also: [Make controller command](../../reference/commands.md#makecontroller) for the complete list of generator flags.
 
 ## Resource-driven controllers
 
