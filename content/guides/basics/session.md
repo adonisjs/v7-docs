@@ -91,7 +91,7 @@ export default defineConfig({
     }),
 
     database: stores.database({
-      connectionName: 'postgres',
+      connectionName: 'pg',
       tableName: 'sessions',
     }),
 
@@ -267,7 +267,7 @@ The name of the database connection to use for session storage. This connection 
 ```ts
 stores: {
   database: stores.database({
-    connectionName: 'postgres'
+    connectionName: 'pg'
   })
 }
 ```
