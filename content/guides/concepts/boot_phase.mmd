@@ -1,0 +1,46 @@
+---
+config:
+  theme: base
+  fontFamily: 'Helvetica, Arial, sans-serif'
+  themeVariables:
+    fontFamily: 'Helvetica, Arial, sans-serif'
+    fontSize: 15px
+    lineColor: '#1f2328'
+    primaryTextColor: '#1f2328'
+    edgeLabelBackground: '#ffffff'
+  flowchart:
+    curve: linear
+    nodeSpacing: 40
+    rankSpacing: 55
+    padding: 12
+    wrappingWidth: 420
+---
+flowchart TD
+  begin([" Begin boot<br/>phase "]):::terminal
+
+  subgraph initiateRow [" "]
+    direction LR
+    initiate[" Initiate<br/>application "]:::step
+    initiateDetails[["- Create container instance<br/>- Run initiating hooks<br/>- Process adonisrc.ts file"]]:::details
+    initiate --> initiateDetails
+  end
+
+  subgraph bootRow [" "]
+    direction LR
+    boot[" Boot application "]:::step
+    bootDetails[["- Run booting hooks<br/>- Import files from config directory<br/>- Execute provider's register method<br/>- Execute provider's boot method<br/>- Run booted hooks"]]:::details
+    boot --> bootDetails
+  end
+
+  booted([" Application<br/>booted "]):::terminal
+
+  begin -- "state:created" --> initiateRow
+  initiateRow -- "state:initiated" --> bootRow
+  bootRow --> booted
+
+  classDef terminal fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+  classDef step fill:#f5f6f7,stroke:#dcdfe3,stroke-width:2px
+  classDef details fill:#a9d6f5,stroke:#0e8ce4,stroke-width:2px,text-align:left
+
+  style initiateRow fill:none,stroke:none
+  style bootRow fill:none,stroke:none

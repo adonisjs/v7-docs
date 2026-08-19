@@ -1,12 +1,12 @@
 ---
-description: Learn how to use Assembler hooks to run custom actions during the development, testing, and build lifecycle of your AdonisJS application.
+description: Learn how to use Assembler hooks during development, testing, builds, and code generation.
 ---
 
 # Assembler hooks
 
 This guide covers Assembler hooks in AdonisJS. You will learn how to:
 
-- Register hooks to respond to lifecycle events during development, testing, and builds
+- Register hooks for development, testing, builds, and code generation
 - React to file changes in watch mode
 - Hook into the routes scanning pipeline
 - Generate barrel files and type declarations using the IndexGenerator
@@ -14,11 +14,11 @@ This guide covers Assembler hooks in AdonisJS. You will learn how to:
 
 ## Overview
 
-Assembler is the build tooling layer of AdonisJS that manages your application as a child process. It handles starting the development server, running tests, and creating production builds. Hooks let you tap into this lifecycle to run custom actions at specific moments, such as generating barrel files when controllers change, creating type declarations when routes are scanned, or displaying custom information when the server starts.
+Assembler is the tooling layer that starts the development server, runs tests, creates production builds, and generates framework-owned files. Hooks let you run code at specific points in these workflows. For example, you can generate a barrel file when controllers change or display additional information when the development server starts.
 
 Because Assembler runs in a separate process from your AdonisJS application, hooks do not have access to framework features like the IoC container, router service, or database connections. Instead, hooks receive purpose-built utilities like the `IndexGenerator` for code generation and scanner instances for route analysis.
 
-Common use cases for Assembler hooks include generating barrel files for lazy-loading controllers, creating type-safe API clients from route metadata, running code generators when files change, and displaying custom startup information.
+Common use cases include generating barrel files, inspecting route metadata, reacting to file changes, and customizing command output.
 
 ## Hooks reference
 
@@ -26,7 +26,7 @@ The following table lists all available hooks, when they execute, and what param
 
 | Hook | Triggered by | Description |
 |------|--------------|-------------|
-| `init` | DevServer, TestRunner, Bundler | First hook executed. Use for initialization tasks |
+| `init` | DevServer, TestRunner, Bundler, CodeGen | First hook executed. Use for initialization tasks |
 | `devServerStarting` | DevServer | Before the child process starts |
 | `devServerStarted` | DevServer | After the child process is running |
 | `testsStarting` | TestRunner | Before tests begin executing |
@@ -36,9 +36,11 @@ The following table lists all available hooks, when they execute, and what param
 | `fileChanged` | DevServer, TestRunner | When a file is modified in watch mode |
 | `fileAdded` | DevServer, TestRunner | When a file is created |
 | `fileRemoved` | DevServer, TestRunner | When a file is deleted |
-| `routesCommitted` | DevServer | When routes are registered by the app |
-| `routesScanning` | DevServer | Before route type scanning begins |
-| `routesScanned` | DevServer | After route type scanning completes |
+| `routesCommitted` | DevServer, CodeGen | When routes are registered by the app |
+| `routesScanning` | DevServer, CodeGen | Before route type scanning begins |
+| `routesScanned` | DevServer, CodeGen | After route type scanning completes |
+
+The `CodeGen` entries refer to the `node ace codegen` command. It runs code generation without starting the server or file watcher. The bundler and test runner do not execute route hooks, so use `node ace codegen` to refresh route-derived output without running the development server.
 
 ## Creating and registering hooks
 
@@ -49,8 +51,8 @@ import { defineConfig } from '@adonisjs/core/app'
 
 export default defineConfig({
   hooks: {
-    devServerStarted: [() => import('./hooks/on_server_started.ts')],
-    fileChanged: [() => import('./hooks/on_file_changed.ts')],
+    devServerStarted: [() => import('./hooks/on_server_started.js')],
+    fileChanged: [() => import('./hooks/on_file_changed.js')],
   },
 })
 ```
@@ -78,8 +80,8 @@ import { defineConfig } from '@adonisjs/core/app'
 export default defineConfig({
   hooks: {
     devServerStarted: [
-      () => import('./hooks/log_server_info.ts'),
-      () => import('./hooks/notify_external_service.ts'),
+      () => import('./hooks/log_server_info.js'),
+      () => import('./hooks/notify_external_service.js'),
     ],
   },
 })
@@ -91,16 +93,12 @@ Assembler hooks run in a separate process from your AdonisJS application. They d
 
 ## Init hook
 
-The `init` hook is the first hook executed when Assembler starts any operation. It receives the parent instance (DevServer, TestRunner, or Bundler), a hooks manager for registering additional runtime hooks, and the IndexGenerator for code generation tasks.
+The `init` hook is the first hook executed when Assembler starts an operation. It receives the parent instance (`DevServer`, `TestRunner`, `Bundler`, or `CodeGen`), a hooks manager, and the `IndexGenerator`.
 
 ```ts title="hooks/init.ts"
 import { hooks } from '@adonisjs/core/app'
 
 export default hooks.init((parent, hooksManager, indexGenerator) => {
-  /**
-   * Determine what operation is running by checking the parent type.
-   * Use indexGenerator to set up barrel file or type generation.
-   */
   console.log('Assembler initialized')
 })
 ```
@@ -127,11 +125,7 @@ export default hooks.devServerStarting((devServer) => {
 import { hooks } from '@adonisjs/core/app'
 
 export default hooks.devServerStarted((devServer, info, instructions) => {
-  /**
-   * The server is now running and accepting connections.
-   * Use instructions to add custom UI output.
-   */
-  instructions.add('custom', `API docs: http://${info.host}:${info.port}/docs`)
+  instructions.add(`API docs: http://${info.host}:${info.port}/docs`)
 })
 ```
 
@@ -139,7 +133,7 @@ These hooks re-trigger every time the child process restarts, such as when a ful
 
 ## Test runner hooks
 
-The test runner hooks execute before and after running your test suite. Use `testsStarting` to set up test fixtures or databases, and `testsFinished` to generate reports or clean up resources.
+The test runner hooks execute before and after your test suite. Use `testsStarting` to prepare external resources or generated fixtures, and `testsFinished` to generate reports or clean up those resources. These hooks run outside the application process and cannot resolve framework services.
 
 ```ts title="hooks/on_tests_starting.ts"
 import { hooks } from '@adonisjs/core/app'
@@ -175,7 +169,7 @@ export default hooks.buildStarting((bundler) => {
 import { hooks } from '@adonisjs/core/app'
 
 export default hooks.buildFinished((bundler, instructions) => {
-  instructions.add('deploy', 'Run `npm run start` in the build folder to start the server')
+  instructions.add('Run `npm run start` in the build folder to start the server')
 })
 ```
 
@@ -218,7 +212,7 @@ export default hooks.fileRemoved((relativePath, absolutePath, parent) => {
 
 ## Routes hooks
 
-The routes hooks provide access to your application's route definitions and their associated types. These hooks only execute during dev server operation, not during builds or tests.
+The routes hooks provide access to your application's route definitions and their associated types. They run for the development server and `node ace codegen`, but not for builds or tests.
 
 ### Routes committed
 
@@ -245,11 +239,11 @@ The `routesScanning` hook fires before Assembler begins analyzing your routes to
 import { hooks } from '@adonisjs/core/app'
 
 export default hooks.routesScanning((devServer, routesScanner) => {
-  /**
-   * Skip routes that don't need type extraction,
-   * such as authentication endpoints with complex flows.
-   */
-  routesScanner.skip(['session.create', 'session.store', 'oauth.callback'])
+  const excludedRoutes = ['session.create', 'session.store', 'oauth.callback']
+
+  routesScanner.filter((route) => {
+    return !excludedRoutes.includes(route.name)
+  })
 })
 ```
 
@@ -261,13 +255,9 @@ The `routesScanned` hook fires after route analysis completes. The scanner conta
 import { hooks } from '@adonisjs/core/app'
 
 export default hooks.routesScanned((devServer, routesScanner) => {
-  const routes = routesScanner.getRoutes()
+  const routes = routesScanner.getScannedRoutes()
   const controllers = routesScanner.getControllers()
-  
-  /**
-   * Use this metadata to generate type-safe API clients.
-   * The types are internal import references, not standalone types.
-   */
+
   console.log(`Scanned ${routes.length} routes from ${controllers.length} controllers`)
 })
 ```
@@ -316,7 +306,7 @@ When `as` is set to `'barrelFile'`, the IndexGenerator scans the source director
 
 Given this controller structure:
 
-```
+```text title="app/controllers"
 app/controllers/
 ├── auth/
 │   ├── login_controller.ts
@@ -345,43 +335,49 @@ export const controllers = {
 
 This barrel file enables lazy-loading controllers in your routes without manual import management. The file automatically updates when you add or remove controllers.
 
-### Custom type generation
+### Custom output generation
 
-For generating type declarations or other custom output, pass a callback function to the `as` option. The callback receives a collection of files and a writer utility for building the output string.
-
-The files collection is a key-value object where each key is the relative path (without extension) from the source directory, and each value contains the file's `importPath`, `relativePath`, and `absolutePath`.
+For custom output, pass a callback to the `as` option. The callback receives a virtual file system, a file buffer, the source configuration, and helpers for generating import paths. The following example scans React pages and generates the `InertiaPages` type used by `inertia.render()`.
 
 ```ts title="hooks/init.ts"
 import { hooks } from '@adonisjs/core/app'
 
-export default hooks.init((parent, hooksManager, indexGenerator) => {
+export default hooks.init((_parent, _hooksManager, indexGenerator) => {
   indexGenerator.add('inertiaPages', {
     source: './inertia/pages',
-    as: (files, writer) => {
-      writer.writeLine(`declare module '@adonisjs/inertia' {`).indent()
-      writer.writeLine(`export interface Pages {`).indent()
+    glob: ['**/*.ts', '**/*.tsx'],
+    as: (vfs, buffer, _config, helpers) => {
+      const pages = vfs.asList()
 
-      for (const [filePath, file] of Object.entries(files)) {
-        writer.writeLine(
-          `'${filePath}': InferPageProps<typeof import('${file.importPath}').default>`
+      buffer.writeLine(`import '@adonisjs/inertia/types'`)
+      buffer.writeLine(`import type React from 'react'`)
+      buffer.writeLine(`import type { Prettify } from '@adonisjs/core/types/common'`)
+      buffer.writeLine(``)
+      buffer.writeLine(`type ExtractProps<T> =`)
+      buffer.indent().writeLine(`T extends React.FC<infer Props>`)
+      buffer.indent().writeLine(`? Prettify<Omit<Props, 'children'>>`)
+      buffer.writeLine(`: never`).dedent().dedent()
+      buffer.writeLine(``)
+      buffer.writeLine(`declare module '@adonisjs/inertia/types' {`).indent()
+      buffer.writeLine(`export interface InertiaPages {`).indent()
+
+      for (const [page, filePath] of Object.entries(pages)) {
+        buffer.writeLine(
+          `'${page}': ExtractProps<(typeof import('${helpers.toImportPath(filePath)}'))['default']>`
         )
       }
 
-      writer.dedent().writeLine('}')
-      writer.dedent().writeLine('}')
-
-      return writer.toString()
+      buffer.dedent().writeLine(`}`)
+      buffer.dedent().writeLine(`}`)
     },
-    output: './.adonisjs/server/inertia_pages.d.ts',
+    output: './.adonisjs/server/pages.d.ts',
   })
 })
 ```
 
-This generates a type declaration file that maps page component paths to their prop types, enabling type-safe Inertia.js page rendering.
-
 ### Complete IndexGenerator example
 
-The following example shows a complete `init` hook that configures barrel file generation for controllers, events, and listeners—the default setup used by the AdonisJS framework.
+The following example shows a complete `init` hook that configures barrel file generation for controllers, events, and listeners. This is the default setup used by AdonisJS.
 
 ```ts title="hooks/init.ts"
 import { hooks } from '@adonisjs/core/app'

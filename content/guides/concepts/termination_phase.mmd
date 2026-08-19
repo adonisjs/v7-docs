@@ -1,0 +1,37 @@
+---
+config:
+  theme: base
+  fontFamily: 'Helvetica, Arial, sans-serif'
+  themeVariables:
+    fontFamily: 'Helvetica, Arial, sans-serif'
+    fontSize: 15px
+    lineColor: '#1f2328'
+    primaryTextColor: '#1f2328'
+    edgeLabelBackground: '#ffffff'
+  flowchart:
+    curve: linear
+    nodeSpacing: 40
+    rankSpacing: 55
+    padding: 12
+    wrappingWidth: 420
+---
+flowchart TD
+  begin([" Begin termination<br/>phase "]):::terminal
+
+  subgraph shutdownRow [" "]
+    direction LR
+    shutdown[" Initiate graceful<br/>shutdown "]:::step
+    shutdownDetails[["- Run terminating hooks<br/>- Execute provider's shutdown method<br/>&nbsp;&nbsp;(skipped for a warmed up application)"]]:::details
+    shutdown --> shutdownDetails
+  end
+
+  terminated([" Application<br/>terminated "]):::terminal
+
+  begin -- "app.isTerminating = true" --> shutdownRow
+  shutdownRow --> terminated
+
+  classDef terminal fill:#d5e8d4,stroke:#82b366,stroke-width:2px
+  classDef step fill:#f5f6f7,stroke:#dcdfe3,stroke-width:2px
+  classDef details fill:#a9d6f5,stroke:#0e8ce4,stroke-width:2px,text-align:left
+
+  style shutdownRow fill:none,stroke:none

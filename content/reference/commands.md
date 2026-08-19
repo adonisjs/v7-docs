@@ -87,6 +87,30 @@ We detect the package manager using the `@antfu/install-pkg` package. However, y
 
 ::::
 
+## codegen
+
+The `codegen` command uses the [@adonisjs/assembler](https://github.com/adonisjs/assembler) package to regenerate the contents of the `.adonisjs` directory without starting the HTTP server.
+
+```sh title="terminal"
+node ace codegen
+```
+
+During normal development, Assembler refreshes generated files as part of other workflows. The development server, test runner, and bundler generate file-based indexes, while the development server also generates route-derived types. The `codegen` command runs both stages explicitly, making it useful in CI before typechecking.
+
+```sh title="terminal"
+npm ci
+node ace codegen
+npm run typecheck
+```
+
+The command writes index files first because preload files import them. It then warms up the application, collects its registered routes, and generates route types. The HTTP server is never started and provider `ready` hooks do not run. Provider `start` hooks do run, so they must respect the [application mode](../guides/concepts/application_lifecycle.md#application-modes) before starting workers or other long-running side effects.
+
+:::warning
+Run `codegen` with development dependencies installed. The command relies on `@adonisjs/assembler`, which is normally installed as a development dependency. In CI, run it after `npm ci` and before pruning development dependencies.
+:::
+
+See the [code generation guide](../guides/concepts/codegen.md) to learn what AdonisJS generates and whether to commit those files.
+
 ## add
 
 The `add` command combines the `npm install <package-name>` and `node ace configure` commands. So, instead of running two separate commands, you can install and configure the package in one go using the `add` command.
