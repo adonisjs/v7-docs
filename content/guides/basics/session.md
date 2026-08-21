@@ -91,7 +91,7 @@ export default defineConfig({
     }),
 
     database: stores.database({
-      connection: 'postgres',
+      connectionName: 'pg',
       tableName: 'sessions',
     }),
 
@@ -261,13 +261,13 @@ The Database driver stores session data in SQL databases, ideal for production a
 
 ::::options
 
-:::option{name="stores.database.connection" dataType="string"}
+:::option{name="stores.database.connectionName" dataType="string"}
 
 The name of the database connection to use for session storage. This connection must be configured in your `config/database.ts` file.
 ```ts
 stores: {
   database: stores.database({
-    connection: 'postgres'
+    connectionName: 'pg'
   })
 }
 ```
