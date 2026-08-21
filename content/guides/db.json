@@ -233,6 +233,11 @@
         "contentPath": "./concepts/container_services.md"
       },
       {
+        "title": "Codegen",
+        "permalink": "guides/concepts/codegen",
+        "contentPath": "./concepts/codegen.md"
+      },
+      {
         "title": "Barrel files",
         "permalink": "guides/concepts/barrel-files",
         "contentPath": "./concepts/barrel_files.md"
