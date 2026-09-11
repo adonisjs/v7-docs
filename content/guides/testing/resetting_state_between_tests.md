@@ -78,7 +78,7 @@ import { test } from '@japa/runner'
 import testUtils from '@adonisjs/core/services/test_utils'
 
 test.group('Users', (group) => {
-  group.each.setup(() => testUtils.db().withGlobalTransaction())
+  group.each.setup(() => testUtils.db().wrapInGlobalTransaction())
 
   test('can create a user', async () => {
     // Database changes here are automatically rolled back after the test
@@ -86,7 +86,7 @@ test.group('Users', (group) => {
 })
 ```
 
-The `withGlobalTransaction()` method returns a cleanup function that Japa calls automatically after each test to roll back the transaction.
+The `wrapInGlobalTransaction()` method returns a cleanup function that Japa calls automatically after each test to roll back the transaction.
 
 **Truncation** clears all data from tables between tests. This approach actually deletes records rather than rolling back transactions.
 
