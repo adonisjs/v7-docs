@@ -213,6 +213,28 @@ export default class NewsletterMail extends BaseMail {
 
 The `expiresIn` option sets when the signed URL expires. After expiration, the signature is no longer valid. The `prefixUrl` option is required when the URL will be shared externally, such as in emails or external notifications, to ensure the URL includes the full domain. For internal app navigation, relative URLs without the domain are sufficient.
 
+### Creating signed URLs from route patterns
+
+By default, `signedUrlFor` looks up the route by its name and uses the route definition to build the URL. You may disable the lookup when you need to sign a URL from a route pattern that is not registered in the router.
+
+```ts
+import { signedUrlFor } from '@adonisjs/core/services/url_builder'
+
+const url = signedUrlFor(
+  '/files/:key',
+  { key: 'invoice.pdf' },
+  {
+    disableRouteLookup: true,
+    prefixUrl: 'https://example.com',
+    qs: {
+      download: true,
+    },
+  }
+)
+```
+
+When `disableRouteLookup` is enabled, the first argument is parsed as a route pattern and signed directly. Regular `signedUrlFor` calls continue to use route lookup and keep their route-name type safety.
+
 The generated signed URL includes a signature query parameter appended to the URL.
 
 ```text
