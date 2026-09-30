@@ -652,6 +652,80 @@ new Worker('emails', async (job) => {
 })
 ```
 
+### Using AdonisJS Queue
+
+If your application already uses [AdonisJS Queue](/guides/digging-deeper/queues), you can use it instead of BullMQ. Install and configure it first:
+
+```sh
+node ace add @adonisjs/queue
+```
+
+Route `mail.sendLater()` to an AdonisJS Queue job. The messenger receives the compiled message and its views, then stores them with the selected mailer name:
+
+```ts title="start/mail.ts"
+import mail from '@adonisjs/mail/services/main'
+import SendMail from '#jobs/send_mail'
+
+mail.setMessenger((mailer) => ({
+  async queue({ message, views }) {
+    await SendMail.dispatch({
+      mailerName: mailer.name,
+      message,
+      views,
+    })
+  },
+}))
+```
+
+Register the file as a preload so the messenger is configured when the application starts:
+
+```ts title="adonisrc.ts"
+export default defineConfig({
+  // ...
+  preloads: [
+    // ...other preloads
+    () => import('#start/mail'),
+  ],
+})
+```
+
+Create the job that delivers the email. `sendCompiled()` bypasses the messenger, so processing the job does not queue the email again:
+
+```ts title="app/jobs/send_mail.ts"
+import type { MailersList, MessageBodyTemplates, NodeMailerMessage } from '@adonisjs/mail/types'
+import { Job } from '@adonisjs/queue'
+import type { JobOptions } from '@adonisjs/queue/types'
+import mail from '@adonisjs/mail/services/main'
+
+interface SendMailPayload {
+  mailerName: string
+  message: NodeMailerMessage
+  views: MessageBodyTemplates
+}
+
+export default class SendMail extends Job<SendMailPayload> {
+  static options: JobOptions = {
+    queue: 'emails',
+    maxRetries: 3,
+    timeout: '30s',
+  }
+
+  async execute() {
+    const { mailerName, message, views } = this.payload
+
+    await mail.use(mailerName as keyof MailersList).sendCompiled({ message, views })
+  }
+}
+```
+
+The job payload is stored by the configured queue adapter. Pass only JSON-serializable data to your mail views; if a view uses a service instance, pass the primitive data needed to recreate it in the job instead.
+
+Run a worker dedicated to email jobs alongside your web server:
+
+```sh
+node ace queue:work --queue=emails
+```
+
 ## Switching between mailers
 
 Use `mail.use()` to send emails through a specific mailer instead of the default.
