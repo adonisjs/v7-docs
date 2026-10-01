@@ -8,6 +8,7 @@ This guide covers the scaffolding and codemods system in AdonisJS. You will lear
 
 - Create a configure hook for your AdonisJS package
 - Use codemods to modify the host application's source files
+- Add import aliases and create directories from a configure hook
 - Create stubs to scaffold configuration files and other source code
 - Customize stub templates with generators and variables
 - Eject and modify stubs from existing packages
@@ -16,9 +17,9 @@ This guide covers the scaffolding and codemods system in AdonisJS. You will lear
 
 When you run `node ace configure @adonisjs/lucid`, the package automatically registers its provider, sets up environment variables, and creates a config file in your project. This seamless setup experience is powered by AdonisJS's scaffolding and codemods system.
 
-**Scaffolding** refers to generating source files from templates called stubs. **Codemods** are programmatic transformations that modify existing TypeScript source files by parsing and manipulating the AST (Abstract Syntax Tree). Together, they allow package authors to provide the same polished configure experience that official AdonisJS packages offer.
+**Scaffolding** refers to generating source files from templates called stubs. **Codemods** are programmatic transformations that update files in the host application. Some codemods parse TypeScript source files and modify their AST (Abstract Syntax Tree), while others update files such as `package.json` or create directories. Together, they let package authors automate setup for their users.
 
-The codemods API is powered by [ts-morph](https://github.com/dsherret/ts-morph) and lives in the `@adonisjs/assembler` package. Since assembler is a development dependency, ts-morph never bloats your production bundle.
+AST-based codemods use [ts-morph](https://github.com/dsherret/ts-morph) from `@adonisjs/assembler`. Other helpers, such as `defineEnvVariables`, `makeUsingStub`, `addImportAlias`, and `createDirectory`, work without Assembler.
 
 ## Building blocks
 
@@ -28,7 +29,7 @@ Before diving into the tutorial, let's briefly define the key components you'll 
 
 **Generators** are helper functions that enforce AdonisJS naming conventions. They transform input like `user` into properly formatted names like `UsersController` or `users_controller.ts`.
 
-**Codemods** are high-level APIs for common modifications like registering providers, adding middleware, or defining environment variables. They handle the complexity of AST manipulation for you.
+**Codemods** are APIs for common application setup tasks. Some use AST manipulation to edit source files, while others update environment or package files and create directories.
 
 **Configure hooks** are functions exported by packages that run when a user executes `node ace configure <package-name>`. This is where you combine stubs and codemods to set up your package.
 
@@ -58,9 +59,9 @@ The `stubs` directory contains your template files, `configure.ts` holds the con
 
 :::
 
-:::step{title="Install @adonisjs/assembler as a peer dependency"}
+:::step{title="Declare @adonisjs/assembler when your hook needs it"}
 
-The codemods API requires `@adonisjs/assembler`, which must be installed as a **peer dependency** in your package. This is important because the host application already has assembler installed as a dev dependency, and it should be shared across all configured packages rather than duplicated.
+AST-based codemods and `installPackages` require `@adonisjs/assembler`. If your configure hook uses them, declare Assembler as a **peer dependency** so it uses the copy installed in the host application instead of adding another copy.
 
 ```json title="package.json"
 {
@@ -71,7 +72,7 @@ The codemods API requires `@adonisjs/assembler`, which must be installed as a **
 }
 ```
 
-When users install your package and run `node ace configure`, the assembler from their project will be used.
+If your hook only uses helpers such as `defineEnvVariables`, `makeUsingStub`, `addImportAlias`, or `createDirectory`, it does not need this peer dependency.
 
 :::
 
@@ -336,11 +337,50 @@ When you call `makeUsingStub`, the following happens:
 
 ## Codemods API reference
 
-The codemods API provides high-level methods for common source file modifications. All methods are available on the codemods instance returned by `command.createCodemods()`.
+The codemods API provides methods for common application setup tasks. All methods are available on the instance returned by `command.createCodemods()`.
 
 :::note
-The codemods API relies on AdonisJS's default file structure and naming conventions. If you've made significant changes to your project structure, some codemods may not work as expected.
+AST-based codemods rely on AdonisJS's default file structure and naming conventions. If you've made significant changes to your project structure, some codemods may not work as expected.
 :::
+
+### addImportAlias
+
+Add a [package import](https://nodejs.org/api/packages.html#subpath-imports) to the host application's `package.json`. The alias is added only when it does not already exist. Existing aliases and their targets remain unchanged. This method preserves the file's indentation and line endings, and does not require `@adonisjs/assembler`.
+
+```ts title="configure.ts"
+import type Configure from '@adonisjs/core/commands/configure'
+
+export async function configure(command: Configure) {
+  const codemods = await command.createCodemods()
+  await codemods.addImportAlias(
+    '#channels/*',
+    './app/channels/*.js'
+  )
+}
+```
+
+This adds the following entry to the `imports` object in `package.json`:
+
+```json title="package.json"
+{
+  "imports": {
+    "#channels/*": "./app/channels/*.js"
+  }
+}
+```
+
+### createDirectory
+
+Create a directory relative to the host application's root. The method creates missing parent directories and leaves an existing directory and its contents unchanged. It does not require `@adonisjs/assembler`.
+
+```ts title="configure.ts"
+import type Configure from '@adonisjs/core/commands/configure'
+
+export async function configure(command: Configure) {
+  const codemods = await command.createCodemods()
+  await codemods.createDirectory('app/channels')
+}
+```
 
 ### updateRcFile
 
