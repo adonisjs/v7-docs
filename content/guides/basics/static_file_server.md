@@ -118,24 +118,6 @@ When a browser requests a file it has cached, it sends the ETag value. If the fi
 
 :::
 
-:::option{name="indexFiles"}
-
-When enabled, the middleware scans `public/` once when it is constructed and keeps an index of files and directories in memory. GET and HEAD requests for paths absent from the index continue to your routes without a filesystem lookup. Existing files still use the normal static server, including ETags, HEAD and range responses, custom headers, and dotfile rules. Symlinks and their descendants retain filesystem lookups.
-
-This option defaults to `false`. Enable it only when public files are fixed for the lifetime of the application process.
-
-```ts title="config/static.ts"
-export default defineConfig({
-  indexFiles: true,
-})
-```
-
-Restart the application after adding files or directories. Leave indexing disabled during development and when serving uploads. Building the index requires a synchronous directory scan and memory proportional to the size of `public/`.
-
-The index covers all public files, not just entries in the Vite manifest. It reduces filesystem operations for missing paths, but it does not remove file reads when serving an existing asset or guarantee a reduction in physical disk reads when metadata is already cached by the operating system.
-
-:::
-
 :::option{name="lastModified"}
 
 The `lastModified` property enables the [Last-Modified](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Last-Modified) header. The server uses the file's modification time from the file system (the [stat.mtime](https://nodejs.org/api/fs.html#statsmtime) property) as the header value. 
@@ -252,6 +234,24 @@ The function should return an object where keys are header names and values are 
   }
 }
 ```
+
+:::
+
+:::option{name="indexFiles"}
+
+When enabled, the middleware scans `public/` once when it is constructed and keeps an index of files and directories in memory. GET and HEAD requests for paths absent from the index continue to your routes without a filesystem lookup. Existing files still use the normal static server, including ETags, HEAD and range responses, custom headers, and dotfile rules. Symlinks and their descendants retain filesystem lookups.
+
+This option defaults to `false`. Enable it only when public files are fixed for the lifetime of the application process.
+
+```ts title="config/static.ts"
+export default defineConfig({
+  indexFiles: true,
+})
+```
+
+Restart the application after adding files or directories. Leave indexing disabled during development and when serving uploads. Building the index requires a synchronous directory scan and memory proportional to the size of `public/`.
+
+The index covers all public files, not just entries in the Vite manifest. It reduces filesystem operations for missing paths, but it does not remove file reads when serving an existing asset or guarantee a reduction in physical disk reads when metadata is already cached by the operating system.
 
 :::
 

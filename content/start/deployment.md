@@ -162,7 +162,7 @@ For the best performance, upload your compiled assets to a CDN. This requires up
 }
 ```
 
-After each build, deploy the contents of `build/public` to your CDN. Your CI/CD pipeline can automate this step.
+After each build, upload the client assets from `build/public/assets` to your CDN, and keep the Vite manifests and server bundles on the application server. The [Vite CDN deployment guide](../guides/frontend/vite.md#deploying-assets-to-a-cdn) covers the build-time configuration and an upload command your CI/CD pipeline can run.
 
 :::tip
 You can combine both approaches. Use a reverse proxy to serve files like `favicon.ico` and `robots.txt` from the `public` directory, and a CDN for Vite-compiled assets (JavaScript, CSS, images) that benefit from global distribution.
