@@ -49,7 +49,7 @@ export default class Greet extends BaseCommand {
 }
 ```
 
-Next, create a test file for the command. If you haven't already defined a unit test suite, see the [testing introduction](./introduction.md#suites) for setup instructions.
+Next, create a test file for the command. If you haven't already defined a unit test suite, see the [testing introduction](./introduction.md#understanding-suites) for setup instructions.
 
 ```sh
 node ace make:test commands/greet --suite=unit
@@ -315,7 +315,7 @@ test.group('Commands cleanup', (group) => {
 
 ## Intermediate: Testing prompt validation
 
-Prompts can include [validation rules](../ace/prompts.md#prompt-options) that reject invalid input. You can test these validators directly using `assertPasses` and `assertFails` without fully executing the command.
+Prompts can include [validation rules](../ace/prompts.md#understanding-prompt-options) that reject invalid input. You can test these validators directly using `assertPasses` and `assertFails` without fully executing the command.
 
 The `assertFails` method accepts the input value and the expected error message. The `assertPasses` method accepts a value that should pass validation.
 

@@ -91,7 +91,7 @@ The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/s
 
 The `@adonisjs/ally` package raises the exception when the OAuth service does not provide the OAuth code during the redirect.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-callback-response) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
 
 - **Status code**: 500
 - **Self handled**: No
@@ -106,7 +106,7 @@ if (error instanceof allyErrors.E_OAUTH_MISSING_CODE) {
 
 The `@adonisjs/ally` package raises the exception when the CSRF state defined during the redirect is missing.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-callback-response) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
 
 - **Status code**: 400
 - **Self handled**: No
@@ -119,7 +119,7 @@ if (error instanceof allyErrors.E_OAUTH_STATE_MISMATCH) {
 
 ## E_UNAUTHORIZED_ACCESS
 
-The exception is raised when one of the authentication guards is not able to authenticate the request. The exception is self-handled and uses [content-negotiation](../guides/auth/session_guard.md#handling-authentication-exception) to return an appropriate error response to the client.
+The exception is raised when one of the authentication guards is not able to authenticate the request. The exception is self-handled and uses [content-negotiation](../guides/auth/session_guard.md#handling-authentication-errors) to return an appropriate error response to the client.
 
 - **Status code**: 401
 - **Self handled**: Yes
@@ -424,7 +424,7 @@ if (error instanceof sessionErrors.E_SESSION_NOT_READY) {
 
 ## E_MISSING_METAFILE_PATTERN
 
-The exception is raised when the `pattern` property is missing in the [metaFile](./adonisrc_file.md#metaFiles).
+The exception is raised when the `pattern` property is missing in the [metaFile](./adonisrc_file.md#metafiles).
 
 - **Status code**: 500
 - **Self handled**: No

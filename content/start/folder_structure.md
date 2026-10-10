@@ -268,7 +268,7 @@ The `start` directory contains the files you want to import during the boot life
 │   └── routes.ts
 ```
 
-AdonisJS does not auto-import files from the `start` directory. It is merely used as a convention to group similar files. We recommend reading about [preload files](../guides/concepts/application_lifecycle.md#running-code-before-the-application-starts) and the [application boot lifecycle](../guides/concepts/application_lifecycle.md) to have a better understanding of which files to keep under the start directory.
+AdonisJS does not auto-import files from the `start` directory. It is merely used as a convention to group similar files. We recommend reading about [preload files](../guides/concepts/application_lifecycle.md#using-preload-files) and the [application boot lifecycle](../guides/concepts/application_lifecycle.md) to have a better understanding of which files to keep under the start directory.
 
 ## `tests/`
 

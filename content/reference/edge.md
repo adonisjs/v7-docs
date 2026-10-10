@@ -80,7 +80,7 @@ A helper function to reference configuration values inside Edge templates. You m
 ```
 
 ## session
-A read-only copy of the [session object](../guides/basics/session.md#reading-and-writing-data). You cannot mutate session data within Edge templates. The `session` property is only available when the template is rendered using the `ctx.view.render` method.
+A read-only copy of the [session object](../guides/basics/session.md#basic-usage). You cannot mutate session data within Edge templates. The `session` property is only available when the template is rendered using the `ctx.view.render` method.
 
 ```edge
 Post views: {{ session.get(`post.${post.id}.visits`) }}
@@ -120,14 +120,14 @@ The `t` method is contributed by the `@adonisjs/i18n` package to display transla
 ```
 
 ## i18n
-Reference to an instance of the I18n class configured using the application's default locale. However, the [`DetectUserLocaleMiddleware`](../guides/digging_deeper/i18n.md#detecting-user-locale-during-an-http-request) overrides this property with an instance created for the current HTTP request locale.
+Reference to an instance of the I18n class configured using the application's default locale. However, the [`DetectUserLocaleMiddleware`](../guides/digging_deeper/i18n.md#detecting-user-locale-during-http-requests) overrides this property with an instance created for the current HTTP request locale.
 
 ```edge
 {{ i18n.formatCurrency(200, { currency: 'USD' }) }}
 ```
 
 ## auth
-Reference to the [ctx.auth](../guides/basics/http_context.md#http-context-properties) property shared by the [InitializeAuthMiddleware](https://github.com/adonisjs/auth/blob/10.x/src/middleware/initialize_auth_middleware.ts#L19-L48). You may use this property to access information about the logged-in user.
+Reference to the [ctx.auth](../guides/basics/http_context.md#available-properties) property shared by the [InitializeAuthMiddleware](https://github.com/adonisjs/auth/blob/10.x/src/middleware/initialize_auth_middleware.ts#L19-L48). You may use this property to access information about the logged-in user.
 
 ```edge
 @if(auth.isAuthenticated)
@@ -147,7 +147,7 @@ If you are displaying the logged-in user info on a public page (not protected by
 ```
 
 ## asset
-Resolve the URL of an asset processed by Vite. Learn more about [referencing assets inside Edge templates](../guides/frontend/vite.md#referencing-assets-inside-edge-templates).
+Resolve the URL of an asset processed by Vite. Learn more about [referencing assets inside Edge templates](../guides/frontend/vite.md#referencing-assets-in-templates).
 
 ```edge
 <img src="{{ asset('resources/images/hero.jpg') }}" />
