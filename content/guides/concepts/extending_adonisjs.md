@@ -671,12 +671,12 @@ Beyond macros and getters, many AdonisJS modules provide dedicated extension API
 
 The following modules can be extended with custom implementations:
 
-- [Creating a custom hash driver](../security/hashing.md#creating-a-custom-hash-driver) - Add support for custom password hashing algorithms
-- [Creating a custom session store](../basics/session.md#creating-a-custom-session-store) - Store sessions in custom backends like MongoDB or Redis
-- [Creating a custom social auth driver](../auth/social_authentication.md#creating-a-custom-social-driver) - Add OAuth providers beyond the built-in ones
-- [Adding custom REPL methods](../ace/repl.md#adding-custom-methods-to-repl) - Extend the REPL with custom commands
-- [Creating a custom translations loader](../digging_deeper/i18n.md#creating-a-custom-translation-loader) - Load translations from custom sources
-- [Creating a custom translations formatter](../digging_deeper/i18n.md#creating-a-custom-translation-formatter) - Format translations with custom logic
+- [Creating a custom hash driver](../security/hashing.md#creating-a-custom-driver) - Add support for custom password hashing algorithms
+- [Creating a custom session store](../basics/session.md#creating-custom-session-stores) - Store sessions in custom backends like MongoDB or Redis
+- [Creating a custom social auth driver](../auth/social_authentication.md#creating-a-custom-driver) - Add OAuth providers beyond the built-in ones
+- [Adding custom REPL methods](../ace/repl.md#adding-custom-repl-methods) - Extend the REPL with custom commands
+- [Creating a custom translations loader](../digging_deeper/i18n.md#advanced-creating-a-custom-translation-loader) - Load translations from custom sources
+- [Creating a custom translations formatter](../digging_deeper/i18n.md#advanced-creating-a-custom-translation-formatter) - Format translations with custom logic
 
 These extension points go beyond simple methods and properties, allowing you to deeply integrate custom functionality into the framework.
 
