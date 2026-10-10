@@ -241,7 +241,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   /**
    * App-specific variables
    */
-  APP_KEY: Env.schema.string(),
+  APP_KEY: Env.schema.secret(),
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
   
   /**
@@ -280,6 +280,32 @@ Env.schema.string({ format: 'url', protocol: false })
 // Validates the value is a valid email address
 Env.schema.string({ format: 'email' })
 ``` 
+:::
+
+:::option{name="Env.schema.secret"}
+Validates the value is a non-empty string and wraps it in a [Secret](../reference/helpers.md#secret) instance. Use this type for sensitive values such as API tokens and encryption keys. The inferred type is `Secret<string>`, and logging or serializing the value outputs `[redacted]`.
+
+```ts title="start/env.ts"
+import { Env } from '@adonisjs/core/env'
+
+export default await Env.create(new URL('../', import.meta.url), {
+  APP_KEY: Env.schema.secret(),
+  API_TOKEN: Env.schema.secret.optional(),
+})
+```
+
+Call `.release()` when you need the plain string, for example when passing the value to a library that expects a string. For optional secrets, use optional chaining because the value is `undefined` when unset or empty.
+
+```ts
+import env from '#start/env'
+
+console.log(env.get('APP_KEY')) // [redacted]
+
+const appKey = env.get('APP_KEY').release()
+const apiToken = env.get('API_TOKEN')?.release()
+```
+
+Once released, the plain string is no longer protected from appearing in logs or serialized output.
 :::
 
 :::option{name="Env.schema.number"}
