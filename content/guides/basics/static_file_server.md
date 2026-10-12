@@ -243,21 +243,25 @@ The function must return an object where keys are header names and values are he
 
 :::
 
-:::option{name="indexFiles"}
+:::option{name="prefixes"}
 
-When enabled, the middleware scans `public/` once when it is constructed and keeps an index of files and directories in memory. GET and HEAD requests for paths absent from the index continue to your routes without a filesystem lookup. Existing files still use the normal static server, including ETags, HEAD and range responses, custom headers, and dotfile rules. Symlinks and their descendants retain filesystem lookups.
-
-This option defaults to `false`. Enable it only when public files are fixed for the lifetime of the application process.
+The `prefixes` property limits static file serving to a list of URL paths. By default, the middleware looks for a file in `public/` on every request, including the requests your routes handle. When you define `prefixes`, a request with no matching prefix continues to your routes without a filesystem lookup.
 
 ```ts title="config/static.ts"
 export default defineConfig({
-  indexFiles: true,
+  prefixes: ['/assets', '/favicon.ico', '/robots.txt'],
 })
 ```
 
-Restart the application after adding files or directories. Leave indexing disabled during development and when serving uploads. Building the index requires a synchronous directory scan and memory proportional to the size of `public/`.
+A request matches when its path equals a prefix or is nested under it. In the example above, `/assets/app.js` matches `/assets`, and `/assets-old/app.js` does not. The prefixes do not change the file path, so `/assets/app.js` still serves `public/assets/app.js`.
 
-The index covers all public files, not just entries in the Vite manifest. It reduces filesystem operations for missing paths, but it does not remove file reads when serving an existing asset or guarantee a reduction in physical disk reads when metadata is already cached by the operating system.
+The property is not defined by default, and every request is looked up in the `public` directory.
+
+:::warning
+A file in `public/` with no matching prefix is not served, even when it exists. Add an entry for each file or directory you keep outside the listed prefixes, such as `/uploads`.
+
+The middleware compares the prefixes as-is with the request URL. It does not decode the path or ignore the case, so `/Assets/app.js` and `/%61ssets/app.js` do not match `/assets`.
+:::
 
 :::
 
@@ -341,7 +345,7 @@ The rule for copying public files is defined in the `adonisrc.ts` file:
 
 The `pattern` property uses glob syntax to match all files inside the `public` directory. The `reloadServer: false` setting indicates that changes to these files during development don't require restarting the development server.
 
-With the default configuration, files added to `public` are served immediately without restarting the server. If you enable `indexFiles`, restart the application after adding files so the index includes them. Changes to `config/static.ts` also require a restart.
+If you add files to the `public` directory while your development server is running, you don't need to restart. The static middleware will serve them immediately, provided their URL matches the `prefixes` option when you have defined it. However, if you modify the `config/static.ts` file, you will need to restart the server for the configuration changes to take effect.
 
 ## See also
 
