@@ -11,6 +11,7 @@ This guide covers the testing setup in AdonisJS applications. You will learn:
 - How to create and run your first test
 - How to filter tests by file, name, tags, or suite
 - How to use watch mode for rapid development
+- How to split tests across parallel CI jobs using shards
 - How to override environment variables for testing
 
 ## Overview
@@ -231,6 +232,57 @@ node ace test --failed
 ```
 
 The `--bail` flag helps when debugging a failing test by preventing subsequent tests from running. The `--failed` flag is useful for quickly verifying that your fix resolved all failures without running the entire suite.
+
+### Sharding tests
+
+As your test suite grows, you can split it across multiple processes or CI jobs using the `--shard` flag. The flag accepts the shard to run and the total number of shards in the `current/total` format.
+
+```sh
+node ace test --shard=1/3
+node ace test --shard=2/3
+node ace test --shard=3/3
+```
+
+Sharding works at the file level. Japa collects the test files of the selected suites, applies the `--files` filter, and distributes the remaining files across shards in round-robin order. Running every shard from `1` to `total` runs each test file exactly once.
+
+The most common setup is to run each shard as a separate CI job. Following is an example GitHub Actions workflow that splits the tests into four parallel jobs.
+
+```yaml title=".github/workflows/test.yml"
+name: test
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node ace test --shard=${{ matrix.shard }}/4
+```
+
+Each CI job runs on its own machine, so every shard gets its own database and other services defined within the job.
+
+You can also run shards in parallel on your machine using a tool like [concurrently](https://www.npmjs.com/package/concurrently). However, shards running on the same machine share the same database. Since environment variables defined in the shell take precedence over the `.env.test` file, you can point each shard to a separate database.
+
+```json title="package.json"
+{
+  "scripts": {
+    "test:parallel": "concurrently --group \"DB_DATABASE=app_test_1 node ace test --shard=1/2\" \"DB_DATABASE=app_test_2 node ace test --shard=2/2\""
+  }
+}
+```
+
+:::note
+Each database must exist before running the tests. The migrations defined in the `tests/bootstrap.ts` file run separately for every shard.
+:::
 
 ## Environment variables
 
