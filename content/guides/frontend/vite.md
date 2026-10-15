@@ -140,7 +140,7 @@ URL prefix for generating asset links in production. Set this to your CDN URL wh
 
 ```ts
 {
-  assetsUrl: 'https://cdn.example.com/'
+  assetsUrl: 'https://cdn.example.com/assets/'
 }
 ```
 ::::
@@ -544,7 +544,9 @@ export default defineConfig({
 
 ## Deploying assets to a CDN
 
-To serve bundled assets from a CDN in production, configure the `assetsUrl` option in both configuration files. This ensures that URLs in the manifest file and lazy-loaded chunks point to your CDN server.
+To serve bundled assets from a CDN in production, use the same CDN URL at build time and at runtime. The build-time value makes lazy-loaded chunks point to the CDN. The runtime value makes helpers such as `@vite` use the same origin.
+
+Read the URL from a `CDN_ASSETS_URL` environment variable in both configuration files, so that a single value drives the build and the running application.
 
 ```ts title="vite.config.ts"
 import { defineConfig } from 'vite'
@@ -556,23 +558,72 @@ export default defineConfig({
       entryPoints: ['resources/js/app.js'],
       reload: ['resources/views/**/*.edge'],
       // [!code ++:1]
-      assetsUrl: 'https://cdn.example.com/',
+      assetsUrl: process.env.CDN_ASSETS_URL,
     }),
   ]
 })
 ```
 
 ```ts title="config/vite.ts"
+import env from '#start/env'
 import { defineConfig } from '@adonisjs/vite'
 
 export default defineConfig({
   buildDirectory: 'public/assets',
   // [!code ++:1]
-  assetsUrl: 'https://cdn.example.com/',
+  assetsUrl: env.get('CDN_ASSETS_URL'),
 })
 ```
 
-After building your application with `node ace build`, upload the contents of `public/assets` to your CDN.
+Add `CDN_ASSETS_URL` to the environment validation in `start/env.ts`. The variable is required, so you must also set `CDN_ASSETS_URL=/assets` in your `.env`, `.env.test`, and `.env.example` files.
+
+```ts title="start/env.ts"
+{
+  CDN_ASSETS_URL: Env.schema.string(),
+}
+```
+
+Export the CDN URL before you build the application, and set the same value on the production server. The environment schema requires a value, but it cannot check that the build environment and the production server use the same URL.
+
+```sh title="Terminal"
+export CDN_ASSETS_URL=https://cdn.example.com/assets/
+node ace build
+```
+
+:::warning
+`CDN_ASSETS_URL` must be defined in every environment that runs `node ace build`, including your CI pipeline. When the variable is missing, the plugin receives `undefined` instead of falling back to `/assets`, and the build fails with a `TypeError`.
+
+Export `CDN_ASSETS_URL=/assets` for builds that do not use a CDN.
+:::
+
+Upload from the completed deployment artifact, not from the source checkout. With the default standalone build, `node ace build` copies the Vite output to `build/public/assets`.
+
+The following command uploads every client asset without selecting filenames by hand. It excludes the Vite manifests and the server bundles, because the AdonisJS process reads `.vite/manifest.json`, `server/.vite/manifest.json`, and files such as `server/ssr.js` from the local filesystem and browsers never request them. The default Vite output uses content hashes for client assets, so the command also gives them an immutable cache policy. For an S3-compatible service, add its `--endpoint-url`.
+
+```sh title="Terminal"
+aws s3 sync build/public/assets s3://my-assets-bucket/assets/ \
+  --exclude '.vite/*' \
+  --exclude 'server/*' \
+  --cache-control 'public,max-age=31536000,immutable'
+```
+
+Upload the assets before switching traffic to the new application release, and do not apply the immutable cache policy to any unhashed files you add to the upload source.
+
+:::warning
+Do not add `--delete` to the command. Old hashed files must remain available for browsers with an open page and for application instances that still run the previous release during a rolling deployment. Deleting them breaks lazy-loaded chunks for those users.
+
+Remove old assets with a separate cleanup job or an object lifecycle rule that only targets files older than your longest deployment window.
+:::
+
+:::warning
+Do not upload the manifests or anything under `server/` to the CDN. The server bundles contain server-side code, not browser assets, and publishing them exposes that code for no benefit.
+
+The static middleware and a reverse proxy that serves the `public` directory also expose everything under `public/assets`. If your server entry points contain code you want to keep private, block the `/assets/server/` path in your reverse proxy.
+:::
+
+Configure the CDN or object store to return the correct JavaScript and CSS MIME types and an `Access-Control-Allow-Origin` header for cross-origin module and font requests. Public assets can use `Access-Control-Allow-Origin: *`, and you must allow `GET` and `HEAD` in the object store's CORS configuration. If your Content Security Policy restricts scripts, styles, fonts, or images, add the CDN origin to the relevant directives.
+
+For an Inertia application with SSR, see [Deploying client assets to a CDN](./inertia.md#deploying-client-assets-to-a-cdn).
 
 ## Common issues
 

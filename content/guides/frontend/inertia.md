@@ -1603,7 +1603,7 @@ See [history encryption](https://inertiajs.com/history-encryption) on the Inerti
 
 Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO.
 
-The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntrypoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
+The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntryPoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
@@ -1618,21 +1618,31 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-If you are adding SSR to an existing application, add the same entrypoint to `serverEntrypoints` in `vite.config.ts`.
+If you are adding SSR to an existing application, add the same entrypoint to `serverEntryPoints` in `vite.config.ts`.
 
 ```ts title="vite.config.ts"
 import { defineConfig } from 'vite'
 import adonisjs from '@adonisjs/vite/client'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
     adonisjs({
-      entrypoints: ['inertia/app.tsx'],
-      serverEntrypoints: ['inertia/ssr.tsx'], // [!code highlight]
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'], // [!code highlight]
     }),
+    react(),
   ],
 })
 ```
+
+### Deploying client assets to a CDN
+
+SSR does not require the client bundles to exist on the application server. The server renders pages from the local SSR bundle and uses the local manifests to resolve client asset URLs. You can upload the hashed client assets to a CDN and omit them from the running application's filesystem.
+
+With the default output directories, keep `public/assets/.vite/manifest.json` and the entire `public/assets/server/` directory in the application artifact. The server directory contains the SSR manifest and bundles. Never upload the manifests or anything under `public/assets/server` to the CDN. The [Vite CDN deployment guide](./vite.md#deploying-assets-to-a-cdn) shows how to configure one URL for both builds and runtime, and how to exclude these files without selecting client filenames manually.
+
+The Inertia SSR renderer loads its local server bundle directly, so it does not need the AdonisJS static middleware to serve `public/assets`. This only applies to Vite assets. Continue to serve other public files, such as `favicon.ico`, uploaded images, or `robots.txt`, with the static middleware, a web server, or separate object storage.
 
 ## Understanding the Inertia request lifecycle
 
