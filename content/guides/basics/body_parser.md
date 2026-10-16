@@ -64,7 +64,7 @@ export default bodyParserConfig
 
 :::option{name="allowedMethods"}
 
-The `allowedMethods` array defines which HTTP methods should have their request bodies parsed. By default, only `POST`, `PUT`, `PATCH`, and `DELETE` requests are processed. GET requests are excluded because they typically don't include request bodies.
+The `allowedMethods` array defines which HTTP methods should have their request bodies parsed. By default, only `POST`, `PUT`, `PATCH`, and `DELETE` requests are processed. GET requests are excluded because they typically don't include request bodies. Add `QUERY` to the list to parse the body of [QUERY requests](./routing.md#the-query-method).
 
 :::
 

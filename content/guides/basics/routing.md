@@ -288,6 +288,7 @@ The router provides dedicated methods for each standard HTTP verb. Each method c
 | `PUT` | Replace entire resources | Update all fields of a user profile |
 | `PATCH` | Update partial resources | Update only the email field of a user |
 | `DELETE` | Remove resources | Delete a blog post, remove a user account |
+| `QUERY` | Run a query with a request body | Search with filters too complex to fit in a URL |
 
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
@@ -297,7 +298,31 @@ router.post('/users', () => {})          // Create a new user
 router.put('/users/:id', () => {})       // Replace user completely
 router.patch('/users/:id', () => {})     // Update specific user fields
 router.delete('/users/:id', () => {})    // Delete a user
+router.query('/users/search', () => {})  // Search users using the request body
 ```
+
+### The QUERY method
+
+`QUERY` is a newer HTTP method defined by [RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html). Like `GET`, it is safe and idempotent, and its responses are cacheable. Like `POST`, it sends the query in the request body. Use it for search or filter endpoints whose input is too large or too structured to fit in a URL, where you would otherwise reach for a `POST` route that doesn't change anything.
+
+```ts title="start/routes.ts"
+router.query('/products/search', async ({ request }) => {
+  const { filters, sort, limit } = request.body()
+  // run the search
+})
+```
+
+```sh
+curl -X QUERY http://localhost:3333/products/search \
+  -H 'Content-Type: application/json' \
+  -d '{"filters":{"category":"books","price":{"lte":30}},"sort":"-rating","limit":20}'
+```
+
+The spec requires every `QUERY` request to declare its `Content-Type`, so AdonisJS rejects `QUERY` requests without a valid `Content-Type` header with a `400 Bad Request` response.
+
+:::note
+The [bodyparser](./body_parser.md) only parses the body for the methods listed in the `allowedMethods` option. Make sure `'QUERY'` is part of that list in `config/bodyparser.ts`, otherwise `request.body()` will be empty for `QUERY` requests.
+:::
 
 ### Matching multiple methods
 
