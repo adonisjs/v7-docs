@@ -170,11 +170,11 @@ S3_BUCKET=your_bucket_name
 
 ```dotenv title=".env"
 DRIVE_DISK=gcs
-GCS_KEY=file://gcs_key.json
+GCS_KEY=gcs_key.json
 GCS_BUCKET=your_bucket_name
 ```
 
-The `GCS_KEY` variable points to a JSON key file for your Google Cloud service account. The `file://` prefix indicates the path is relative to your application root.
+The `GCS_KEY` variable holds the path (relative to your application root) of the JSON key file for your Google Cloud service account.
 
 :::
 
@@ -184,13 +184,19 @@ The `GCS_KEY` variable points to a JSON key file for your Google Cloud service a
 {
   services: {
     gcs: services.gcs({
-      credentials: env.get('GCS_KEY'),
+      /**
+       * Path to the service account key file. The Google Cloud
+       * SDK reads and parses the file when creating the client.
+       */
+      keyFilename: app.makePath(env.get('GCS_KEY')),
       bucket: env.get('GCS_BUCKET'),
       visibility: 'public',
     }),
   }
 }
 ```
+
+The `credentials` option expects the parsed key object (with `client_email` and `private_key` properties), not a file path. Use it instead of `keyFilename` when your hosting platform provides the key contents rather than a file, for example `credentials: JSON.parse(env.get('GCS_CREDENTIALS'))`.
 
 :::
 
