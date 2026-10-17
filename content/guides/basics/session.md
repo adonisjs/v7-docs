@@ -56,6 +56,8 @@ Cookie-based sessions silently truncate data exceeding 4KB. Switch to Redis for 
 | `database` | Stores data in SQL databases | Production apps using SQL, existing database infrastructure |
 | `memory` | Stores data in memory (lost on restart) | Testing only
 
+The `memory`, `redis`, and `database` drivers also support [session tagging](./session_tagging.md), which lets you list the active sessions of a user and log them out from other devices.
+
 ## Configuration
 
 Session configuration is stored in `config/session.ts`, which is created during installation. Here's the default configuration:

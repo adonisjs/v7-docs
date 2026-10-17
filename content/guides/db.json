@@ -59,6 +59,11 @@
         "contentPath": "./basics/session.md"
       },
       {
+        "title": "Session tagging",
+        "permalink": "guides/basics/session-tagging",
+        "contentPath": "./basics/session_tagging.md"
+      },
+      {
         "title": "URL builder",
         "permalink": "guides/basics/url-builder",
         "contentPath": "./basics/url_builder.md"
