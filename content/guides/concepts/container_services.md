@@ -253,11 +253,12 @@ You can view the [complete implementation on GitHub](https://github.com/adonisjs
 
 ```ts title="Example service structure"
 import app from '@adonisjs/core/services/app'
+import type { DriveService } from '@adonisjs/drive/types'
 
-let drive: DriveManager
+let drive: DriveService
 
 await app.booted(async () => {
-  drive = await app.container.make('drive')
+  drive = await app.container.make('drive.manager')
 })
 
 export { drive as default }

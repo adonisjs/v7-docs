@@ -43,13 +43,13 @@ The command prompts you to select one or more storage services.
 :::
 
 :::tip{title="Non-interactive installation"}
-The `node ace add` command requires interactive service selection. If you need to install Drive non-interactively (for example, in CI scripts), you can perform the steps manually:
+You can skip the prompts (for example, in CI scripts) by passing the service with the `--services` flag and the `--install` flag to install its peer dependencies without asking. The supported values are `fs`, `s3`, `gcs`, `r2`, `spaces`, and `supabase`.
 
-1. Install the package: `npm install @adonisjs/drive`
-2. Install peer dependencies for your storage service (e.g., `npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner` for S3)
-3. Register the provider in `adonisrc.ts`: add `() => import('@adonisjs/drive/drive_provider')` to the `providers` array
-4. Create `config/drive.ts` with your service configuration (see the [Configuration](#configuration) section below)
-5. Add the required environment variables to `.env` and `start/env.ts`
+```sh
+node ace add @adonisjs/drive --services=s3 --install
+```
+
+To use more services later, add them to `config/drive.ts` and define their environment variables by hand, as described in the [Configuration](#configuration) section below.
 :::
 
 ## Configuration
@@ -271,7 +271,7 @@ SPACES_ENDPOINT=https://${SPACES_REGION}.digitaloceanspaces.com
 
 ### Supabase Storage
 
-Supabase Storage uses the S3-compatible API.
+Supabase Storage uses the S3-compatible API. Selecting `supabase` during installation defines the environment variables below, but you must add the `supabase` service to `config/drive.ts` yourself using the configuration shown here.
 
 :::disclosure{title="Environment variables"}
 
@@ -305,6 +305,16 @@ SUPABASE_ENDPOINT=https://your_project.supabase.co/storage/v1/s3
 }
 ```
 
+:::
+
+:::warning
+Supabase Storage cannot receive streamed uploads, which is what `moveToDisk` uses by default. Pass the `moveAs: 'buffer'` option when moving files to a Supabase disk so the file is read into memory before it is uploaded.
+
+```ts title="app/controllers/profile_controller.ts"
+await avatar.moveToDisk(key, 'supabase', {
+  moveAs: 'buffer',
+})
+```
 :::
 
 ## Basic usage
@@ -429,6 +439,21 @@ await avatar.moveToDisk(key)
 await avatar.moveToDisk(key, 's3')
 await avatar.moveToDisk(key, 'gcs')
 await avatar.moveToDisk(key, 'r2')
+```
+
+The last argument accepts the FlyDrive write options (such as `contentType` or `visibility`) along with the `moveAs` option, which controls how the file is sent to the disk. It defaults to `stream`. Use `buffer` for providers that cannot receive streams. Once the file is moved, `meta.url` holds its public URL (when the disk can generate one), so you can return it without calling `getUrl` again.
+
+```ts title="app/controllers/profile_controller.ts"
+// Pass options when using the default disk
+await avatar.moveToDisk(key, { visibility: 'private' })
+
+// Pass options along with a disk name
+await avatar.moveToDisk(key, 's3', {
+  contentType: 'image/png',
+  moveAs: 'buffer',
+})
+
+return { url: avatar.meta.url }
 ```
 
 :::warning
@@ -725,7 +750,7 @@ Drive provides a fakes API for testing file uploads without interacting with rea
 
 ```ts title="tests/functional/profile/update_avatar.spec.ts"
 import { test } from '@japa/runner'
-import { fileGenerator } from '@poppinss/file-generator'
+import fileGenerator from '@poppinss/file-generator'
 import drive from '@adonisjs/drive/services/main'
 import { UserFactory } from '#database/factories/user_factory'
 
@@ -759,14 +784,16 @@ test.group('Profile | update avatar', () => {
       .assertStatus(200)
 
     /**
-     * Assert the file was stored
+     * The controller stores the generated key on the user,
+     * so reload the user and assert the file exists
      */
-    fakeDisk.assertExists(`${user.id}.png`)
+    await user.refresh()
+    fakeDisk.assertExists(user.avatar)
   })
 
-  test('rejects invalid file types', async ({ client }) => {
+  test('rejects invalid file types', async ({ client, assert }) => {
     // [!code highlight]
-    using fakeDisk = drive.fake()
+    using _fakeDisk = drive.fake()
 
     const user = await UserFactory.create()
 
@@ -782,9 +809,10 @@ test.group('Profile | update avatar', () => {
       .assertStatus(422)
 
     /**
-     * Assert no file was stored
+     * Assert no avatar was stored
      */
-    fakeDisk.assertMissing(`${user.id}.pdf`)
+    await user.refresh()
+    assert.isNull(user.avatar)
   })
 })
 ```

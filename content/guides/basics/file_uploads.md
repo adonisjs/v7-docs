@@ -242,7 +242,7 @@ Install and configure FlyDrive by running the following command:
 node ace add @adonisjs/drive
 ```
 
-This command installs the `@adonisjs/drive` package and creates a `config/drive.ts` configuration file with local disk storage ready to use. For cloud storage configuration (S3, R2, GCS), see the [Drive documentation](../digging_deeper/drive.md).
+This command installs the `@adonisjs/drive` package, prompts you to select the storage services you want to use, and creates a `config/drive.ts` configuration file for them. Select the local filesystem (`fs`) to store files on your server during development. For cloud storage configuration (S3, R2, GCS, Spaces, Supabase), see the [Drive documentation](../digging_deeper/drive.md).
 
 ### Moving files to permanent storage
 
