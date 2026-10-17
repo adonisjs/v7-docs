@@ -27,6 +27,10 @@ The `serve` command starts the development server (via the `bin/server.ts` file)
 node ace --no-warnings --inspect serve --hmr
 ```
 
+In both `--watch` and `--hmr` modes, the development server restarts when one of the environment files loaded by your application changes, such as `.env` or `.env.local`. Files loaded from a custom `ENV_PATH` directory are watched as well, so you do not have to restart the command manually after editing environment variables.
+
+When running in an interactive terminal, the development server also listens for keyboard shortcuts. Press `r` to restart the server, `c` to clear the console, `o` to open the application in your browser, and `h` to list the shortcuts.
+
 Following is the list of available options you can pass to the `serve` command. Alternatively, use the `--help` flag to view the command's help.
 
 ::::options
@@ -59,9 +63,7 @@ Clear the terminal after every file change and before displaying the new logs. U
 
 
 ## build
-The `build` command uses the [@adonisjs/assembler](https://github.com/adonisjs/assembler?tab=readme-ov-file#bundler) package to create the production build of your AdonisJS application. The following steps are performed to generate the build.
-
-See also: [Creating the production build](../start/deployment.md#creating-the-production-build).
+The `build` command uses the [@adonisjs/assembler](https://github.com/adonisjs/assembler?tab=readme-ov-file#bundler) package to create the production build of your AdonisJS application. See [Creating the production build](../start/deployment.md#creating-the-production-build) for the steps performed during the build.
 
 ```sh
 node ace build
@@ -87,7 +89,7 @@ We detect the package manager using the `@antfu/install-pkg` package. However, y
 
 :::option{name="--tsconfig"}
 
-Define the path to the `tsconfig` file used to compile the application. By default, the build uses the `tsconfig.json` file from the application root.
+Define the path to the `tsconfig` file used to compile the application. By default, the build uses the `tsconfig.json` file from the application root. The `outDir` of this file determines the build output directory.
 
 ```sh
 node ace build --tsconfig=tsconfig.build.json

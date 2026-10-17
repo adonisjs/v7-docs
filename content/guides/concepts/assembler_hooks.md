@@ -299,6 +299,12 @@ The configuration options are:
 | `exportName` | Name of the exported constant in barrel files |
 | `removeSuffix` | Suffix to strip from file names when generating property keys |
 | `output` | Path where the generated file will be written |
+| `glob` | Glob patterns selecting the source files. Defaults to `.ts` (excluding `.d.ts`), `.tsx`, and `.js` files |
+| `filter` | A `(path, isDirectory) => boolean` callback to exclude files or directories from the scan |
+| `skipSegments` | Directory names to omit from the nested keys of a barrel file |
+| `computeBaseName` | A callback receiving a `StringBuilder` for the file name and returning the property key. Replaces the default `removeSuffix` and PascalCase transform |
+| `disableLazyImports` | Use static imports instead of lazy `() => import()` functions in barrel files |
+| `comment` | Add a comment at the top of the generated file. Pass `true` for the default "DO NOT EDIT" notice or a string for custom text |
 
 ### Barrel file generation
 

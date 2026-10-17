@@ -52,12 +52,15 @@ npm run build
 
 This executes `node ace build` under the hood. The build process performs the following steps in order:
 
-1. Removes the existing `./build` folder if one exists
-2. Rewrites the `ace.js` file to remove the TypeScript loader import
-3. Compiles frontend assets using Vite (if configured)
+1. Runs the `init` [Assembler hooks](../guides/concepts/assembler_hooks.md) and generates the index files inside the `.adonisjs` directory
+2. Removes the existing output directory (`./build` by default) if one exists
+3. Runs the `buildStarting` hooks, which compile frontend assets using Vite (if configured)
 4. Compiles TypeScript source code to JavaScript using `tsc`
-5. Copies non-TypeScript files registered in the `metaFiles` array to `./build`
-6. Copies `package.json` and your package manager lock file to `./build`
+5. Writes an `ace.js` file to the output directory that imports `bin/console.js` without the TypeScript loader
+6. Copies non-TypeScript files registered in the `metaFiles` array to the output directory
+7. Copies `package.json` and your package manager lock file to the output directory
+
+The output directory is read from the `compilerOptions.outDir` property of your `tsconfig.json` file and defaults to `./build`. The build refuses to run when `outDir` points to the project root or one of its parent directories, since cleaning it would delete your project files.
 
 If there are TypeScript errors in your code, the build will fail. You must fix these errors before creating a production build. If you need to bypass TypeScript errors temporarily, use the `--ignore-ts-errors` flag.
 
@@ -65,10 +68,16 @@ If there are TypeScript errors in your code, the build will fail. You must fix t
 npm run build -- --ignore-ts-errors
 ```
 
-The `--package-manager` flag controls which lock file is copied to the build output. If not specified, the build command detects your package manager based on how you invoked the command (for example, `npm run build` versus `pnpm build`).
+The `--package-manager` flag controls which lock file is copied to the build output. If not specified, the build command detects your package manager from the lock file in your project root (or the `packageManager` field of your `package.json` file) and falls back to `npm`.
 
 ```sh
 npm run build -- --package-manager=pnpm
+```
+
+Use the `--tsconfig` flag to compile with a different TypeScript config file, for example one that excludes test files from the production build. The path is relative to your project root, and its `outDir` determines the build output directory.
+
+```sh
+npm run build -- --tsconfig=tsconfig.build.json
 ```
 
 ## Build output contents

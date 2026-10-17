@@ -333,14 +333,16 @@ Define routes to exclude using the `exclude` option.
 
 ```ts title="adonisrc.ts"
 import { defineConfig } from '@adonisjs/core/app'
-import { generateRegistry } from '@adonisjs/assembler/hooks'
+import { generateRegistry } from '@tuyau/core/hooks'
 
 export default defineConfig({
-  init: [
-    generateRegistry({
-      exclude: ['admin.*'],
-    })
-  ],
+  hooks: {
+    init: [
+      generateRegistry({
+        exclude: ['admin.*'],
+      }),
+    ],
+  },
 })
 ```
 

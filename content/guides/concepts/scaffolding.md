@@ -641,6 +641,16 @@ export default class User extends compose(UserSchema, withManagedEmail()) {}
 
 Use the `args` property to pass arguments to the mixin function. Each entry is inserted as raw source code.
 
+An optional third argument adds more imports to the model file, which is useful when the mixin arguments reference other modules. Imports from a module already imported by the file are merged into the existing declaration.
+
+```ts
+await codemods.addModelMixins(
+  'user.ts',
+  [{ name: 'withManagedEmail', importPath: '#mixins/managed_email', importType: 'named' }],
+  [{ source: '#services/hash', namedImports: ['hash'] }]
+)
+```
+
 ### addControllerMethod
 
 Add a method to a controller inside the `app/controllers` directory. The controller file is created when it does not exist, and the `imports` are added to the top of the file.
