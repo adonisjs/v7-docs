@@ -148,6 +148,14 @@ urlFor('users.posts.show', { userId: 5, postId: 10 })
 // Output: /users/5/posts/10
 ```
 
+Parameter values are URL-encoded as individual path segments. A value containing `/`, `?`, or `#` cannot change the structure of the generated URL, which makes it safe to pass request input as a route parameter.
+
+```ts
+// Route: /files/:name
+urlFor('files.show', { name: 'reports/2026 Q1' })
+// Output: /files/reports%2F2026%20Q1
+```
+
 ## Adding query strings
 
 Query strings can be added to generated URLs by passing a third options parameter with a `qs` property. The query string object can contain nested values, which are automatically serialized into the proper format.

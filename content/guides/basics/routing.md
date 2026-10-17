@@ -222,8 +222,8 @@ For common patterns like numbers, UUIDs, and slugs, AdonisJS provides shorthand 
 | Matcher | Validates | Casts To | Example Use Case |
 |---------|-----------|----------|------------------|
 | `number()` | Digits only (`/^\d+$/`) | `number` | Database IDs, pagination offsets |
-| `uuid()` | Valid UUID v4 format | `string` | Public resource identifiers, secure IDs |
-| `slug()` | URL-safe strings (`/^[a-z0-9-_]+$/`) | `string` | SEO-friendly URLs, article slugs |
+| `uuid()` | UUID format (`8-4-4-4-12` characters), any version | `string` (lowercased) | Public resource identifiers, secure IDs |
+| `slug()` | At least 3 characters, no whitespace, no leading or repeated `-`/`_` | `string` | SEO-friendly URLs, article slugs |
 
 ```ts title="Numeric IDs"
 import router from '@adonisjs/core/services/router'
@@ -608,12 +608,12 @@ router.on('/contact').renderInertia('contact', { title: 'Contact us' })
 
 ## Redirect from a route
 
-You can redirect one path to another using `redirectToRoute()` or `redirectToPath()`. This is useful for handling deprecated URLs, shortening URLs, or creating aliases.
+You can redirect one path to another using `redirect()` or `redirectToPath()`. This is useful for handling deprecated URLs, shortening URLs, or creating aliases.
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
 // Redirect to a named route
-router.on('/posts').redirectToRoute('articles.index')
+router.on('/posts').redirect('articles.index')
 
 // Redirect to a static URL
 router.on('/posts').redirectToPath('https://medium.com/my-blog')
@@ -626,10 +626,10 @@ If your route has dynamic params, you can forward them to the destination route 
 import router from '@adonisjs/core/services/router'
 
 // Forward the :id param to the destination route
-router.on('/posts/:id').redirectToRoute('articles.show')
+router.on('/posts/:id').redirect('articles.show')
 
 // Override the param with a specific value
-router.on('/featured').redirectToRoute('articles.show', { id: 1 })
+router.on('/featured').redirect('articles.show', { id: 1 })
 ```
 
 When someone visits `/posts/42`, they're redirected to the `articles.show` route with `id: 42`. When they visit `/featured`, they're redirected with `id: 1`.
@@ -640,12 +640,32 @@ Redirects can also include query strings via the `qs` option:
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
-router.on('/posts').redirectToRoute('articles.index', {}, {
+router.on('/posts').redirect('articles.index', {}, {
   qs: { limit: 20, page: 1 },
 })
 ```
 
 This redirects to `/articles?limit=20&page=1`.
+
+### Forwarding the query string and setting the status
+
+Set `forwardQueryString` to carry the incoming query string over to the destination. This keeps tracking parameters such as `?ref=newsletter` intact when you move a page. The option overrides the [`redirect.forwardQueryString`](./response.md#forwarding-query-strings) config for this route, so you can also pass `false` to drop the query string when forwarding is enabled globally.
+
+Use the `status` option to send a permanent redirect instead of the default `302`. Both options are accepted by `redirect()` and `redirectToPath()`.
+
+```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+
+// /old-blog?ref=newsletter redirects to /blog?ref=newsletter
+router.on('/old-blog').redirectToPath('/blog', {
+  status: 301,
+  forwardQueryString: true,
+})
+
+router.on('/posts').redirect('articles.index', {}, {
+  forwardQueryString: true,
+})
+```
 
 ## Accessing the current route
 
@@ -731,6 +751,41 @@ router.get('/posts/search', () => {})
 router.get('/posts/:id', () => {})
 router.get('/posts/:id/comments', () => {})
 ```
+
+### Using the tree matcher
+
+By default, the router compares the request URL against each registered route in order. This linear matcher is fast enough for most applications, but its cost grows with the number of routes, since a request for the last registered route is compared against every route before it.
+
+Applications with hundreds of routes can switch to the tree matcher using the `router.matcher` option in `config/app.ts`. The tree matcher indexes routes by their segments and only evaluates the routes that can match the URL. It keeps the same registration-order semantics, so switching does not change which route handles a request.
+
+```ts title="config/app.ts"
+import { defineConfig } from '@adonisjs/core/http'
+
+export const http = defineConfig({
+  router: {
+    matcher: 'tree',
+  },
+})
+```
+
+The tree matcher also accepts a `precedence` option. Setting it to `specificity` makes the most specific route win regardless of registration order. Segments are compared from left to right, with static segments ranking above required params, followed by optional params and wildcards. Registration order only breaks ties between equally specific routes.
+
+```ts title="config/app.ts"
+import { defineConfig } from '@adonisjs/core/http'
+
+export const http = defineConfig({
+  router: {
+    matcher: 'tree',
+    precedence: 'specificity',
+  },
+})
+```
+
+With `specificity` precedence, `/posts/archived` matches the `/posts/archived` route even when `/posts/:id` is registered first.
+
+:::warning
+Specificity precedence changes which route handles overlapping URLs in applications that rely on registration order. Review routes with overlapping patterns before enabling it, and run your test suite to catch requests that now reach a different handler.
+:::
 
 ### Handling 404 requests
 

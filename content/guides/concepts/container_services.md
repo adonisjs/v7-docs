@@ -214,7 +214,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>router</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/http-server/blob/8.x/src/router/main.ts">Router</a>
+        <a href="https://github.com/adonisjs/http-server/blob/9.x/src/router/main.ts">Router</a>
       </td>
       <td>
         <code>@adonisjs/core/services/router</code>
@@ -225,7 +225,7 @@ AdonisJS core and official packages expose the following container services. Eac
         <code>server</code>
       </td>
       <td>
-        <a href="https://github.com/adonisjs/http-server/blob/8.x/src/server/main.ts">Server</a>
+        <a href="https://github.com/adonisjs/http-server/blob/9.x/src/server/main.ts">Server</a>
       </td>
       <td>
         <code>@adonisjs/core/services/server</code>

@@ -256,7 +256,7 @@ export default class PostsController {
 
 ### Redirecting back
 
-Use `response.redirect().back()` to redirect to the previous page. The method reads the `Referer` header and validates that the referrer's host matches the current request's `Host` header. If the referrer is missing, invalid, or from an unknown host, the redirect falls back to `/`.
+Use `response.redirect().back()` to redirect to the previous page. The method reads the `Referer` header and validates that the referrer's host matches the current request's host (the HTTP/2 `:authority` pseudo-header, or the `Host` header). If the referrer is missing, invalid, or from an unknown host, the redirect falls back to `/`.
 
 You can provide a custom fallback URL as an argument to `back()`.
 

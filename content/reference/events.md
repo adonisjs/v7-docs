@@ -8,7 +8,7 @@ In this guide, we look at the list of events dispatched by the framework core an
 
 ## http\:request_completed
 
-The [`http:request_completed`](https://github.com/adonisjs/http-server/blob/8.x/src/types/server.ts#L65-L81) event is dispatched after an HTTP request is completed. The event contains an instance of the [HttpContext](../guides/basics/http_context.md) and the request duration. The `duration` value is the output of the `process.hrtime` method.
+The [`http:request_completed`](https://github.com/adonisjs/http-server/blob/9.x/src/types/server.ts#L66-L82) event is dispatched after an HTTP request is completed. The event contains an instance of the [HttpContext](../guides/basics/http_context.md) and the request duration. The `duration` value is the output of the `process.hrtime` method.
 
 ```ts
 import emitter from '@adonisjs/core/services/emitter'

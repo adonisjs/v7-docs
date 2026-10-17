@@ -56,7 +56,7 @@ export const http = defineConfig({
 })
 ```
 
-When enabled, each request receives a unique ID accessible via `request.id()`. The default value is `true`.
+When enabled, requests without an `X-Request-Id` header receive a generated ID accessible via `request.id()`. The option defaults to `false`, unless you define a custom `createRequestId` function, which enables it automatically.
 
 ## Form Method Spoofing
 
@@ -170,4 +170,35 @@ export const http = defineConfig({
 
 When `forwardQueryString` is enabled, all redirects automatically carry over the current URL's query parameters. You can disable forwarding for a specific redirect by calling `withQs(false)` on the redirect instance.
 
-The `allowedHosts` array is checked alongside the request's `Host` header when `back()` validates the `Referer` header. Referrers from hosts not in this list and not matching the current request's host will cause `back()` to use the fallback URL instead.
+The `allowedHosts` array is checked alongside the request's authority (the HTTP/2 `:authority` pseudo-header, falling back to `request.host()`) when `back()` validates the `Referer` header. Referrers from hosts not in this list and not matching the current request's host will cause `back()` to use the fallback URL instead.
+
+## Router Configuration
+
+The `router` option selects the algorithm used to match incoming requests against registered routes. See the [routing guide](../../guides/basics/routing.md#using-the-tree-matcher) for guidance on choosing a matcher.
+
+```ts
+// title: config/app.ts
+import { defineConfig } from '@adonisjs/core/http'
+
+export const http = defineConfig({
+  router: {
+    /**
+     * The "linear" matcher compares the URL against every route
+     * in registration order. The "tree" matcher indexes routes
+     * by segment and is faster for applications with many routes.
+     *
+     * Defaults to "linear"
+     */
+    matcher: 'tree',
+
+    /**
+     * Only available with the "tree" matcher. Use "specificity"
+     * to let static segments win over params regardless of
+     * registration order.
+     *
+     * Defaults to "registration"
+     */
+    precedence: 'registration',
+  },
+})
+```
