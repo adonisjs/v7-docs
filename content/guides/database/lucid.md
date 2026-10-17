@@ -123,6 +123,8 @@ node ace make:migration posts
 
 This generates a timestamped migration file in `database/migrations/`. The timestamp ensures migrations run in the correct order.
 
+The command infers the intent from the migration name. Names like `posts` or `create_posts_table` generate a `createTable` migration, while names like `add_status_to_posts` or `alter_posts_table` generate an `alterTable` migration for the `posts` table. You can always be explicit with the `--create` or `--alter` flags.
+
 ```typescript title="database/migrations/1705234567890_create_posts_table.ts"
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
@@ -168,47 +170,67 @@ Migrations run inside transactions by default. If a migration fails, all changes
 
 For more migration operations like altering tables, adding indexes, and working with foreign keys, see the [Lucid migrations documentation](https://lucid.adonisjs.com/docs/migrations).
 
+:::tip
+Long-lived projects accumulate hundreds of migration files. The `node ace schema:dump` command squashes them into a single SQL file at `database/schema/<connection>-schema.sql`, and `migration:run` restores that dump before running newer migrations. Pass `--prune` to delete the old migration files. The command relies on your database's dump tool (`pg_dump`, `mysqldump`, or `sqlite3`), so it must be installed on the machine.
+:::
+
 ### Auto-generated schema classes
 
 After running migrations, Lucid scans your database and generates TypeScript schema classes that contain all column definitions with proper types. This migrations-first approach keeps your models clean and ensures your TypeScript types always match your actual database schema.
 
-The generated schema class lives at `database/schema.ts`.
+The generated schema classes live at `database/schema.ts`. Each class is named after the singular form of its table (`posts` becomes `PostSchema`).
 
 ```typescript title="database/schema.ts"
-import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { DateTime } from 'luxon'
 
-export class PostsSchema extends BaseModel {
-  static table = 'posts'
-
-  @column({ isPrimary: true })
-  declare id: number
-
-  @column()
-  declare title: string
-
+export class PostSchema extends BaseModel {
+  static $columns = ['content', 'createdAt', 'id', 'status', 'title', 'updatedAt'] as const
+  $columns = PostSchema.$columns
   @column()
   declare content: string
-
-  @column()
-  declare status: string
-
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime | null
-
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare status: string | null
+  @column()
+  declare title: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
 ```
 
-Lucid automatically converts database types to appropriate TypeScript types, snake_case column names to camelCase properties, and timestamp columns to Luxon DateTime objects. The `autoCreate` option means Lucid sets the timestamp when creating a record, and `autoUpdate` means it updates the timestamp on every save.
+Lucid automatically converts database types to appropriate TypeScript types, snake_case column names to camelCase properties, nullable columns to `| null` unions, and timestamp columns to Luxon DateTime objects. The `autoCreate` option means Lucid sets the timestamp when creating a record, and `autoUpdate` means it updates the timestamp on every save. The `$columns` list powers type-safe helpers like `model.toAttributes()`, which returns a plain object containing only the column values.
+
+Schema generation runs automatically after `migration:run` and `migration:rollback`, except in production. You can also run it manually with `node ace schema:generate`, or turn it off for a connection by setting `schemaGeneration.enabled` to `false` in `config/database.ts`.
 
 ### Schema generation rules
 
-The default schema generation can be steered by configuring schema generation rules. Make sure your database config enables generation and points to the `database/schema_rules.ts` file:
+The default schema generation can be steered by configuring schema generation rules. The starter kits ship with an empty `database/schema_rules.ts` file registered through the `schemaGeneration.rulesPaths` option of each connection.
+
+```typescript title="config/database.ts"
+const dbConfig = defineConfig({
+  connection: 'postgres',
+  connections: {
+    postgres: {
+      client: 'pg',
+      connection: {},
+      // [!code ++:4]
+      schemaGeneration: {
+        enabled: true,
+        rulesPaths: ['./database/schema_rules.js'],
+      },
+    },
+  },
+})
+```
+
+Rules can target a database type, a column name, or a specific table. Each rule defines the TypeScript type, the decorators to apply, and the imports the generated file needs. A rule replaces the defaults for the matched column, so you must list every decorator you want.
 
 ```typescript title="database/schema_rules.ts"
-import { type SchemaRules } from '@adonisjs/lucid/types/schema_generator';
+import { type SchemaRules } from '@adonisjs/lucid/types/schema_generator'
 
 export default {
   types: {
@@ -217,7 +239,7 @@ export default {
      * instead of the default 'any' type.
      */
     jsonb: {
-      decorator: '@column()',
+      decorators: [{ name: '@column' }],
       tsType: 'JSON<any>',
       imports: [{ source: '#types/db', typeImports: ['JSON'] }],
     },
@@ -248,14 +270,20 @@ node ace make:model Post
 ```
 
 ```typescript title="app/models/post.ts"
-import { PostsSchema } from '#database/schema'
+import { PostSchema } from '#database/schema'
 
-export default class Post extends PostsSchema {
+export default class Post extends PostSchema {
   // Your model is ready to use with all columns inherited from the schema
 }
 ```
 
 The model inherits all column definitions from the schema class. You'll add relationships, hooks, and custom methods here, while the schema class handles column definitions.
+
+The `make:model` command can scaffold related files in the same run. Use `-m` for a migration, `-f` for a factory, `-c` for a controller, and `--transformer` for a [transformer](../frontend/transformers.md).
+
+```bash
+node ace make:model Post -m -f --transformer
+```
 
 :::warning
 Never modify the generated schema classes in `database/schema.ts` directly. These files are regenerated after every migration. Instead, override columns or add custom logic in your model classes, which extend the schema classes and persist your changes.
@@ -406,7 +434,7 @@ For the complete query builder API, see the [Lucid query builder documentation](
 
 Understanding what SQL queries your application generates helps with debugging and optimization. Lucid provides built-in query debugging that pretty-prints SQL statements to your console during development.
 
-Pretty printing is enabled by default in development mode. You'll see formatted SQL queries in your terminal:
+The starter kits enable it in development, so you'll see formatted SQL queries in your terminal:
 
 ```sql
 select * from "posts" where "status" = 'published' order by "created_at" desc
@@ -415,6 +443,9 @@ select * from "posts" where "status" = 'published' order by "created_at" desc
 The feature is configured in your database config:
 
 ```typescript title="config/database.ts"
+import app from '@adonisjs/core/services/app'
+import { defineConfig } from '@adonisjs/lucid'
+
 const dbConfig = defineConfig({
   prettyPrintDebugQueries: true,
   connections: {
@@ -422,10 +453,10 @@ const dbConfig = defineConfig({
       client: 'pg',
       connection: {},
       /**
-       * Enable debug mode to log all queries for this connection.
-       * Set to false in production to avoid performance overhead.
+       * Log all queries for this connection during development only,
+       * avoiding the performance overhead in production.
        */
-      debug: true,
+      debug: app.inDev,
     },
   },
 })
@@ -568,11 +599,11 @@ For manual transaction control, isolation levels, and savepoints, see the [Lucid
 Hooks allow you to execute code at specific points in a model's lifecycle. You can use hooks to hash passwords before saving, validate data, update related records, or perform any logic that should happen automatically during model operations.
 
 ```typescript title="app/models/user.ts"
-import { UsersSchema } from '#database/schema'
+import { UserSchema } from '#database/schema'
 import { beforeSave } from '@adonisjs/lucid/orm'
 import hash from '@adonisjs/core/services/hash'
 
-export default class User extends UsersSchema {
+export default class User extends UserSchema {
   /**
    * Hash the password before saving to the database.
    * The hook runs before both inserts and updates.
@@ -593,17 +624,19 @@ export default class User extends UsersSchema {
 Lucid provides hooks for different lifecycle events. Before hooks (`@beforeSave`, `@beforeCreate`, `@beforeUpdate`, `@beforeDelete`) run before database operations and can modify data or cancel operations. After hooks (`@afterSave`, `@afterCreate`, `@afterUpdate`, `@afterDelete`) run after database operations and are useful for side effects like sending notifications. Query hooks (`@beforeFind`, `@afterFind`, `@beforeFetch`, `@afterFetch`) run during fetch operations and can automatically filter results.
 
 ```typescript title="app/models/post.ts"
-import { PostsSchema } from '#database/schema'
+import { PostSchema } from '#database/schema'
 import { beforeFind, afterCreate } from '@adonisjs/lucid/orm'
+import type { ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 
-export default class Post extends PostsSchema {
+export default class Post extends PostSchema {
   /**
    * Automatically exclude soft-deleted posts from queries.
    * This hook modifies every find query to filter deleted records.
+   * Query builder methods use database column names.
    */
   @beforeFind()
-  static ignoreDeleted(query) {
-    query.where('isDeleted', false)
+  static ignoreDeleted(query: ModelQueryBuilderContract<typeof Post>) {
+    query.where('is_deleted', false)
   }
 
   /**
@@ -634,12 +667,12 @@ Relationships define how your models connect to each other, making it easy to wo
 A user has many posts:
 
 ```typescript title="app/models/user.ts"
-import { UsersSchema } from '#database/schema'
+import { UserSchema } from '#database/schema'
 import { hasMany } from '@adonisjs/lucid/orm'
 import Post from '#models/post'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 
-export default class User extends UsersSchema {
+export default class User extends UserSchema {
   /**
    * Define a one-to-many relationship.
    * A user can have multiple posts.
@@ -652,12 +685,12 @@ export default class User extends UsersSchema {
 A post belongs to a user:
 
 ```typescript title="app/models/post.ts"
-import { PostsSchema } from '#database/schema'
+import { PostSchema } from '#database/schema'
 import { belongsTo } from '@adonisjs/lucid/orm'
 import User from '#models/user'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
-export default class Post extends PostsSchema {
+export default class Post extends PostSchema {
   /**
    * Define the inverse relationship.
    * Each post belongs to one user.
@@ -717,12 +750,12 @@ const posts = await Post.query()
 For many-to-many relationships like users belonging to multiple teams:
 
 ```typescript title="app/models/user.ts"
-import { UsersSchema } from '#database/schema'
+import { UserSchema } from '#database/schema'
 import { manyToMany } from '@adonisjs/lucid/orm'
 import Team from '#models/team'
 import type { ManyToMany } from '@adonisjs/lucid/types/relations'
 
-export default class User extends UsersSchema {
+export default class User extends UserSchema {
   /**
    * Define a many-to-many relationship through a pivot table.
    * Lucid expects a team_user table with user_id and team_id columns.
@@ -792,26 +825,25 @@ export default class UsersController {
 }
 ```
 
-Control serialization at the model level using column options:
+Control serialization at the model level using column options. The schema generator already marks `password` columns with `serializeAs: null`, and you can override other columns in your model the same way.
 
 ```typescript title="app/models/user.ts"
-import { UsersSchema } from '#database/schema'
+import { UserSchema } from '#database/schema'
 import { column } from '@adonisjs/lucid/orm'
 
-export default class User extends UsersSchema {
+export default class User extends UserSchema {
   /**
-   * Override password column to exclude from all serialization.
+   * Exclude the token from all serialization.
    * Setting serializeAs to null prevents this field from appearing in JSON.
    */
   @column({ serializeAs: null })
-  declare password: string
+  declare rememberMeToken: string | null
 
   /**
-   * Override firstName column to rename in JSON output.
-   * The database column is snake_case but JSON uses camelCase.
+   * Rename the fullName property to name in the JSON output.
    */
-  @column({ serializeAs: 'firstName' })
-  declare firstName: string
+  @column({ serializeAs: 'name' })
+  declare fullName: string | null
 }
 ```
 
@@ -873,6 +905,10 @@ const publishedPost = await PostFactory
 Factories support states for common variations:
 
 ```typescript title="database/factories/post_factory.ts"
+import { DateTime } from 'luxon'
+import Post from '#models/post'
+import Factory from '@adonisjs/lucid/factories'
+
 export const PostFactory = Factory.define(Post, ({ faker }) => {
   return {
     title: faker.lorem.sentence(),
@@ -882,7 +918,7 @@ export const PostFactory = Factory.define(Post, ({ faker }) => {
 })
   .state('published', (post) => {
     post.status = 'published'
-    post.publishedAt = new Date()
+    post.publishedAt = DateTime.now()
   })
   .build()
 ```

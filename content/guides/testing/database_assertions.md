@@ -153,6 +153,21 @@ test('deletes a user', async ({ client, db }) => {
 })
 ```
 
+## Asserting against another connection
+
+All assertions run against the default connection from `config/database.ts`. Call `db.connection()` with a connection name to run the same assertions against another database.
+
+```ts title="tests/functional/audit_logs.spec.ts"
+import { test } from '@japa/runner'
+
+test('records an audit log entry', async ({ client, db }) => {
+  await client.post('/posts').json({ title: 'Hello world' })
+
+  // Queries the "audit" connection instead of the default one
+  await db.connection('audit').assertHas('audit_logs', { action: 'post.created' })
+})
+```
+
 ## Assertions reference
 
 | Method | Description |
@@ -163,3 +178,4 @@ test('deletes a user', async ({ client, db }) => {
 | `assertEmpty(table)` | Verifies the table has no rows. Shorthand for `assertCount(table, 0)`. |
 | `assertModelExists(model)` | Verifies the model instance exists in the database by primary key. |
 | `assertModelMissing(model)` | Verifies the model instance does not exist in the database. |
+| `connection(name)` | Returns a new assertions object that runs queries against the given connection. |

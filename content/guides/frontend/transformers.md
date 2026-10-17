@@ -408,6 +408,51 @@ With `.depth(2)`, if you eager-load nested relationships, they'll be included in
 - Even if `PostTransformer` has its own depth settings, they won't override the depth set by the parent transformer
 - Depth is determined at the starting point and cascades down through the entire tree
 
+### Relationship counts and aggregates
+
+Lucid stores the results of `withCount()` and `withAggregate()` queries in the model's `$extras` object. When Lucid is installed, transformers gain helper methods that read these values and convert them to numbers, so you don't have to reach into `$extras` manually.
+
+```ts title="app/controllers/users_controller.ts"
+import User from '#models/user'
+import type { HttpContext } from '@adonisjs/core/http'
+import UserTransformer from '#transformers/user_transformer'
+
+export default class UsersController {
+  async index({ serialize }: HttpContext) {
+    const users = await User.query()
+      .withCount('posts')
+      .withAggregate('posts', (query) => {
+        query.sum('views').as('totalViews')
+      })
+
+    return serialize(UserTransformer.transform(users))
+  }
+}
+```
+
+```ts title="app/transformers/user_transformer.ts"
+import { BaseTransformer } from '@adonisjs/core/transformers'
+import type User from '#models/user'
+
+export default class UserTransformer extends BaseTransformer<User> {
+  toObject() {
+    return {
+      ...this.pick(this.resource, ['id', 'fullName']),
+      /**
+       * Throws when the count was not loaded by the query
+       */
+      postsCount: this.withCount('posts'),
+      /**
+       * Returns undefined when the aggregate was not loaded
+       */
+      totalViews: this.whenAggregated('totalViews'),
+    }
+  }
+}
+```
+
+The `withCount` and `withAggregate` methods throw when the value was not loaded, which catches a forgotten `withCount()` call early. Use `whenCounted` and `whenAggregated` when the same transformer serves queries that don't always load the value.
+
 ## Using variants
 
 A single transformer can produce different output shapes for different contexts. This is useful when the same resource needs to be displayed differently across your application — for example, a lightweight version for list views and a detailed version for single-item views.

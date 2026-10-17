@@ -176,13 +176,15 @@ The following command will create a new migration file that will modify our exis
 node ace make:migration add_foreign_keys_to_posts_and_comments
 ```
 
+Lucid reads the `_to_` in the name as an intent to alter an existing table, so it creates a `database/migrations/1732089800000_alter_posts_and_comments_table.ts` file with an `alterTable` stub. The stub targets a single table named after the end of the migration name. Since this migration alters two tables, you'll replace the stub entirely in the next step.
+
 :::
 
 :::step{title="Add foreign key columns"}
 
 Update the migration file to add the foreign key columns.
 
-```ts title="database/migrations/1732089800000_add_foreign_keys_to_posts_and_comments.ts"
+```ts title="database/migrations/1732089800000_alter_posts_and_comments_table.ts"
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
 export default class extends BaseSchema {
@@ -238,7 +240,7 @@ node ace migration:run
 ```
 
 ```bash
-❯ migrated database/migrations/1732089800000_add_foreign_keys_to_posts_and_comments
+❯ migrated database/migrations/1732089800000_alter_posts_and_comments_table
 ```
 
 :::
@@ -463,7 +465,8 @@ Now execute the seeder to populate your database.
 node ace db:seed
 ```
 ```bash
-❯ running PostSeeder
+❯ completed database/seeders/post_seeder
+❯ Executed 1 seeders
 ```
 
 Your database now has 10 posts, each with several comments!
