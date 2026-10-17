@@ -47,7 +47,7 @@ The assembler hook automatically generates the Tuyau registry whenever your code
 
 ```ts title="adonisrc.ts"
 import { indexPages } from '@adonisjs/inertia'
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 import { generateRegistry } from '@tuyau/core/hooks'
 
@@ -223,7 +223,7 @@ Tuyau uses TypeScript decorators internally. Enable them in your frontend `tscon
 In your backend AdonisJS application, add the `generateRegistry` hook just like in the Inertia setup.
 
 ```ts title="apps/backend/adonisrc.ts"
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 import { generateRegistry } from '@tuyau/core/hooks'
 

@@ -68,6 +68,18 @@ When using the Hypermedia starter kit, you can also use the `@link` component, w
 @end
 ```
 
+### Generating form attributes
+
+HTML forms only support the `GET` and `POST` methods. The `formAttributes` helper looks up a named route and returns the `action` and `method` attributes for a form submitting to it. For routes using other methods, like `PUT` or `DELETE`, the method is set to `POST` and the original method is added to the action URL as the `_method` query string, so [method spoofing](./body_parser.md#form-method-spoofing) can route the request.
+
+```edge title="resources/views/posts/edit.edge"
+@let(form = formAttributes('posts.update', { id: post.id }))
+
+<form action="{{ form.action }}" method="{{ form.method }}">
+  {{-- action: /posts/1?_method=PUT, method: POST --}}
+</form>
+```
+
 ## Generating URLs during redirects
 
 When redirecting users to a different page, use the `response.redirect().toRoute()` method instead of hard-coding URLs. You can only redirect to `GET` routes.

@@ -309,7 +309,7 @@ The Inertia starter kit configures type generation for you. If you are adding In
 
 ```ts title="adonisrc.ts"
 import { indexPages } from '@adonisjs/inertia'
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 import { generateRegistry } from '@tuyau/core/hooks'
 
@@ -1312,15 +1312,14 @@ Flash data follows the session's flash semantics: a message survives exactly one
 
 ### Typing flash data
 
-Add the following augmentation to `inertia/types.ts` to infer `usePage().flash` and flash event payloads from the middleware's `flash()` method. The starter kit includes this setup by default.
+When `withSharedProps` is enabled on the `indexEntities` hook, codegen infers the return type of the middleware's `flash()` method and writes it to the `Data.FlashMessages` type. Add the following augmentation to `inertia/types.ts` to type `usePage().flash` and flash event payloads. The starter kit includes this setup by default.
 
 ```ts title="inertia/types.ts"
-import type { InferFlashData } from '@adonisjs/inertia/types'
-import type InertiaMiddleware from '#middleware/inertia_middleware'
+import type { Data } from '@generated/data'
 
 declare module '@inertiajs/core' {
   interface InertiaConfig {
-    flashDataType: InferFlashData<InertiaMiddleware>
+    flashDataType: Data.FlashMessages
   }
 }
 ```

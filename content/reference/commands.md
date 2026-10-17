@@ -85,6 +85,16 @@ We detect the package manager using the `@antfu/install-pkg` package. However, y
 
 :::
 
+:::option{name="--tsconfig"}
+
+Define the path to the `tsconfig` file used to compile the application. By default, the build uses the `tsconfig.json` file from the application root.
+
+```sh
+node ace build --tsconfig=tsconfig.build.json
+```
+
+:::
+
 ::::
 
 ## codegen
@@ -268,6 +278,34 @@ The `generate:key` command does not write the key to the `.env` file when runnin
 </dd>
 
 </dl>
+
+## make commands
+
+The `make:*` commands shipped with the framework core accept the following flags in addition to their command-specific flags.
+
+::::options
+
+:::option{name="--force | -f"}
+
+Overwrite the file when it already exists. Without this flag, the command skips existing files.
+
+```sh
+node ace make:controller users --force
+```
+
+:::
+
+:::option{name="--contents-from"}
+
+Replace the generated contents with the contents of the given file. The output is still written to the location defined by the command's stub. Relative paths are resolved from the application root.
+
+```sh
+node ace make:service invoice --contents-from=stubs/custom/invoice_service.ts
+```
+
+:::
+
+::::
 
 ## make\:controller
 
@@ -476,6 +514,19 @@ Create a new [custom exception class](../guides/basics/exception_handling.md#cus
 node ace make:exception commandValidation
 ```
 
+## make\:transformer
+
+Create a new [transformer](../guides/frontend/transformers.md) class. Transformers are stored inside the `app/transformers` directory and use the following naming conventions.
+
+- Form: `singular`
+- Suffix: `transformer`
+- Class name example: `UserTransformer`
+- File name example: `user_transformer.ts`
+
+```sh
+node ace make:transformer user
+```
+
 ## make\:command
 
 Create a new Ace command. By default, the commands are stored inside the `commands` directory at the root of your application.
@@ -662,6 +713,12 @@ View list of routes registered by your application. This command will boot your 
 node ace list:routes
 ```
 
+You may pass a keyword to only display the routes whose name, pattern, or controller name matches it.
+
+```sh
+node ace list:routes users
+```
+
 Also, you can see the routes list from the VSCode activity bar if you are using our [official VSCode extension](https://marketplace.visualstudio.com/items?itemName=jripouteau.adonis-vscode-extension).
 
 :::media
@@ -679,6 +736,18 @@ Also, you can see the routes list from the VSCode activity bar if you are using 
 <dd>
 
 View routes as a JSON string. The output will be an array of object.
+
+</dd>
+
+<dt>
+
+--jsonl
+
+</dt>
+
+<dd>
+
+View routes as JSON Lines, with one JSON object per route. This format is compact and easy to stream, which makes it a good fit for AI agents and other CLI tools consuming the routes list.
 
 </dd>
 

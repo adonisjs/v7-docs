@@ -202,7 +202,7 @@ Hooks can be defined inline or as lazily-imported modules. They run in a separat
 
 ```ts title="adonisrc.ts"
 import { defineConfig } from '@adonisjs/core/app'
-import { indexEntities } from '@adonisjs/core/app'
+import { indexEntities } from '@adonisjs/core/generators'
 
 export default defineConfig({
   hooks: {
@@ -213,6 +213,10 @@ export default defineConfig({
 ```
 
 The `indexEntities()` hook generates barrel files for controllers, events, and listeners, enabling lazy-loading and type-safe references. Package hooks like `@adonisjs/vite/build_hook` handle build-time asset compilation.
+
+:::tip
+The `indexEntities` hook is also exported from the `@adonisjs/core` entry point. However, that entry point loads modules (such as the error classes of every framework package) that `adonisrc.ts` does not need. Since Ace imports `adonisrc.ts` on every command, importing from `@adonisjs/core/generators` makes commands like `node ace --help` start faster.
+:::
 
 See also: [Assembler hooks](../guides/concepts/assembler_hooks.md) for a complete reference of available hooks and how to create custom hooks for code generation.
 

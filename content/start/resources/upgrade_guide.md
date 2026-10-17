@@ -76,7 +76,7 @@ npm install @tuyau/core
 The following example shows a complete hooks configuration. Include only the hooks relevant to your stack.
 
 ```ts title="adonisrc.ts"
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { indexPages } from '@adonisjs/inertia'
 import { defineConfig } from '@adonisjs/core/app'
 import { indexPolicies } from '@adonisjs/bouncer'
