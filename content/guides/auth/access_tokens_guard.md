@@ -22,31 +22,15 @@ A token consists of three parts: a configurable prefix (`oat_` by default), the 
 
 ## Configuring the User model
 
-Before using the access tokens guard, configure a tokens provider on your User model. The provider handles creating, storing, and verifying tokens.
+Before using the access tokens guard, configure a tokens provider on your User model. The provider handles creating, storing, and verifying tokens. The `add` command generates the following model when you select the access tokens guard.
 ```ts title="app/models/user.ts"
-import { DateTime } from 'luxon'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { UserSchema } from '#database/schema'
+import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 
-export default class User extends BaseModel {
-  @column({ isPrimary: true })
-  declare id: number
-
-  @column()
-  declare fullName: string | null
-
-  @column()
-  declare email: string
-
-  @column()
-  declare password: string
-
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-
+export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static accessTokens = DbAccessTokensProvider.forModel(User)
 }
 ```
@@ -333,12 +317,15 @@ The guard updates the `last_used_at` column each time a token is used for authen
 
 If you reference the User model with `currentAccessToken` elsewhere in your codebase (such as in Bouncer abilities), declare the property on your model to avoid type errors:
 ```ts title="app/models/user.ts"
-import { AccessToken } from '@adonisjs/auth/access_tokens'
+import { UserSchema } from '#database/schema'
+import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+import { type AccessToken, DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 
-export default class User extends BaseModel {
-  // ...other properties
-
-  currentAccessToken?: AccessToken
+export default class User extends compose(UserSchema, withAuthFinder(hash)) {
+  static accessTokens = DbAccessTokensProvider.forModel(User)
+  declare currentAccessToken?: AccessToken
 }
 ```
 

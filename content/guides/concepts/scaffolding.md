@@ -389,7 +389,7 @@ Register providers, commands, meta files, and command aliases in `adonisrc.ts`.
 ```ts
 await codemods.updateRcFile((rcFile) => {
   rcFile
-    .addProvider('@adonisjs/lucid/db_provider')
+    .addProvider('@adonisjs/lucid/database_provider')
     .addCommand('@adonisjs/lucid/commands')
     .setCommandAlias('migrate', 'migration:run')
 })
@@ -405,7 +405,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/commands')
   ],
   providers: [
-    () => import('@adonisjs/lucid/db_provider')
+    () => import('@adonisjs/lucid/database_provider')
   ],
   commandAliases: {
     migrate: 'migration:run'
@@ -480,7 +480,7 @@ await codemods.registerMiddleware('router', [
 await codemods.registerMiddleware('named', [
   {
     name: 'auth',
-    path: '@adonisjs/auth/auth_middleware'
+    path: '#middleware/auth_middleware'
   }
 ])
 ```
@@ -495,7 +495,7 @@ router.use([
 ])
 
 export const middleware = router.named({
-  auth: () => import('@adonisjs/auth/auth_middleware')
+  auth: () => import('#middleware/auth_middleware')
 })
 ```
 

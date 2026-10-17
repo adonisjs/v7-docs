@@ -271,12 +271,13 @@ export default class extends BaseSchema {
 
 Assign the `DbRememberMeTokensProvider` to your User model:
 ```ts title="app/models/user.ts"
-import { BaseModel } from '@adonisjs/lucid/orm'
+import { UserSchema } from '#database/schema'
+import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbRememberMeTokensProvider } from '@adonisjs/auth/session'
 
-export default class User extends BaseModel {
-  // ...other model properties
-
+export default class User extends compose(UserSchema, withAuthFinder(hash)) {
   static rememberMeTokens = DbRememberMeTokensProvider.forModel(User)
 }
 ```

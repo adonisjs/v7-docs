@@ -20,6 +20,49 @@ Lucid simplifies database interactions by encapsulating common operations using 
 
 This guide provides a high-level overview of Lucid's features to help you understand what's available and how the pieces fit together. For detailed API references, advanced patterns, and comprehensive documentation on specific features, refer to the [official Lucid documentation](https://lucid.adonisjs.com).
 
+## Installation
+
+Lucid comes pre-configured with all the official starter kits. To add it to an existing application, run the following command and select your database when prompted. You can skip the prompt by passing one of `sqlite`, `libsql`, `mysql`, `postgres`, or `mssql` to the `--db` flag.
+
+```sh
+node ace add @adonisjs/lucid --db=postgres
+```
+
+:::disclosure{title="See steps performed by the add command"}
+
+1. Installs the `@adonisjs/lucid` package using the detected package manager.
+
+2. Creates the `config/database.ts` file with a single connection for the selected database.
+
+3. Registers the following commands and service provider inside the `adonisrc.ts` file.
+```ts
+    {
+      commands: [
+        // ...other commands
+        () => import('@adonisjs/lucid/commands')
+      ],
+      providers: [
+        // ...other providers
+        () => import('@adonisjs/lucid/database_provider')
+      ]
+    }
+```
+
+4. For `mysql`, `postgres`, and `mssql`, defines the `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_DATABASE` environment variables in the `.env` file, along with their validation rules in `start/env.ts`.
+```ts title="start/env.ts"
+    DB_HOST: Env.schema.string({ format: 'host' }),
+    DB_PORT: Env.schema.number(),
+    DB_USER: Env.schema.string(),
+    DB_PASSWORD: Env.schema.string.optional(),
+    DB_DATABASE: Env.schema.string(),
+```
+
+5. For `sqlite` and `libsql`, creates the `tmp` directory that stores the database file.
+
+6. Installs the database driver (`better-sqlite3`, `@libsql/sqlite3`, `mysql2`, `pg`, or `tedious`) along with `luxon` and `@types/luxon`. Pass `--no-install` to print the packages instead of installing them.
+
+:::
+
 ## Configuration
 
 Lucid's configuration lives in the `config/database.ts` file at the root of your AdonisJS project. This file defines your database connections, migration paths, and other ORM settings.
@@ -29,7 +72,7 @@ import env from '#start/env'
 import { defineConfig } from '@adonisjs/lucid'
 
 const dbConfig = defineConfig({
-  connection: env.get('DB_CONNECTION'),
+  connection: 'postgres',
   connections: {
     postgres: {
       client: 'pg',
@@ -51,7 +94,7 @@ const dbConfig = defineConfig({
 export default dbConfig
 ```
 
-The configuration specifies which database connection to use by default (typically set via environment variables), and defines the connection details for each database. Each connection includes the client library (like `pg` for PostgreSQL or `mysql2` for MySQL), connection credentials, and paths to migration files.
+The configuration specifies which database connection to use by default and defines the connection details for each database. Each connection includes the client library (like `pg` for PostgreSQL or `mysql2` for MySQL), connection credentials, and paths to migration files.
 
 You can explore all available configuration options, connection pooling settings, and advanced features like read-write replicas in the [Lucid configuration documentation](https://lucid.adonisjs.com/docs/installation#configuration).
 
