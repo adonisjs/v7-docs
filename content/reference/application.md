@@ -7,7 +7,8 @@ description: Learn about the Application class and how to access the environment
 This guide covers the Application class in AdonisJS. You will learn how to:
 
 - Access the runtime environment (web, console, repl, test)
-- Check the Node.js environment and application state
+- Check the Node.js environment, application state, and application mode
+- Detect when your process runs under pm2 or an AI coding agent
 - Listen for process signals and notify parent processes
 - Generate absolute paths to project directories and files
 - Use generators for consistent naming conventions
@@ -101,13 +102,15 @@ app.nodeEnvironment === 'test'
 
 ## State
 
-The state represents where the application is in its lifecycle. The features you can access depend on the current state—for example, you cannot access [container bindings](../guides/concepts/dependency_injection.md#bindings) or [container services](../guides/concepts/container_services.md) until the app reaches the `booted` state.
+The state represents where the application is in its lifecycle. The features you can access depend on the current state. For example, you cannot access [container bindings](../guides/concepts/dependency_injection.md#bindings) or [container services](../guides/concepts/container_services.md) until the app reaches the `booted` state.
 
 | State | Description |
 |-------|-------------|
 | `created` | Default state when Application instance is created |
 | `initiated` | Environment variables parsed and `adonisrc.ts` processed |
 | `booted` | Service providers registered and booted |
+| `warming` | Service providers are being started and preload files imported |
+| `warmed` | Application fully assembled, but not started yet |
 | `ready` | Application ready to handle requests (meaning varies by environment) |
 | `terminated` | Application terminated and process will exit shortly |
 
@@ -116,6 +119,8 @@ import app from '@adonisjs/core/services/app'
 
 console.log(app.getState())
 ```
+
+An application created in the `warmup` mode stops at the `warmed` state and never becomes `ready`. See [application mode](#application-mode).
 
 ### Shorthand properties
 
@@ -126,6 +131,11 @@ import app from '@adonisjs/core/services/app'
  * True when state is past 'initiated'
  */
 app.isBooted
+
+/**
+ * True when state is 'warmed' or 'ready'
+ */
+app.isWarmedUp
 
 /**
  * True when state is 'ready'
@@ -141,6 +151,48 @@ app.isTerminating
  * True when state is 'terminated'
  */
 app.isTerminated
+```
+
+## Application mode
+
+The mode declares how far the application intends to travel within its lifecycle. The default `run` mode takes the application all the way to the `ready` state. The `warmup` mode stops once providers have been started and preload files imported, which lets tooling such as `node ace codegen` inspect your application without running it.
+
+Use the `getMode` method inside a service provider to skip side effects that only make sense for a running application. Never use the mode to register different bindings, routes, or listeners, since the inspected application must match the one that runs.
+
+```ts title="providers/app_provider.ts"
+import type { ApplicationService } from '@adonisjs/core/types'
+
+export default class AppProvider {
+  constructor(protected app: ApplicationService) {}
+
+  async start() {
+    /**
+     * Skip the health check when the app is only being warmed up
+     */
+    if (this.app.getMode() !== 'run') {
+      return
+    }
+
+    const database = await this.app.container.make('lucid.db')
+    await database.connection().select(1)
+  }
+}
+```
+
+Calling `app.start` on an application in `warmup` mode throws an error, and the providers `shutdown` methods are skipped when it terminates. The mode can be switched with `app.setMode` before the application has been booted. See the [application lifecycle guide](../guides/concepts/application_lifecycle.md#application-modes) for more details.
+
+## Detecting the surrounding environment
+
+The `managedByPm2` property is `true` when the process runs under [pm2](https://pm2.keymetrics.io/). AdonisJS detects it using the `pm_id` environment variable set by pm2.
+
+The `runningInAIAgent` property is `true` when the process has been started by an AI coding agent, and `detectedAIAgent` returns the agent name (`claude`, `gemini`, `copilot`, `windsurf`, `codex`, `opencode`, or `cursor`) or `null`. You can use them to adjust output for agents, for example, by disabling interactive prompts or colors.
+
+```ts title="app/services/some_service.ts"
+import app from '@adonisjs/core/services/app'
+
+if (app.runningInAIAgent) {
+  console.log(`Running inside ${app.detectedAIAgent}`)
+}
 ```
 
 ## Listening for process signals
