@@ -48,37 +48,16 @@ The `basicAuthUserProvider` uses your User model to find and verify credentials.
 The `basicAuthUserProvider` works with any Lucid model that represents your user entity. During installation, the `add` command generates a `User` model with the `withAuthFinder` mixin applied.
 
 ```ts title="app/models/user.ts"
-import { DateTime } from 'luxon'
-import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { UserSchema } from '#database/schema'
 import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 
 /**
  * Applying the withAuthFinder mixin adds the verifyCredentials
  * static method to your model.
  */
-const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email'],
-  passwordColumnName: 'password',
-})
-
-export default class User extends compose(BaseModel, AuthFinder) {
-  @column({ isPrimary: true })
-  declare id: number
-
-  @column()
-  declare email: string
-
-  @column()
-  declare password: string
-
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-}
+export default class User extends compose(UserSchema, withAuthFinder(hash)) {}
 ```
 
 ## Authenticating requests

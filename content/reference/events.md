@@ -296,6 +296,40 @@ emitter.on('access_tokens_auth:authentication_failed', (event) => {
 })
 ```
 
+## basic_auth\:authentication_attempted
+The event is dispatched by the `@adonisjs/auth` package when an attempt is made to validate the basic auth credentials during an HTTP request.
+
+```ts
+import emitter from '@adonisjs/core/services/emitter'
+
+emitter.on('basic_auth:authentication_attempted', (event) => {
+  console.log(event.guardName)
+})
+```
+
+## basic_auth\:authentication_succeeded
+The event is dispatched by the `@adonisjs/auth` package after the basic auth credentials have been verified. You may access the authenticated user using the `event.user` property.
+
+```ts
+import emitter from '@adonisjs/core/services/emitter'
+
+emitter.on('basic_auth:authentication_succeeded', (event) => {
+  console.log(event.guardName)
+  console.log(event.user)
+})
+```
+
+## basic_auth\:authentication_failed
+The event is dispatched by the `@adonisjs/auth` package when the authentication check fails.
+
+```ts
+import emitter from '@adonisjs/core/services/emitter'
+
+emitter.on('basic_auth:authentication_failed', (event) => {
+  console.log(event.guardName)
+  console.log(event.error)
+})
+```
 
 ## authorization\:finished
 The event is dispatched by the `@adonisjs/bouncer` package after the authorization check has been performed. The event payload includes the final response you may inspect to know the status of the check.

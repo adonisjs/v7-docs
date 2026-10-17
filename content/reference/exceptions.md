@@ -157,7 +157,7 @@ if (error instanceof authErrors.E_UNAUTHORIZED_ACCESS) {
 
 ## E_INVALID_CREDENTIALS
 
-The exception is raised when the auth finder is not able to verify the user credentials. The exception is handled and use [content-negotiation](../guides/auth/verifying_user_credentials.md#handling-exceptions) to return an appropriate error response to the client.
+The exception is raised when the auth finder is not able to verify the user credentials. The exception is handled and use [content-negotiation](../guides/auth/verifying_user_credentials.md#handling-verification-errors) to return an appropriate error response to the client.
 
 - **Status code**: 400
 - **Self handled**: Yes

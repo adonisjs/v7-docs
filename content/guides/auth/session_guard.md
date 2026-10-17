@@ -140,7 +140,9 @@ When the auth middleware cannot authenticate a request, it throws the [E_UNAUTHO
 
 - Requests with `Accept: application/json` receive an array of error objects.
 - Requests with `Accept: application/vnd.api+json` receive errors formatted per the JSON API specification.
-- Server-rendered applications redirect to `/login`. You can customize this path in `app/middleware/auth_middleware.ts`.
+- Server-rendered applications redirect to `/login` with the error message flashed under the `error` key. You can customize this path in `app/middleware/auth_middleware.ts`.
+
+The redirect forwards the current query string to the login page. For GET navigational requests, it also stores the current URL in the session. See [redirecting to the intended URL](#redirecting-to-the-intended-url) to send users back after login.
 
 ## Accessing the authenticated user
 
@@ -225,6 +227,22 @@ On public pages that aren't protected by the auth middleware, call `auth.check()
     <a href="/login">Sign in</a>
   @end
 </header>
+```
+
+The `auth.check()` method only uses the default guard. Use `auth.checkUsing()` to try multiple guards in order. It stops at the first guard that authenticates the request and returns `false` when none of them does.
+```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+
+router.get('/', async ({ auth, view }) => {
+  await auth.checkUsing(['web', 'api'])
+
+  /**
+   * Name of the guard that authenticated the request
+   */
+  console.log(auth.authenticatedViaGuard)
+
+  return view.render('pages/home')
+})
 ```
 
 ## Remember me
@@ -382,7 +400,7 @@ export default class SessionController {
 }
 ```
 
-After login, `toIntended()` works the same way regardless of how the intended URL was stored.
+After login, `toIntendedRoute()` and `toIntended()` work the same way regardless of how the intended URL was stored.
 
 ## Guest middleware
 

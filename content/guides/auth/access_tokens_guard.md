@@ -174,6 +174,7 @@ The `AccessToken` class provides these methods for checking abilities:
 |--------|-------------|
 | `allows(ability)` | Returns `true` if the token has the specified ability or the wildcard (`*`). |
 | `denies(ability)` | Returns `true` if the token does not have the specified ability. |
+| `authorize(ability)` | Throws [E_UNAUTHORIZED_ACCESS](../../reference/exceptions.md#e_unauthorized_access) if the token does not have the specified ability. |
 
 ### Token expiration
 
@@ -361,6 +362,11 @@ The `all` method returns both valid and expired tokens. Filter or label expired 
 Delete a token by its identifier:
 ```ts title="start/routes.ts"
 await User.accessTokens.delete(user, tokenId)
+```
+
+Use the `deleteAll` method to revoke every token of a user at once, for example after a password change or when the user signs out from all devices. It only deletes tokens matching the provider's `type` and returns the number of deleted rows.
+```ts title="start/routes.ts"
+const deletedCount = await User.accessTokens.deleteAll(user)
 ```
 
 ## Login and logout via guard
