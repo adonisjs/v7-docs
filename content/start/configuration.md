@@ -7,6 +7,7 @@ description: Learn how to manage configuration and environment variables in Adon
 This guide covers configuration in AdonisJS applications. You will learn about:
 
 - Config files in the `config` directory
+- Reading config values in your application code
 - Environment variables and the `.env` file
 - Validating environment variables with type safety
 - Variable interpolation within `.env` files
@@ -94,6 +95,76 @@ Configuration files are loaded during the application boot cycle, before your ro
 
 Config files should only import framework utilities, define configuration objects, and reference environment variables. **Importing application code creates circular dependencies and will cause your app to fail during startup**.
 
+### Reading config in your application
+
+The `config` service gives you access to the values exported by your config files. Each config file becomes a top-level key named after the file, so you read the `appUrl` export of `config/app.ts` using the `app.appUrl` key. Nested values use dot notation.
+
+```ts title="app/services/invoice_service.ts"
+import config from '@adonisjs/core/services/config'
+
+export class InvoiceService {
+  invoiceUrl(id: number) {
+    /**
+     * Pass the expected type as a generic, since config
+     * values are not typed by their key
+     */
+    const appUrl = config.get<string>('app.appUrl')
+    return `${appUrl}/invoices/${id}`
+  }
+}
+```
+
+The `config` service exposes the following methods.
+
+::::options
+
+:::option{name="get"}
+Returns the value for a key. The optional second argument is returned when the value is `undefined`.
+
+```ts
+config.get<string>('app.appUrl')
+config.get<string>('app.timezone', 'UTC')
+```
+:::
+
+:::option{name="has"}
+Returns `true` when a value exists for the key.
+
+```ts
+if (config.has('mail.mailers.resend')) {
+  // ...
+}
+```
+:::
+
+:::option{name="all"}
+Returns the entire config tree as an object.
+:::
+
+:::option{name="set"}
+Updates a value in memory. Nothing is written to the config file on disk, and packages that already read the value during boot will not see the change.
+
+```ts
+config.set('app.timezone', 'Europe/Paris')
+```
+:::
+
+::::
+
+Inside service providers, you can access the same instance through `this.app.config`.
+
+:::warning
+The `config` service is only available after the application has booted, so you cannot use it inside config files. Config files are themselves being loaded at that point. Read shared values from the `env` service instead.
+
+```ts title="config/mail.ts"
+import config from '@adonisjs/core/services/config' // [!code --]
+import env from '#start/env' // [!code ++]
+
+const from = config.get('app.mailFromAddress') // [!code --]
+const from = env.get('MAIL_FROM_ADDRESS') // [!code ++]
+```
+:::
+
 ### Accessing config in Edge templates
 
 Edge templates have access to your application's configuration through the `config` global. This allows you to reference configuration values directly in your views without passing them explicitly from controllers.
@@ -101,11 +172,11 @@ Edge templates have access to your application's configuration through the `conf
 <!DOCTYPE html>
 <html>
 <head>
-  <title>{{ config('app.appName') }}</title>
+  <title>My app</title>
 </head>
 <body>
   <footer>
-    <p>Running in {{ config('app.nodeEnv') }} mode</p>
+    <a href="{{ config('app.appUrl') }}">Home</a>
   </footer>
 </body>
 </html>
@@ -113,9 +184,13 @@ Edge templates have access to your application's configuration through the `conf
 
 The `config()` helper accepts a dot-notation path to any configuration value. The path corresponds to the config file name and the property within it. For example, `config('database.connection')` reads the `connection` property from `config/database.ts`.
 
-You can also provide a default value as the second argument.
+You can also provide a default value as the second argument, or check if a key exists using `config.has`.
 ```edge
 <p>{{ config('app.timezone', 'UTC') }}</p>
+
+@if(config.has('app.appUrl'))
+  <a href="{{ config('app.appUrl') }}">Home</a>
+@end
 ```
 
 ## Environment variables
