@@ -247,7 +247,7 @@ export default defineConfig({
   plugins: [
     adonisjs({
       // highlight-start
-      entrypoints: ['resources/js/app.js'],
+      entryPoints: ['resources/js/app.js'],
       // highlight-end
     }),
   ]
