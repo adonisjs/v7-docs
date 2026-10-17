@@ -49,6 +49,8 @@ node ace add @adonisjs/shield
 
 :::
 
+Every guard is configured under its own key in `config/shield.ts`. A guard you leave out of the config is disabled, so the examples in this guide only show the key being discussed. Keep the other keys in your config file when applying them.
+
 ## CSRF protection
 
 CSRF (Cross-Site Request Forgery) attacks trick authenticated users into submitting malicious requests without their knowledge. Imagine a user is logged into your banking application. While browsing another site, that malicious site includes a hidden form that submits a money transfer request to your bank. Because the user's browser automatically includes their session cookie, the bank processes the transfer as if the user intended it.
@@ -70,7 +72,7 @@ Once Shield is configured, all form submissions without a valid CSRF token will 
 </form>
 ```
 
-The helper generates a hidden input field that Shield's middleware validates on submission.
+The helper generates a hidden input field named `_csrf` that Shield's middleware validates on submission.
 
 ```html title="Output HTML"
 <form method="POST" action="/posts">
@@ -82,13 +84,34 @@ The helper generates a hidden input field that Shield's middleware validates on 
 </form>
 ```
 
+Shield also shares the `csrfToken` variable and the `csrfMeta` helper with Edge templates. Use them when JavaScript code needs the token, for example to send it in the `X-CSRF-TOKEN` request header. Shield reads the token from the `_csrf` input first, then from the `X-CSRF-TOKEN` header.
+
+```edge title="resources/views/layouts/main.edge"
+<head>
+  {{-- Renders <meta name='csrf-token' content='...'> --}}
+  {{ csrfMeta() }}
+</head>
+```
+
+```ts title="resources/js/app.ts"
+const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')!.content
+
+await fetch('/posts', {
+  method: 'POST',
+  headers: { 'X-CSRF-TOKEN': token },
+  body: new FormData(document.querySelector('form')!),
+})
+```
+
 ### Handling CSRF errors
 
-Shield raises an `E_BAD_CSRF_TOKEN` exception when a token is missing or invalid. By default, AdonisJS redirects the user back to the form with an error flash message. You can display this message in your template using the `@error` tag.
+Shield raises an `E_BAD_CSRF_TOKEN` exception when a token is missing or invalid. The exception handles itself by redirecting the user back to the form with the error message flashed under the `error` key. This is the same key the starter kits use for error notifications, so the message is displayed by your layout without extra code.
+
+The form input is also flashed (except for `_csrf`, `_method`, `password`, and `password_confirmation`), so the `old` helper can repopulate the form. Inertia requests are an exception: the input is not flashed because Inertia preserves the form state on the client.
 
 ```edge title="resources/views/posts/create.edge"
-@error('E_BAD_CSRF_TOKEN')
-  <p class="error">{{ $message }}</p>
+@if(flashMessages.has('error'))
+  <p class="error">{{ flashMessages.get('error') }}</p>
 @end
 
 <form method="POST" action="/posts">
@@ -96,6 +119,12 @@ Shield raises an `E_BAD_CSRF_TOKEN` exception when a token is missing or invalid
   {{-- form fields --}}
 </form>
 ```
+
+:::note
+Shield still flashes the message inside the errors bag, so `@error('E_BAD_CSRF_TOKEN')` keeps working. This behavior is deprecated and will be removed in a future release. Read the message from the `error` key instead.
+:::
+
+If `@adonisjs/i18n` is configured, the message is translated using the `errors.E_BAD_CSRF_TOKEN` identifier.
 
 For custom error handling, you can catch the exception in your global exception handler. This is useful when you want to render a custom error page or return a specific response format.
 
@@ -148,7 +177,7 @@ Only enable `enableXsrfCookie` if your application makes Ajax requests. For trad
 
 ### Exempting routes from CSRF protection
 
-API endpoints that receive webhooks or requests from external services cannot include CSRF tokens. You can exempt specific routes using the `exceptRoutes` option.
+API endpoints that receive webhooks or requests from external services cannot include CSRF tokens. You can exempt specific routes using the `exceptRoutes` option. Each entry must match the route pattern exactly as defined in your routes file (for example `/payments/:id/callback`). Wildcards are not supported, so use a function to exempt a group of routes.
 
 ```ts title="config/shield.ts"
 import { defineConfig } from '@adonisjs/shield'
@@ -157,8 +186,8 @@ const shieldConfig = defineConfig({
   csrf: {
     enabled: true,
     exceptRoutes: [
-      '/api/webhooks/*',
-      '/api/payments/callback',
+      '/webhooks/stripe',
+      '/payments/:id/callback',
     ],
     enableXsrfCookie: false,
     methods: ['POST', 'PUT', 'PATCH', 'DELETE'],
@@ -197,10 +226,10 @@ export default shieldConfig
 | Option | Type | Description |
 |--------|------|-------------|
 | `enabled` | `boolean` | Turn CSRF protection on or off. |
-| `exceptRoutes` | `string[]` or `function` | Routes to exempt from CSRF protection. Accepts route patterns or a function receiving `HttpContext`. |
-| `enableXsrfCookie` | `boolean` | When `true`, stores the CSRF token in an `XSRF-TOKEN` cookie for Ajax requests. |
-| `methods` | `string[]` | HTTP methods that require CSRF token validation. Defaults to `POST`, `PUT`, `PATCH`, `DELETE`. |
-| `cookieOptions` | `object` | Configuration for the `XSRF-TOKEN` cookie. See [cookies configuration](../basics/response.md#cookie-options). |
+| `exceptRoutes` | `string[]` or `function` | Routes to exempt from CSRF protection. Accepts exact route patterns or a function receiving `HttpContext` and returning `true` to skip validation. |
+| `enableXsrfCookie` | `boolean` | When `true`, stores the CSRF token in an encrypted `XSRF-TOKEN` cookie for Ajax requests. |
+| `methods` | `string[]` | HTTP methods that require CSRF token validation. The generated config uses `POST`, `PUT`, `PATCH`, `DELETE`. If you omit the option, every request is validated, including `GET` requests. |
+| `cookieOptions` | `object` | Configuration for the `XSRF-TOKEN` cookie. See [cookies configuration](../basics/response.md#cookie-options). The `httpOnly` option is always `false` so frontend code can read the cookie. |
 
 ## CSP (Content Security Policy)
 
@@ -386,7 +415,7 @@ const shieldConfig = defineConfig({
 export default shieldConfig
 ```
 
-The `maxAge` option tells browsers how long to remember the HTTPS-only policy. The `includeSubDomains` option extends this protection to all subdomains, preventing attackers from exploiting insecure subdomains to compromise your main domain.
+The `maxAge` option tells browsers how long to remember the HTTPS-only policy (`180 days` when omitted). The `includeSubDomains` option extends this protection to all subdomains, preventing attackers from exploiting insecure subdomains to compromise your main domain.
 
 :::warning
 Only enable HSTS after confirming HTTPS works correctly across your entire domain and all subdomains. Once browsers cache the HSTS policy, they will refuse to connect over HTTP for the duration of `maxAge`. If your HTTPS configuration breaks, users won't be able to access your site until you fix it or the cached policy expires.
@@ -401,6 +430,7 @@ Start with a short `maxAge` (like `1 day`) during testing, then increase it to `
 | `enabled` | `boolean` | Turn HSTS on or off. |
 | `maxAge` | `number` or `string` | How long browsers should remember the HTTPS-only policy. Accepts seconds as a number or a time expression like `'180 days'`. |
 | `includeSubDomains` | `boolean` | When `true`, applies the HTTPS-only policy to all subdomains. |
+| `preload` | `boolean` | When `true`, adds the `preload` directive, required to submit your domain to the [HSTS preload list](https://hstspreload.org/). |
 
 ## X-Frame-Options (clickjacking protection)
 
@@ -461,7 +491,7 @@ If you've configured CSP, you can use the `frame-ancestors` directive instead of
 | Option | Type | Description |
 |--------|------|-------------|
 | `enabled` | `boolean` | Turn X-Frame protection on or off. |
-| `action` | `string` | The framing policy: `'DENY'`, `'SAMEORIGIN'`, or `'ALLOW-FROM'`. |
+| `action` | `string` | The framing policy: `'DENY'`, `'SAMEORIGIN'`, or `'ALLOW-FROM'`. Defaults to `'SAMEORIGIN'`. |
 | `domain` | `string` | Required when `action` is `'ALLOW-FROM'`. The domain allowed to frame your content. |
 
 ## Content-Type sniffing protection

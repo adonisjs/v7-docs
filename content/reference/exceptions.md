@@ -77,13 +77,11 @@ if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
 }
 ```
 
-The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/shield/blob/9.x/src/errors.ts#L23-L66), and the user will be redirected back to the form, and you can access the error using the flash messages.
+The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/shield/blob/9.x/src/errors.ts). The user is redirected back to the form, and the error message is flashed under the `error` key.
 
 ```edge
-@error('E_BAD_CSRF_TOKEN')
-  <p>
-    {{ message }}
-  </p>
+@if(flashMessages.has('error'))
+  <p>{{ flashMessages.get('error') }}</p>
 @end
 ```
 
