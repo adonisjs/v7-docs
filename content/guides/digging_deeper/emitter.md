@@ -174,6 +174,20 @@ The `dispatch` method accepts the same arguments as the event class constructor.
 
 ::::
 
+## Waiting for listeners to finish
+
+The `emit` method returns a promise that resolves once all listeners have finished. Without `await`, the calling code continues immediately and listeners run in the background. Use `emitSerial` when listeners must run one after another, in the order they were registered.
+
+```ts title="app/controllers/users_controller.ts"
+import emitter from '@adonisjs/core/services/emitter'
+
+// Run all listeners concurrently and wait for them
+await emitter.emit('user:registered', user)
+
+// Run listeners one at a time, in registration order
+await emitter.emitSerial('user:registered', user)
+```
+
 ## Listeners
 
 Listeners can be defined as inline callbacks or as dedicated listener classes. Inline callbacks work well for simple logic, while listener classes are better for complex operations that benefit from dependency injection and testability.
@@ -289,9 +303,34 @@ emitter.once('user:registered', function (user) {
 })
 ```
 
+Unlike `on`, the `once` method does not return an unsubscribe function.
+
+### Conditional listeners with `listenIf`
+
+The `listenIf` method registers a listener only when a condition is true. This is useful for listeners that should only run in certain environments or when a feature flag is enabled, without wrapping the registration in an `if` statement.
+
+```ts title="start/events.ts"
+import app from '@adonisjs/core/services/app'
+import emitter from '@adonisjs/core/services/emitter'
+import { events } from '#generated/events'
+import { listeners } from '#generated/listeners'
+
+/**
+ * The condition can be a boolean or a function
+ * returning a boolean. It is evaluated once, at
+ * the time of registering the listener.
+ */
+emitter.listenIf(app.inProduction, events.UserRegistered, listeners.TrackSignup)
+emitter.listenIf(() => app.inDev, 'user:registered', (user) => {
+  console.log(`New user: ${user.email}`)
+})
+```
+
+Like `on`, the method returns an unsubscribe function. When the condition is false, no listener is registered and the returned function does nothing.
+
 ### Multiple listeners with `listen`
 
-The `listen` method registers multiple listeners for a single event in one call.
+The `listen` method registers multiple listener classes for a class-based event in one call. Each listener class must define a `handle` method.
 
 ```ts title="start/events.ts"
 import emitter from '@adonisjs/core/services/emitter'
@@ -326,7 +365,7 @@ You can remove listeners when they're no longer needed.
 
 ### Using the unsubscribe function
 
-The `on` and `once` methods return an unsubscribe function. Call it to remove the listener.
+The `on`, `listenIf`, and `onAny` methods return an unsubscribe function. Call it to remove the listener.
 
 ```ts
 import emitter from '@adonisjs/core/services/emitter'
@@ -400,7 +439,7 @@ The error handler receives three arguments: the event name (or class), the error
 
 When testing code that emits events, you often want to verify the event was emitted without actually running the listeners. For example, when testing user registration, you might want to confirm the `user:registered` event fires without sending real emails.
 
-The `emitter.fake` method prevents listeners from running and returns an `EventBuffer` that captures emitted events for assertions.
+The `emitter.fake` method prevents listeners from running and returns an `EventsBuffer` that captures emitted events for assertions.
 
 ```ts
 import emitter from '@adonisjs/core/services/emitter'
@@ -424,20 +463,19 @@ test.group('User signup', () => {
 })
 ```
 
-The `using` keyword automatically restores the emitter when the variable goes out of scope (at the end of the test function). You can also call `emitter.restore()` manually if you need more control over when restoration happens.
+The `using` keyword automatically restores the emitter when the variable goes out of scope (at the end of the test function). You can also call `emitter.restore()` manually if you need more control over when restoration happens. Calling `emitter.fake` again drops the existing fake and returns a new, empty buffer.
 
 ### Faking specific events
 
-Pass event names or classes to `fake` to only fake specific events. Other events will continue to trigger their listeners normally.
+Pass an array of event names or classes to `fake` to only fake specific events. Other events will continue to trigger their listeners normally.
 
 ```ts
-emitter.fake('user:registered')
-emitter.fake([events.UserRegistered, events.OrderUpdated])
+using fakeEmitter = emitter.fake(['user:registered', events.OrderUpdated])
 ```
 
 ### Assertions
 
-The `EventBuffer` returned by `fake` provides several assertion methods.
+The `EventsBuffer` returned by `fake` provides several assertion methods.
 
 ```ts
 const fakeEmitter = emitter.fake()
@@ -446,7 +484,7 @@ const fakeEmitter = emitter.fake()
 fakeEmitter.assertEmitted('user:registered')
 fakeEmitter.assertEmitted(events.UserRegistered)
 
-// Assert an event was not emitted
+// Assert an event was not emitted (also accepts a finder callback)
 fakeEmitter.assertNotEmitted(events.OrderUpdated)
 
 // Assert an event was emitted a specific number of times
@@ -470,4 +508,6 @@ fakeEmitter.assertEmitted(events.OrderUpdated, ({ data }) => {
 })
 ```
 
-The callback receives the event data and should return `true` if the event matches your criteria.
+The callback receives the buffered event (an object with `event` and `data` properties) and should return `true` if the event matches your criteria.
+
+Besides assertions, the buffer exposes `all`, `size`, `find`, and `exists` methods to inspect captured events, and `flush` to clear them.

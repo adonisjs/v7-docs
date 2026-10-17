@@ -64,7 +64,7 @@ You can fake specific events while allowing others to execute normally by passin
 emitter.fake([events.UserRegistered, events.OrderUpdated])
 ```
 
-The `EventBuffer` returned by `emitter.fake()` provides several assertion methods.
+The `EventsBuffer` returned by `emitter.fake()` provides several assertion methods.
 
 | Method                             | Description                                            |
 | ---------------------------------- | ------------------------------------------------------ |
@@ -73,7 +73,7 @@ The `EventBuffer` returned by `emitter.fake()` provides several assertion method
 | `assertEmittedCount(event, count)` | Assert an event was emitted a specific number of times |
 | `assertNoneEmitted()`              | Assert no events were emitted                          |
 
-For conditional assertions, pass a callback to `assertEmitted` that receives the event data and returns `true` if the event matches your criteria.
+For conditional assertions, pass a callback to `assertEmitted` that receives the buffered event (with `event` and `data` properties) and returns `true` if the event matches your criteria.
 
 ```ts title="tests/functional/orders/update.spec.ts"
 fakeEmitter.assertEmitted(events.OrderUpdated, ({ data }) => {
