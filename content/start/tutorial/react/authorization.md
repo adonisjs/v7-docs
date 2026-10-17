@@ -304,6 +304,7 @@ Now add the form markup.
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 import { Form, Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post
@@ -370,6 +371,8 @@ export default function PostsEdit(props: PageProps) {
     </div>
   )
 }
+
+PostsEdit.layout = [MarketingLayout]
 ```
 
 This form is similar to the create form, with a few key differences:
@@ -387,6 +390,7 @@ Now add an Edit button to the post detail page. Open your `posts/show.tsx` compo
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 import { Form, Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post.Variants['forDetailedView']
@@ -432,6 +436,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 We're using conditional rendering with `post.can?.edit` to show the Edit button only to the post owner. The `can` object comes from our transformer's `forDetailedView` variant, which used the same `PostPolicy` we saw in the controller.
@@ -508,6 +514,7 @@ Add a delete button next to the edit button in your post detail component.
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 import { Form, Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post.Variants['forDetailedView']
@@ -566,6 +573,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 A few important things about this delete button:
@@ -739,6 +748,7 @@ Finally, add delete buttons to the comments list in your post detail component.
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 import { Form, Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post.Variants['forDetailedView']
@@ -798,6 +808,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 How the comment delete button works:

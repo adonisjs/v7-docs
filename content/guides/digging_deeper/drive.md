@@ -399,7 +399,7 @@ export default class ProfileController {
 The template displays the current avatar using the `driveUrl` helper and provides a form for uploading a new one.
 
 ```edge title="resources/views/pages/profile/show.edge"
-@layout()
+@layouts.app({ title: 'Profile' })
   <div class="form-container">
     <div>
       @if(user.avatar)

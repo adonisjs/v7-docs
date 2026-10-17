@@ -94,6 +94,7 @@ node ace make:page posts/create
 This creates `inertia/pages/posts/create.tsx`. Open it and add the following form:
 ```tsx title="inertia/pages/posts/create.tsx"
 import { Form } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 export default function PostsCreate() {
   return (
@@ -155,6 +156,8 @@ export default function PostsCreate() {
     </div>
   )
 }
+
+PostsCreate.layout = [MarketingLayout]
 ```
 
 The `Form` component from `@adonisjs/inertia/react` handles form submissions. It accepts a `route` prop (the named route to submit to) and provides an `errors` object through a render prop pattern. When you submit the form, Inertia sends the request to your backend and automatically handles the response, including displaying validation errors.
@@ -300,7 +303,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
 
-router.on('/').renderInertia('home')
+router.on('/').renderInertia('home', {}).as('home')
 router.get('/posts', [controllers.Posts, 'index'])
 router.get('/posts/create', [controllers.Posts, 'create']).use(middleware.auth())
 router.post('/posts', [controllers.Posts, 'store']).use(middleware.auth())
@@ -320,6 +323,7 @@ import { InertiaProps } from '~/types'
 import { Data } from '~/generated/data'
 // [!code ++]
 import { Form } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post
@@ -398,6 +402,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 The `Form` component accepts `routeParams` to pass the post ID to the route. The route `comments.store` corresponds to our `CommentsController.store` method, and we're passing `{ id: post.id }` to fill in the `:id` parameter in the route `/posts/:id/comments`.

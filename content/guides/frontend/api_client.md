@@ -140,7 +140,7 @@ The `baseUrl` is set to `'/'` since the frontend and backend are served from the
 
 For monorepo setups where your frontend and backend are separate packages, the setup requires additional configuration to share types between workspaces.
 
-This guide assumes you're using npm workspaces with Turborepo (as used by the [API Starter Kit](https://github.com/adonisjs/api-starter-kit)), but the concepts apply to other monorepo tools like pnpm or Yarn workspaces with slight variations in syntax.
+This guide assumes you're using npm workspaces with Turborepo (as used by the [API monorepo starter kit](https://github.com/adonisjs/starter-kits/tree/main/api-monorepo)), but the concepts apply to other monorepo tools like pnpm or Yarn workspaces with slight variations in syntax.
 
 ::::steps
 
@@ -1309,7 +1309,7 @@ const client = createTuyau({
 
 ### Access token authentication
 
-For APIs that use access token authentication (like the [API Starter Kit](https://github.com/adonisjs/api-starter-kit)), use the `hooks.beforeRequest` option to dynamically attach the `Authorization` header to every request.
+For APIs that use access token authentication (like the [API starter kit](https://github.com/adonisjs/starter-kits/tree/main/api)), use the `hooks.beforeRequest` option to dynamically attach the `Authorization` header to every request.
 
 ```ts
 const client = createTuyau({

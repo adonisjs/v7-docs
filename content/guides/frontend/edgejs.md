@@ -35,7 +35,7 @@ node ace make:view pages/posts/index
 Open `resources/views/pages/posts/index.edge` and add the following content.
 
 ```edge title="resources/views/pages/posts/index.edge"
-@layout()
+@layouts.app({ title: 'Posts' })
   @each(post in posts)
     <div>
       <h2>
@@ -51,7 +51,7 @@ Open `resources/views/pages/posts/index.edge` and add the following content.
 
 A few important things to understand about this template:
 
-- The `@layout()` component wraps your content with a complete HTML document structure (including `<html>`, `<head>`, and `<body>` tags). We'll explore layouts in detail later in this guide.
+- The `@layouts.app()` component wraps your content with a complete HTML document structure (including `<html>`, `<head>`, and `<body>` tags). We'll explore layouts in detail later in this guide.
 
 - The `@each` tag loops over the `posts` array and renders the content for each post. Edge provides several tags like `@if`, `@else`, and `@elseif` for writing logic in templates. You can learn about all available tags in the [Edge syntax reference](https://edgejs.dev/docs/syntax_specification).
 
@@ -166,9 +166,9 @@ For complete coverage of Edge's template syntax, including advanced features lik
 
 ## Working with layouts and components
 
-The `@layout()` component you saw in the first example wraps your page content with a complete HTML document structure. This component is stored at `resources/views/components/layout.edge` and contains the standard HTML boilerplate:
+The `@layouts.app()` component you saw in the first example wraps your page content with a complete HTML document structure. This component is stored at `resources/views/components/layouts/app.edge`. Components inside subdirectories are referenced using dot notation, so `layouts/app.edge` becomes the `@layouts.app` tag. Stripped down to the essentials, a layout looks like this:
 
-```edge title="resources/views/components/layout.edge"
+```edge title="resources/views/components/layouts/app.edge"
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -182,7 +182,7 @@ The `@layout()` component you saw in the first example wraps your page content w
 </html>
 ```
 
-The `$slots.main()` method call renders whatever content you place between the opening and closing `@layout()` tags in your page templates. This is Edge's slots feature, which allows components to accept content from their consumers.
+The `$slots.main()` method call renders whatever content you place between the opening and closing `@layouts.app()` tags in your page templates. This is Edge's slots feature, which allows components to accept content from their consumers.
 
 ### Creating components
 
@@ -207,18 +207,52 @@ Components can accept props (parameters) and have multiple named slots for more 
 
 ## Starter kit components
 
-The Hypermedia starter kit includes a collection of unstyled components for building forms and common UI patterns. Each component renders at most one HTML element and passes unknown props through as HTML attributes, allowing you to apply classes and other attributes directly.
+The Hypermedia starter kit includes a collection of components for building pages, forms, and common UI patterns. The components are styled by the kit's `resources/css/app.css` file. Form and UI components render at most one HTML element and pass unknown props through as HTML attributes, allowing you to apply classes and other attributes directly.
 
-### Layout
+### Layouts
 
-Renders the HTML document with head and body elements.
+The layouts live in `resources/views/components/layouts` and render the HTML document with the head and body elements. Each layout renders the page content passed through the `main` slot.
 
-- **Props**: None
-- **Slots**: `main` (default)
+- `@layouts.marketing()` renders public pages with a header showing login and signup links (or a dashboard link for logged-in users).
+- `@layouts.auth()` renders the login and signup pages.
+- `@layouts.app()` renders pages for logged-in users, with a top navigation and a logout button. Add an entry to the `nav` list defined at the top of the file to link a new page from the navigation.
+- `@layouts.settings()` renders a settings area with a sidebar of links inside the app layout. Add an entry to the `items` list defined at the top of the file for every settings page.
+
+The `app` and `settings` layouts accept a `title` prop for the document title.
 
 ```edge
-@layout()
-  <main>Page content goes here</main>
+@layouts.app({ title: 'Reports' })
+  @page({ title: 'Reports' })
+    Page content goes here
+  @end
+@end
+```
+
+### Page and Section
+
+The `@page` component renders the frame of an app page, with an optional heading, description, and actions passed through the `actions` slot. The `@section` component groups content within a page under an optional title and description. Stacked sections are separated by a divider.
+
+```edge
+@layouts.app({ title: 'Reports' })
+  @page({ title: 'Reports', description: 'Monthly numbers at a glance.' })
+    @slot('actions')
+      @!link({ route: 'reports.export', text: 'Export', class: 'btn btn--secondary btn--sm' })
+    @end
+
+    @section({ title: 'Revenue' })
+      {{-- Section content --}}
+    @end
+  @end
+@end
+```
+
+### NavLink
+
+Renders an anchor element for a named route and marks it with `aria-current="page"` when the current URL matches the route. Nested URLs count as a match, so a link to `/settings` stays active on `/settings/security`. Pass `exact: true` to match only the route itself.
+
+```edge
+@navLink({ route: 'dashboard' })
+  Dashboard
 @end
 ```
 
@@ -435,11 +469,14 @@ Renders a button element.
 | Prop | Type | Description |
 |------|------|-------------|
 | `text` | `string` | Button text (alternative to using the slot) |
+| `variant` | `string` | Visual style. One of `primary` (default), `secondary`, or `ghost` |
+| `size` | `string` | Set to `sm` for a smaller button |
+| `block` | `boolean` | Make the button span the full width of its container |
 
 ```edge
 @!button({ text: 'Sign up', type: 'submit' })
 
-@button({ type: 'button', class: 'btn-secondary' })
+@button({ type: 'button', variant: 'secondary' })
   <span>Cancel</span>
 @end
 ```

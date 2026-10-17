@@ -96,7 +96,7 @@ node ace make:view posts/create
 This creates `resources/views/posts/create.edge`. Open it and add the following form.
 
 ```edge title="resources/views/posts/create.edge"
-@layout()
+@layouts.marketing()
   <div class="form-container">
     <div>
       <h1>
@@ -308,7 +308,7 @@ router.post('/posts/:id/comments', [controllers.Comments, 'store']).use(middlewa
 
 Open your `resources/views/posts/show.edge` template and add the comment form.
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   {{-- ... existing post display code ... --}}
 
     <div class="post-comments">

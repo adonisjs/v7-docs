@@ -99,7 +99,7 @@ Open your routes file and register a route.
 import router from '@adonisjs/core/services/router'
 import { controllers } from '#generated/controllers'
 
-router.on('/').renderInertia('home').as('home')
+router.on('/').renderInertia('home', {}).as('home')
 // [!code ++]
 router.get('/posts', [controllers.Posts, 'index'])
 ```
@@ -124,6 +124,7 @@ This creates `inertia/pages/posts/index.tsx`. Open it and add the following code
 ```tsx title="inertia/pages/posts/index.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   posts: Data.Post[]
@@ -162,6 +163,8 @@ export default function PostsIndex(props: PageProps) {
     </div>
   )
 }
+
+PostsIndex.layout = [MarketingLayout]
 ```
 
 Let's break down what's happening:
@@ -169,6 +172,7 @@ Let's break down what's happening:
 - **TypeScript props**: We're using `InertiaProps` combined with the generated `Data.Post` type to get full type safety. The `Data.Post` type is automatically generated from our `PostTransformer`.
 - **Mapping posts**: We loop through the posts array and display each post's title, author, and URL.
 - **Type safety**: Your editor will autocomplete `post.title`, `post.author.fullName`, etc., and TypeScript will catch any typos.
+- **Layout**: Assigning `PostsIndex.layout` wraps the page with the `MarketingLayout` that came with your starter kit. The layout renders the site header with login and signup links, and displays flash messages. Pages generated with `make:page` do not use a layout until you assign one.
 
 :::
 ::::
@@ -245,6 +249,7 @@ This creates `inertia/pages/posts/show.tsx`. Open it and add the following code:
 ```tsx title="inertia/pages/posts/show.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post
@@ -276,6 +281,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 Again, we're using `InertiaProps` with the generated `Data.Post` type to get automatic type safety for the `post` prop.
@@ -295,6 +302,7 @@ import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 // [!code ++]
 import { Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   posts: Data.Post[]
@@ -338,6 +346,8 @@ export default function PostsIndex(props: PageProps) {
     </div>
   )
 }
+
+PostsIndex.layout = [MarketingLayout]
 ```
 
 The `Link` component accepts two important props:
@@ -459,6 +469,7 @@ Update the component to display the comments:
 ```tsx title="inertia/pages/posts/show.tsx"
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post
@@ -513,6 +524,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 Notice how TypeScript knows that `post.comments` exists and what shape each comment has. This is all thanks to the generated `Data.Post` type from our transformers.

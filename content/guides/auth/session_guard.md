@@ -361,7 +361,7 @@ export default class SessionController {
 
 When a user voluntarily clicks a login link from a public page, the current URL can be passed as a query parameter. The login page handler stores it in the session using `session.setIntendedUrl()`, which validates the URL to prevent open redirects.
 
-```edge title="resources/views/partials/header.edge"
+```edge title="resources/views/components/layouts/marketing.edge"
 <a href="{{ route('auth.login', {}, { qs: { intended: request.url(true) } }) }}">
   Login
 </a>

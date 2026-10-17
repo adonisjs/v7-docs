@@ -1234,44 +1234,35 @@ async store({ request, response, session }: HttpContext) {
 }
 ```
 
-On the frontend, flash data is available on `page.flash`, a sibling of `props`. The starter kit's default layout reads it through `usePage()` and forwards messages to toast notifications, dismissing stale toasts when the URL changes.
+On the frontend, flash data is available on `page.flash`, a sibling of `props`. The starter kit's `FlashToasts` component reads it through `usePage()` and forwards messages to toast notifications, dismissing stale toasts when you navigate away. Every layout in `inertia/layouts` renders this component, so flash messages work on any page that uses a layout.
 
 ::::tabs
 
 :::tab{title="React"}
-```tsx title="inertia/layouts/default.tsx"
+```tsx title="inertia/components/flash_toasts.tsx"
+import { useEffect } from 'react'
 import { toast, Toaster } from 'sonner'
-import { usePage } from '@inertiajs/react'
-import { ReactElement, useEffect } from 'react'
+import { router, usePage } from '@inertiajs/react'
 
-export default function Layout({ children }: { children: ReactElement }) {
-  const { url, flash } = usePage()
-
-  useEffect(() => {
-    toast.dismiss()
-  }, [url])
+export default function FlashToasts() {
+  const { flash } = usePage()
 
   useEffect(() => {
-    if (flash.error) {
-      toast.error(flash.error)
-    }
-    if (flash.success) {
-      toast.success(flash.success)
-    }
-  })
+    return router.on('start', () => toast.dismiss('flash'))
+  }, [])
 
-  return (
-    <>
-      <main>{children}</main>
-      <Toaster position="top-center" richColors />
-    </>
-  )
+  useEffect(() => {
+    if (flash.error) toast.error(flash.error, { id: 'flash' })
+    if (flash.success) toast.success(flash.success, { id: 'flash' })
+  }, [flash])
+
+  return <Toaster position="top-center" />
 }
 ```
 :::
 
 :::tab{title="Vue"}
-```vue title="inertia/layouts/default.vue"
+```vue title="inertia/components/flash_toasts.vue"
 <script setup lang="ts">
 import { watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
@@ -1279,25 +1270,23 @@ import { toast, Toaster } from 'vue-sonner'
 
 const page = usePage()
 
-watch(() => page.url, () => toast.dismiss())
+watch(
+  () => page.url,
+  () => toast.dismiss()
+)
 
 watch(
   () => page.flash,
   (flash) => {
-    if (flash.error) {
-      toast.error(flash.error)
-    }
-    if (flash.success) {
-      toast.success(flash.success)
-    }
+    if (flash.error) toast.error(flash.error, { id: 'flash' })
+    if (flash.success) toast.success(flash.success, { id: 'flash' })
   },
   { immediate: true }
 )
 </script>
 
 <template>
-  <main><slot /></main>
-  <Toaster position="top-center" richColors />
+  <Toaster position="top-center" />
 </template>
 ```
 :::

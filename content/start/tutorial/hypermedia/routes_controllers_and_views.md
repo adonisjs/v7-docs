@@ -96,7 +96,7 @@ node ace make:view posts/index
 This creates a new file at `resources/views/posts/index.edge`. Open it and add the following code inside it.
 
 ```edge title="resources/views/posts/index.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div class="posts-list-title">
       <h1> Posts </h1>
@@ -121,7 +121,7 @@ This creates a new file at `resources/views/posts/index.edge`. Open it and add t
 @end
 ```
 
-This template uses the existing `layout` component that came with your starter kit. The layout handles the basic HTML structure, and you provide the main content by wrapping it in `@layout` tag.
+This template uses the `marketing` layout that came with your starter kit (stored in `resources/views/components/layouts/marketing.edge`). The layout renders the HTML document, the site header with login and signup links, and flash messages, and you provide the main content by wrapping it in the `@layouts.marketing` tag. The starter kit also ships `auth`, `app`, and `settings` layouts, which you can use the same way.
 
 Inside, we loop through each post with `@each` and display its title, the author's name, and a link to view post comments.
 
@@ -200,7 +200,7 @@ node ace make:view posts/show
 This creates `resources/views/posts/show.edge`. Open it and add the following code.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div>
       <h1>
@@ -253,7 +253,7 @@ For the complete guide on URL building and named routes, see the [URL builder do
 Let's update our posts listing page to use named routes.
 
 ```edge title="resources/views/posts/index.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div class="posts-list-title">
       <h1> Posts </h1>
@@ -314,7 +314,7 @@ export default class PostsController {
 We're preloading comments along with each comment's user (the author), and ordering them by creation date with oldest first. Now update the view to display them.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div>
       <h1>

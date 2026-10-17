@@ -139,7 +139,7 @@ Right now, the homepage doesn't tell users what DevShow is or how to get started
 Replace the entire content of your homepage with this:
 
 ```edge title="resources/views/pages/home.edge"
-@layout()
+@layouts.marketing()
   <div class="hero">
     <h1>DevShow - Share what you have built</h1>
     <p>
@@ -167,7 +167,7 @@ Users who want to share their projects need an easy way to reach the creation fo
 Update your posts index template to add the button in the header.
 
 ```edge title="resources/views/posts/index.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div class="posts-list-title">
       <h1> Posts </h1>
@@ -197,7 +197,7 @@ When users are on the post creation form, they might want to go back to browsing
 Update your posts create template.
 
 ```edge title="resources/views/posts/create.edge"
-@layout()
+@layouts.marketing()
   <div class="form-container">
     <div>
       // [!code ++:4]
@@ -231,7 +231,7 @@ Finally, let's add a back link on individual post pages so users can easily retu
 Update your posts show template.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div>
       // [!code ++:4]

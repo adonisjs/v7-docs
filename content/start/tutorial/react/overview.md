@@ -30,7 +30,7 @@ import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
 import router from '@adonisjs/core/services/router'
 
-router.on('/').renderInertia('home')
+router.on('/').renderInertia('home', {}).as('home')
 
 /**
  * Signup and login routes - only accessible to guests
@@ -46,16 +46,17 @@ router
   .use(middleware.guest())
 
 /**
- * Logout route - only accessible to authenticated users
+ * Dashboard and logout routes - only accessible to authenticated users
  */
 router
   .group(() => {
+    router.on('/dashboard').renderInertia('dashboard', {}).as('dashboard')
     router.post('logout', [controllers.Session, 'destroy'])
   })
   .use(middleware.auth())
 ```
 
-The starter kit gives us user signup, login, and logout routes. Notice how `middleware.guest()` ensures only logged-out users can access signup/login, while `middleware.auth()` protects the logout route.
+The starter kit gives us user signup, login, and logout routes, plus an empty dashboard page where users land after logging in. Notice how `middleware.guest()` ensures only logged-out users can access signup/login, while `middleware.auth()` protects the dashboard and logout routes.
 
 :::note
 We'll use the `auth` middleware throughout the tutorial to protect routes that require authentication.
@@ -78,12 +79,12 @@ export default class NewAccountController {
     /**
      * Validate the submitted data
      */
-    const payload = await request.validateUsing(signupValidator)
-    
+    const { fullName, email, password } = await request.validateUsing(signupValidator)
+
     /**
      * Create the new user in the database
      */
-    const user = await User.create(payload)
+    const user = await User.create({ fullName, email, password })
 
     /**
      * Log them in automatically
@@ -91,9 +92,9 @@ export default class NewAccountController {
     await auth.use('web').login(user)
     
     /**
-     * Redirect to home page
+     * Redirect to the dashboard
      */
-    response.redirect().toRoute('home')
+    response.redirect().toRoute('dashboard')
   }
 }
 ```
@@ -102,7 +103,7 @@ Each controller method receives an HTTP context object as its first parameter. T
 
 The `create` method renders the signup form using `inertia.render()`. Instead of returning HTML like traditional server-rendered apps, Inertia sends a JSON response containing the component name and any props. Your React frontend receives this and renders the corresponding component.
 
-The `store` method does the heavy lifting. It validates data, creates the user, logs them in, and redirects home. **This pattern of bringing together validators, models, and auth is what you'll see throughout the tutorial**.
+The `store` method does the heavy lifting. It validates data, creates the user, logs them in, and redirects to the dashboard. **This pattern of bringing together validators, models, and auth is what you'll see throughout the tutorial**.
 
 You might notice the controller references a `User` model and a `signupValidator`. The starter kit already includes these. We'll explore how models work in the [Database and Models](./database_and_models.md) chapter and validators in the [Forms and Validation](./forms_and_validation.md) chapter.
 
@@ -137,82 +138,110 @@ Browser Response
 
 When a controller calls `inertia.render('auth/signup')`, Inertia looks for a React component at `inertia/pages/auth/signup.tsx` and renders it. Let's look at that component.
 ```tsx title="inertia/pages/auth/signup.tsx"
-import { Form } from '@adonisjs/inertia/react'
+import AuthLayout from '~/layouts/auth'
+import { Form, Link } from '@adonisjs/inertia/react'
 
 export default function Signup() {
   return (
-    <div className="form-container">
-      <div>
-        <h1>Signup</h1>
-        <p>Enter your details below to create your account</p>
-      </div>
+    <>
+      <h1 className="auth__title">Create your account</h1>
+      <p className="auth__sub">Start building with the starter kit.</p>
 
-      <div>
-        <Form route="new_account.store">
-          {({ errors }) => (
-            <>
-              <div>
-                <label htmlFor="fullName">Full name</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  id="fullName"
-                  data-invalid={errors.fullName ? 'true' : undefined}
-                />
-                {errors.fullName && <div>{errors.fullName}</div>}
-              </div>
+      <Form route="new_account.store">
+        {({ errors, processing }) => (
+          <div className="auth__form">
+            <div className="field">
+              <label className="field__label" htmlFor="fullName">
+                Full name
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                className="field__input"
+                autoComplete="name"
+                placeholder="Ada Lovelace"
+                aria-invalid={errors.fullName ? 'true' : 'false'}
+              />
+              {errors.fullName && <span className="field__error">{errors.fullName}</span>}
+            </div>
 
-              <div>
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  id="email"
-                  autoComplete="email"
-                  data-invalid={errors.email ? 'true' : undefined}
-                />
-                {errors.email && <div>{errors.email}</div>}
-              </div>
+            <div className="field">
+              <label className="field__label" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                className="field__input"
+                autoComplete="email"
+                placeholder="you@example.com"
+                aria-invalid={errors.email ? 'true' : 'false'}
+              />
+              {errors.email && <span className="field__error">{errors.email}</span>}
+            </div>
 
-              <div>
-                <label htmlFor="password">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  id="password"
-                  autoComplete="new-password"
-                  data-invalid={errors.password ? 'true' : undefined}
-                />
-                {errors.password && <div>{errors.password}</div>}
-              </div>
+            <div className="field">
+              <label className="field__label" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                className="field__input"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                aria-invalid={errors.password ? 'true' : 'false'}
+              />
+              {errors.password && <span className="field__error">{errors.password}</span>}
+            </div>
 
-              <div>
-                <label htmlFor="passwordConfirmation">Confirm password</label>
-                <input
-                  type="password"
-                  name="passwordConfirmation"
-                  id="passwordConfirmation"
-                  autoComplete="new-password"
-                  data-invalid={errors.passwordConfirmation ? 'true' : undefined}
-                />
-                {errors.passwordConfirmation && <div>{errors.passwordConfirmation}</div>}
-              </div>
+            <div className="field">
+              <label className="field__label" htmlFor="passwordConfirmation">
+                Confirm password
+              </label>
+              <input
+                id="passwordConfirmation"
+                name="passwordConfirmation"
+                type="password"
+                className="field__input"
+                autoComplete="new-password"
+                placeholder="••••••••"
+                aria-invalid={errors.passwordConfirmation ? 'true' : 'false'}
+              />
+              {errors.passwordConfirmation && (
+                <span className="field__error">{errors.passwordConfirmation}</span>
+              )}
+            </div>
 
-              <div>
-                <button type="submit" className="button">
-                  Sign up
-                </button>
-              </div>
-            </>
-          )}
-        </Form>
-      </div>
-    </div>
+            <button
+              type="submit"
+              className="btn btn--primary btn--block"
+              disabled={processing}
+              style={{ marginTop: 4 }}
+            >
+              {processing ? 'One moment…' : 'Create account'}
+            </button>
+          </div>
+        )}
+      </Form>
+
+      <p className="auth__foot">
+        Already have an account?{' '}
+        <Link route="session.create" className="il">
+          Sign in
+        </Link>
+      </p>
+    </>
   )
 }
+
+Signup.layout = [AuthLayout]
 ```
 
-Page components live in the `inertia/pages` directory. The `Form` component from `@adonisjs/inertia/react` handles form submissions. It accepts a `route` prop (the named route to submit to) and provides an `errors` object through a render prop pattern. When you submit the form, Inertia sends the request to your backend and automatically handles the response, including displaying validation errors.
+Page components live in the `inertia/pages` directory. The `Form` component from `@adonisjs/inertia/react` handles form submissions. It accepts a `route` prop (the named route to submit to) and provides an `errors` object and a `processing` flag through a render prop pattern. When you submit the form, Inertia sends the request to your backend and automatically handles the response, including displaying validation errors. Assigning `Signup.layout` wraps the page with the `AuthLayout` from `inertia/layouts/auth.tsx`. The starter kit also ships `marketing`, `app`, and `settings` layouts in the same directory.
 
 ## Try creating an account
 Before we move forward, start your development server with `node ace serve --hmr` and try creating an account. Get comfortable with how the starter kit works. We'll be building on this foundation.

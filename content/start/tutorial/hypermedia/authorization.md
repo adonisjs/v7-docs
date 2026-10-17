@@ -229,7 +229,7 @@ node ace make:view posts/edit
 Now add the form markup.
 
 ```edge title="resources/views/posts/edit.edge"
-@layout()
+@layouts.marketing()
   <div class="form-container">
     @!link({
       route: 'posts.show',
@@ -285,7 +285,7 @@ This form is similar to the create form, with a few key differences:
 Now add an Edit button to the post detail page. Open your `posts/show.edge` template.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div class="post">
       <div class="post-meta">...</div>
@@ -382,7 +382,7 @@ router.post('/posts/:id/comments', [controllers.Comments, 'store']).use(middlewa
 Add a delete button next to the edit button in your post detail template.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
 <div class="container">
     <div class="post">
       <div class="post-meta">...</div>
@@ -500,7 +500,7 @@ router
 Finally, add delete button to the comments list in your post detail template.
 
 ```edge title="resources/views/posts/show.edge"
-@layout()
+@layouts.marketing()
   <div class="container">
     <div class="post">
       {{-- ... post content ... --}}
