@@ -147,7 +147,16 @@ declare module '@adonisjs/core/types' {
 
 The `syncDestination()` helper configures synchronous, pretty-printed output for development. By default, Pino writes logs asynchronously for better performance, but this can make it harder to correlate logs with the code that produced them during debugging. The synchronous destination writes logs inline as your code executes, with human-readable formatting.
 
-In production, the `destination` is left as `undefined`, which means logs flow through the configured transport targets. The `targets.file({ destination: 1 })` target writes JSON logs to stdout (file descriptor 1), which is the standard approach for containerized deployments where a log aggregator collects stdout.
+When a `destination` is defined, the logger ignores the `transport` option. In production, the `destination` is left as `undefined`, which means logs flow through the configured transport targets. The `targets.file({ destination: 1 })` target writes JSON logs to stdout (file descriptor 1), which is the standard approach for containerized deployments where a log aggregator collects stdout.
+
+:::tip
+Applications created before `@adonisjs/logger@7.1.1` may define the option as `desination` (a typo). The misspelled key still works but is deprecated. Rename it to `destination`.
+
+```ts title="config/logger.ts"
+desination: !app.inProduction ? await syncDestination() : undefined, // [!code --]
+destination: !app.inProduction ? await syncDestination() : undefined, // [!code ++]
+```
+:::
 
 ### Configuration reference
 
@@ -158,7 +167,9 @@ In production, the `destination` is left as `undefined`, which means logs flow t
 | `name` | A name included in every log entry, useful for identifying the source application |
 | `level` | The minimum level to log. Messages below this level are ignored |
 | `destination` | A custom destination stream. Use `syncDestination()` for synchronous pretty output |
-| `transport` | Configuration for Pino transports that process and route logs |
+| `transport` | Configuration for Pino transports that process and route logs. Ignored when `destination` is set |
+| `timestamp` | Controls the timestamp added to every log entry. See [customizing timestamps](#customizing-timestamps) |
+| `redact` | Keys to hide from log output. See [hiding sensitive values](#hiding-sensitive-values) |
 
 ### Log levels
 
@@ -176,6 +187,28 @@ The logger supports six levels, ordered from most to least verbose. When you set
 Set the level in your `.env` file:
 ```dotenv title=".env"
 LOG_LEVEL=debug
+```
+
+### Customizing timestamps
+
+By default, Pino adds the number of milliseconds since the Unix epoch to every log entry. Use the `timestamp` option to pick another format with one of the `iso`, `unix`, or `epoch` keywords, to remove timestamps with `false`, or to compute the value with a function.
+
+```ts title="config/logger.ts"
+loggers: {
+  app: {
+    enabled: true,
+    name: env.get('APP_NAME'),
+    level: env.get('LOG_LEVEL'),
+    // ISO 8601 string, e.g. "time":"2026-10-17T10:24:36.842Z"
+    timestamp: 'iso',
+  },
+}
+```
+
+A function must return the partial JSON string to append to the log line, including the leading comma.
+
+```ts title="config/logger.ts"
+timestamp: () => `,"time":"${new Date().toUTCString()}"`,
 ```
 
 ### Writing logs to a file
@@ -406,7 +439,6 @@ import {
   transport,
   stdSerializers,
   stdTimeFunctions,
-  symbols,
-  pinoVersion,
+  version,
 } from '@adonisjs/core/logger'
 ```
