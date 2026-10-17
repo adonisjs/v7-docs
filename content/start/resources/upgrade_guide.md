@@ -10,7 +10,7 @@ We have worked hard to keep the breaking changes surface area low. Yet, there ar
 
 - AdonisJS v7 requires Node.js 24
 - Works with TypeScript 5.9/6.0 and ESLint 10
-- And the Vite integration has been updated to work with Vite 7
+- And the Vite integration has been updated to work with Vite 8
 
 ## Helpful links
 

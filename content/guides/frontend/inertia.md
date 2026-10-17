@@ -1602,7 +1602,7 @@ See [history encryption](https://inertiajs.com/history-encryption) on the Inerti
 
 Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO.
 
-The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntrypoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
+The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntryPoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
@@ -1617,7 +1617,7 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-If you are adding SSR to an existing application, add the same entrypoint to `serverEntrypoints` in `vite.config.ts`.
+If you are adding SSR to an existing application, add the same entrypoint to `serverEntryPoints` in `vite.config.ts`.
 
 ```ts title="vite.config.ts"
 import { defineConfig } from 'vite'
@@ -1626,8 +1626,8 @@ import adonisjs from '@adonisjs/vite/client'
 export default defineConfig({
   plugins: [
     adonisjs({
-      entrypoints: ['inertia/app.tsx'],
-      serverEntrypoints: ['inertia/ssr.tsx'], // [!code highlight]
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'], // [!code highlight]
     }),
   ],
 })

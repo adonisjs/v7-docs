@@ -276,17 +276,18 @@ Shield generates a unique nonce for each request. Attackers cannot predict this 
 
 ### Configuring CSP for Vite
 
-When using Vite for asset bundling, you need to allow assets from the Vite dev server during development. Shield provides special keywords for this purpose.
+During development, AdonisJS serves Vite assets from the same origin as your application, so `'self'` already covers scripts and stylesheets. The HMR WebSocket is the exception. It listens on its own port (`24678` by default, or the value of the `VITE_HMR_PORT` environment variable), and you must allow it in the `connectSrc` directive.
 
 ```ts title="config/shield.ts"
+import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
 const shieldConfig = defineConfig({
   csp: {
     enabled: true,
     directives: {
-      defaultSrc: [`'self'`, '@viteDevUrl'],
-      connectSrc: [`'self'`, '@viteHmrUrl'],
+      defaultSrc: [`'self'`],
+      connectSrc: [`'self'`, ...(app.inDev ? ['ws://localhost:24678'] : [])],
       scriptSrc: [`'self'`, '@nonce'],
       styleSrc: [`'self'`, '@nonce'],
     },
@@ -297,11 +298,10 @@ const shieldConfig = defineConfig({
 export default shieldConfig
 ```
 
-The `@viteDevUrl` keyword resolves to the Vite development server URL, while `@viteHmrUrl` allows the WebSocket connection for hot module replacement.
-
-If you deploy bundled assets to a CDN, replace `@viteDevUrl` with `@viteUrl`. This keyword allows assets from both the development server and your production CDN.
+If you deploy bundled assets to a CDN, add the `@viteUrl` keyword to the directives that load those assets. The `@adonisjs/vite` package registers this keyword, and it resolves to the `assetsUrl` from `config/vite.ts` when the value is an HTTP or HTTPS URL. For relative URLs like `/assets`, it resolves to an empty string.
 
 ```ts title="config/shield.ts"
+import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
 const shieldConfig = defineConfig({
@@ -309,9 +309,9 @@ const shieldConfig = defineConfig({
     enabled: true,
     directives: {
       defaultSrc: [`'self'`, '@viteUrl'], // [!code highlight]
-      connectSrc: [`'self'`, '@viteHmrUrl'],
-      scriptSrc: [`'self'`, '@nonce'],
-      styleSrc: [`'self'`, '@nonce'],
+      connectSrc: [`'self'`, ...(app.inDev ? ['ws://localhost:24678'] : [])],
+      scriptSrc: [`'self'`, '@nonce', '@viteUrl'], // [!code highlight]
+      styleSrc: [`'self'`, '@nonce', '@viteUrl'], // [!code highlight]
     },
     reportOnly: false,
   },
