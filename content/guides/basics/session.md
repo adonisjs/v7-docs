@@ -8,6 +8,7 @@ This guide covers working with HTTP sessions in AdonisJS applications. You will 
 - Installing and configuring the session package
 - Storing and retrieving session data
 - Working with flash messages
+- Handling concurrent requests safely
 - Choosing the right storage driver
 - Implementing custom session stores
 
@@ -122,6 +123,28 @@ age: 7200000 // 2 hours in milliseconds
 When `true`, the session cookie is deleted when the user closes the browser, regardless of the configured `age`. When `false` (the default), the session persists for the configured `age` duration even after the browser is closed.
 ```ts
 clearWithBrowser: false
+```
+
+:::
+
+:::option{name="refreshCookie" dataType="boolean"}
+
+When `true` (the default), the session ID cookie is sent on every response, which refreshes its `Max-Age`. When `false`, the cookie is sent only when the session ID changes (a new session or `regenerate()`) or when the browser did not send one. A slow response that kept its incoming session ID then cannot put that ID back in the browser, for example the guest session ID after a login regenerated the session. Responses that create a new ID still send the cookie. See the `renewMissingSessionId` option for a case where this matters.
+
+The cookie `Max-Age` is no longer refreshed, so the browser drops the cookie `age` after the session started, even if the user stays active. Combine this option with `clearWithBrowser: true` and let the store expire inactive sessions. See [Handling concurrent requests](#handling-concurrent-requests).
+```ts
+refreshCookie: false
+```
+
+:::
+
+:::option{name="renewMissingSessionId" dataType="boolean"}
+
+When `true`, a request whose cookie names a session the store does not have (expired or destroyed) gets a new session ID, and `session.fresh` is `true`. The ID of an ended session is never used again. When `false` (the default), the session keeps the ID from the cookie and writes the new session under it.
+
+A session without data is never written to the store, so with this option it gets a new ID on every request. Do not use `session.sessionId` as a stable key until you store something in the session. Combined with `refreshCookie: false`, each response for an empty session also sends its new ID cookie, so a slow guest request can still overwrite the cookie set by a login that ran at the same time.
+```ts
+renewMissingSessionId: true
 ```
 
 :::
@@ -253,6 +276,22 @@ stores: {
 
 :::
 
+:::option{name="stores.redis.encrypt" dataType="boolean"}
+
+When `true`, session data is encrypted with the [encryption service](../security/encryption.md) instead of being stored as readable JSON, so anyone with read access to Redis cannot read it. Defaults to `false`.
+
+Sessions written before you enable `encrypt` cannot be read anymore, so each user starts a new session once (and must log in again).
+```ts
+stores: {
+  redis: stores.redis({
+    connection: 'main',
+    encrypt: true
+  })
+}
+```
+
+:::
+
 ::::
 
 ### Database driver
@@ -281,6 +320,22 @@ The name of the database table where session data will be stored. Defaults to `'
 stores: {
   database: stores.database({
     tableName: 'sessions'
+  })
+}
+```
+
+:::
+
+:::option{name="stores.database.encrypt" dataType="boolean"}
+
+When `true`, session data is encrypted with the [encryption service](../security/encryption.md) instead of being stored as readable JSON, so anyone with read access to the sessions table cannot read it. Defaults to `false`.
+
+Sessions written before you enable `encrypt` cannot be read anymore, so each user starts a new session once (and must log in again).
+```ts
+stores: {
+  database: stores.database({
+    connectionName: 'pg',
+    encrypt: true
   })
 }
 ```
@@ -758,6 +813,71 @@ export default class AuthController {
     return response.redirect('/dashboard')
   }
 }
+```
+
+## Handling concurrent requests
+
+A browser can send several requests at once, so a logout or a `session.regenerate()` may happen while another request from the same browser is still running. The slow request read the old session at its start and writes it back at its end.
+
+The Redis, database, file and DynamoDB stores do not write back a session that another request destroyed in the meantime. They only update a session they read if it still exists in the store. The old session is destroyed when a request that called `session.regenerate()` commits at the end of the request, or when a session is left empty at commit. Keep this in mind if you [create a custom store](#creating-custom-session-stores): its `write()` method should not recreate a session that was destroyed after `read()`.
+
+This guard only covers destroyed sessions. Sessions are not locked, so when two requests modify a session that still exists, the last write wins. For example, `auth.use('web').logout()` only removes the authentication key from the session. If the session holds other data, such as a flash message, it is not destroyed, and a slow request that read it before the logout writes the authentication key back. Regenerate the session on logout so the old session is destroyed.
+
+```ts title="app/controllers/session_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class SessionController {
+  async destroy({ auth, session, response }: HttpContext) {
+    await auth.use('web').logout()
+
+    /**
+     * Move the remaining data to a new session ID and destroy
+     * the old session, so a slow request cannot restore it
+     */
+    session.regenerate() // [!code ++]
+
+    session.flash('success', 'You have been logged out')
+    return response.redirect('/login')
+  }
+}
+```
+
+Two problems remain with the default configuration, and two opt-in options solve them.
+
+- A late response still sets the session ID cookie it read, which can put back the guest session ID after a login that regenerated the session. Set `refreshCookie: false` to send the cookie only when the ID changes.
+- A request whose cookie names a destroyed session keeps that ID and writes a new session under it. A slow request that read the old session then finds it again and updates it. Set `renewMissingSessionId: true` so the ID of a destroyed session is never used again.
+
+The following configuration combines both options for an application using Redis, and encrypts the session data at rest. Since the cookie `Max-Age` is no longer refreshed, the cookie lives until the browser closes and Redis expires sessions after 2 hours of inactivity.
+
+```ts title="config/session.ts"
+import env from '#start/env'
+import app from '@adonisjs/core/services/app'
+import { defineConfig, stores } from '@adonisjs/session'
+
+export default defineConfig({
+  enabled: true,
+  cookieName: 'adonis-session',
+  age: '2h',
+  clearWithBrowser: true, // [!code ++]
+  refreshCookie: false, // [!code ++]
+  renewMissingSessionId: true, // [!code ++]
+
+  cookie: {
+    path: '/',
+    httpOnly: true,
+    secure: app.inProduction,
+    sameSite: 'lax',
+  },
+
+  store: env.get('SESSION_DRIVER'),
+
+  stores: {
+    redis: stores.redis({
+      connection: 'main',
+      encrypt: true, // [!code ++]
+    }),
+  },
+})
 ```
 
 ## Creating custom session stores

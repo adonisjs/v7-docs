@@ -294,7 +294,7 @@ Create a `.env.test` file in your project root to configure test-specific settin
 SESSION_DRIVER=memory
 ```
 
-The memory session driver is commonly used in tests because it doesn't persist sessions between requests, ensuring test isolation. Other variables you might override include database connection settings, mail drivers, or any service configuration that should behave differently during testing.
+The memory session driver is commonly used in tests because it has no external dependency and its sessions are lost when the test process exits. The session test plugins also fall back to it when your application uses the cookie store. Other variables you might override include database connection settings, mail drivers, or any service configuration that should behave differently during testing.
 
 ## Next steps
 

@@ -54,7 +54,7 @@ export const plugins: Config['plugins'] = [
 ]
 ```
 
-When using sessions during tests, the session driver must be set to `memory` in your `.env.test` file. This is configured by default in the starter kit.
+The `sessionApiClient` plugin writes test sessions (from `withSession()` or `loginAs()`) to the store configured by `SESSION_DRIVER`, so the application reads them from the same place. The cookie store is the exception: it needs an HTTP request, so the plugin falls back to the memory store. If your application uses the cookie store, set the session driver to `memory` in your `.env.test` file. This is configured by default in the starter kit.
 
 ```dotenv title=".env.test"
 SESSION_DRIVER=memory
