@@ -1047,7 +1047,7 @@ router.post('/api/posts/lookup', [controllers.Posts, 'lookup']).as('posts.lookup
 
 :::step{title="Return a serialized response"}
 
-Validate the request and return transformed values with `HttpContext.serialize`. The generated route response type will match the values received by the browser after serialization.
+Validate the request and return transformed values with `HttpContext.serialize`. The generated route response type will match the values received by the browser after serialization. The `serialize` helper wraps the payload under a `data` key, so the browser receives `{ data: { post } }`.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -1090,7 +1090,7 @@ export default function PostLookup() {
       </button>
 
       {request.errors.id && <p>{request.errors.id}</p>}
-      {request.response && <p>{request.response.post.title}</p>}
+      {request.response && <p>{request.response.data.post.title}</p>}
     </div>
   )
 }

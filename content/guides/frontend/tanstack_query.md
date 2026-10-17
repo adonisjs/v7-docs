@@ -510,7 +510,7 @@ export default class PostsController {
       .paginate(page, limit)
 
     return {
-      posts: await serialize(PostTransformer.transform(posts.all())),
+      posts: await serialize.withoutWrapping(PostTransformer.transform(posts.all())),
       meta: {
         currentPage: posts.currentPage,
         lastPage: posts.lastPage,
