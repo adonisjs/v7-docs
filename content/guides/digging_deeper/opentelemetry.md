@@ -62,21 +62,23 @@ node ace add @adonisjs/otel
 
    ```ts
    router.use([
-     () => import('@adonisjs/otel/otel_middleware')
+     () => import('@adonisjs/otel/otel_middleware'),
+     // ...other middleware
    ])
    ```
 
 4. Creates the `config/otel.ts` file.
 
-5. Creates the `bin/otel.ts` file with OpenTelemetry initialization.
+5. Creates the `otel.ts` file at the root of your project. This file initializes the OpenTelemetry SDK.
 
-6. Adds the import statement at the top of `bin/server.ts` file.
+6. Adds `import '../otel.js'` as the first import of the `bin/server.ts` file. The SDK must load before any other module, otherwise auto-instrumentation cannot patch libraries like `http` or `knex`.
 
 7. Defines the following environment variables and their validation rules.
 
    ```dotenv
-   OTEL_EXPORTER_OTLP_ENDPOINT=
-   OTEL_EXPORTER_OTLP_HEADERS=
+   APP_NAME=
+   APP_VERSION=0.0.1
+   APP_ENV=development
    ```
 :::
 
@@ -105,7 +107,7 @@ The package resolves service metadata from multiple sources.
 
 :::option{name="serviceName" dataType="string"}
 
-The name of your service. This value is resolved from `OTEL_SERVICE_NAME` or `APP_NAME` environment variables.
+The name of your service. When not defined, this value is resolved from the `OTEL_SERVICE_NAME` or `APP_NAME` environment variables and defaults to `unknown_service`.
 
 ```ts
 export default defineConfig({
@@ -143,12 +145,20 @@ export default defineConfig({
 
 ### Exporters
 
-By default, the package exports traces using OTLP over gRPC to `localhost:4317`. This is the standard OpenTelemetry Collector endpoint. If you're running an OpenTelemetry Collector locally or in your infrastructure, traces will be sent there automatically.
+By default, the package exports traces, metrics, and logs using OTLP over HTTP (`http/protobuf`) to `localhost:4318`. This is the standard OpenTelemetry Collector endpoint. If you're running an OpenTelemetry Collector locally or in your infrastructure, telemetry will be sent there automatically.
 
 You can configure the exporter endpoint using environment variables without changing any code.
 
 ```dotenv
 # title: .env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.example.com:4318
+```
+
+To use gRPC instead, switch the protocol. The endpoint must then point to the gRPC port (usually `4317`).
+
+```dotenv
+# title: .env
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.example.com:4317
 ```
 
@@ -194,7 +204,7 @@ export default defineConfig({
 })
 ```
 
-When you set `endpoint`, the package automatically derives per-signal endpoints by appending:
+Destinations always use OTLP over HTTP. When you set `endpoint`, the package automatically derives per-signal endpoints by appending:
 
 - `/v1/traces`
 - `/v1/metrics`
@@ -299,13 +309,17 @@ If you provide a custom `sampler` option, `samplingRatio` is ignored.
 
 The package automatically instruments common libraries without any code changes. Out of the box, you get tracing for HTTP requests (incoming and outgoing), Lucid database queries (via Knex), and Redis operations.
 
-To reduce noise, the following endpoints are excluded from tracing by default.
+The `pg`, `mysql`, `mysql2`, `net`, `dns`, and `socket.io` instrumentations are disabled by default. Lucid queries are already traced through Knex, so enabling the database driver instrumentations would produce duplicate spans.
 
-- `/health`, `/healthz`, `/ready`, `/readiness`
-- `/metrics`, `/internal/metrics`, `/internal/healthz`
-- `/favicon.ico`
+To reduce noise, the HTTP instrumentation ignores the following incoming requests by default.
 
-You can configure individual instrumentations or add custom ignored URLs.
+- `OPTIONS` requests (CORS preflight).
+- Static files, detected by their extension (`.css`, `.js`, `.png`, `.woff2`, `.svg`, `.map`, and so on).
+- Vite dev server requests (`/@vite/`, `/@id/`, `/@fs/`, `/__vite`, `/@react-refresh`).
+- Health and metrics endpoints: `/health`, `/healthz`, `/internal/healthz`, `/ready`, `/readiness`, `/metrics`, `/internal/metrics`.
+- Browser and crawler files: `/favicon.ico`, `/robots.txt`, `/sitemap.xml`, `/manifest.json`, `/site.webmanifest`, `/browserconfig.xml`, `/ads.txt`.
+
+Each URL matches the exact path and its sub-paths. You can configure individual instrumentations or add custom ignored URLs.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -325,7 +339,64 @@ export default defineConfig({
     /**
      * Disable a specific instrumentation
      */
-    '@opentelemetry/instrumentation-pg': { enabled: false },
+    '@opentelemetry/instrumentation-ioredis': { enabled: false },
+  },
+})
+```
+
+The HTTP instrumentation accepts the following options on top of the ones from [`@opentelemetry/instrumentation-http`](https://www.npmjs.com/package/@opentelemetry/instrumentation-http).
+
+::::options
+
+:::option{name="ignoredUrls" dataType="string[]"}
+
+URLs to exclude from tracing. Use a trailing `/*` to match a path prefix.
+
+:::
+
+:::option{name="mergeIgnoredUrls" dataType="boolean"}
+
+Merge `ignoredUrls` with the default list. Set it to `false` to replace the defaults entirely. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreStaticFiles" dataType="boolean"}
+
+Ignore static files and Vite dev server requests. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreOptionsRequests" dataType="boolean"}
+
+Ignore `OPTIONS` requests. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreIncomingRequestHook" dataType="(request: { url?: string, method?: string }) => boolean"}
+
+A custom function to ignore requests. It runs after the built-in checks, and returning `true` skips tracing for the request.
+
+:::
+
+::::
+
+### AdonisJS instrumentations
+
+The package ships with two opt-in instrumentations for AdonisJS internals. The container instrumentation creates a `container.make {binding}` span every time the container resolves a dependency. The events instrumentation creates an `event.dispatch {event}` span every time an event is emitted, covering the execution of its listeners.
+
+Register them as custom instrumentations under any key. Spans are only created inside an existing trace (an HTTP request, for example), so the application boot does not produce orphan spans.
+
+```ts title="config/otel.ts"
+import { defineConfig } from '@adonisjs/otel'
+import { EventsInstrumentation } from '@adonisjs/otel/instrumentations/events'
+import { ContainerInstrumentation } from '@adonisjs/otel/instrumentations/container'
+
+export default defineConfig({
+  serviceName: 'my-app',
+
+  instrumentations: {
+    '@adonisjs/instrumentation-events': new EventsInstrumentation(),
+    '@adonisjs/instrumentation-container': new ContainerInstrumentation(),
   },
 })
 ```
@@ -351,14 +422,14 @@ docker run -d --name jaeger \
 
 This command exposes:
 - Port `16686` for the Jaeger UI
-- Port `4317` for OTLP gRPC (the default endpoint)
-- Port `4318` for OTLP HTTP
+- Port `4317` for OTLP gRPC
+- Port `4318` for OTLP HTTP (the default endpoint)
 
 :::
 
 :::step{title="Start your application"}
 
-Your AdonisJS application is already configured to send traces to `localhost:4317` by default, so no additional configuration is needed.
+Your AdonisJS application is already configured to send traces to `localhost:4318` by default, so no additional configuration is needed.
 
 ```sh
 node ace serve --hmr
@@ -610,11 +681,11 @@ export default class OrdersController {
 }
 ```
 
-In your queue worker, extract the context and continue the trace.
+In your queue worker, extract the context and continue the trace. The `context` API comes from the `@opentelemetry/api` package, which you must install in your application (`npm i @opentelemetry/api`).
 
 ```ts title="app/jobs/process_order_job.ts"
+import { context } from '@opentelemetry/api'
 import { extractTraceContext, record } from '@adonisjs/otel/helpers'
-import { context } from '@adonisjs/otel'
 
 export default class ProcessOrderJob {
   async handle(payload: { orderId: string; traceContext: Record<string, string> }) {
@@ -643,9 +714,9 @@ export default class ProcessOrderJob {
 
 ## User context
 
-When `@adonisjs/auth` is installed, the middleware automatically sets user attributes on spans if a user is authenticated. This includes `user.id`, `user.email` (if available), and `user.roles` (if available).
+When `@adonisjs/auth` is installed, the middleware automatically sets user attributes on spans if a user is authenticated. It reads the `id`, `email`, and `role` properties of `ctx.auth.user` and stores them as the `user.id`, `user.email`, and `user.roles` attributes.
 
-You can customize this behavior or add additional user attributes.
+You can disable this behavior or replace it with a resolver. Any extra property returned by the resolver is stored with a `user.` prefix, so `tenantId` becomes the `user.tenantId` attribute.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -677,7 +748,7 @@ export default defineConfig({
 })
 ```
 
-You can also manually set user context anywhere in your code.
+You can also manually set user context anywhere in your code using the `setUser` helper. It follows the same rules as the resolver.
 
 ```ts title="app/middleware/auth_middleware.ts"
 import { setUser } from '@adonisjs/otel/helpers'
@@ -733,29 +804,24 @@ otelLoggingPreset({ keep: ['trace_id', 'span_id'] })
 The `defineConfig` function accepts all options from the [OpenTelemetry Node SDK](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/), giving power users full control.
 
 ```ts title="config/otel.ts"
-import { defineConfig } from '@adonisjs/otel'
+import { defineConfig, OTLPTraceExporter } from '@adonisjs/otel'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 
 export default defineConfig({
   serviceName: 'my-app',
   
   /**
-   * Use HTTP instead of gRPC
-   */
-  traceExporter: new OTLPTraceExporter({
-    url: 'https://otel-collector.example.com/v1/traces',
-    headers: { 'x-api-key': process.env.OTEL_API_KEY },
-  }),
-  
-  /**
-   * Custom span processor with batching configuration
+   * Custom span processor exporting over gRPC, with
+   * batching configuration
    */
   spanProcessors: [
-    new BatchSpanProcessor(new OTLPTraceExporter(), {
-      maxQueueSize: 2048,
-      scheduledDelayMillis: 5000,
-    }),
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({ url: 'https://otel-collector.example.com:4317' }),
+      {
+        maxQueueSize: 2048,
+        scheduledDelayMillis: 5000,
+      }
+    ),
   ],
   
   /**
@@ -763,10 +829,12 @@ export default defineConfig({
    */
   resourceAttributes: {
     'deployment.region': 'eu-west-1',
-    'k8s.pod.name': process.env.POD_NAME,
+    'k8s.pod.name': process.env.POD_NAME ?? 'unknown',
   },
 })
 ```
+
+The main entrypoint re-exports `OTLPTraceExporter` and `OTLPMetricExporter` (both gRPC), `PeriodicExportingMetricReader`, and `ConsoleSpanExporter`, so you do not have to install those OpenTelemetry packages yourself. Other classes, like `BatchSpanProcessor`, require installing the matching `@opentelemetry/*` package.
 
 See the [OpenTelemetry JS documentation](https://opentelemetry.io/docs/languages/js/) for all available options.
 
