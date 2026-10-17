@@ -147,6 +147,7 @@ transmit.registerRoutes((route) => {
 Import the transmit service and call the `broadcast` method to send data to all subscribers of a channel.
 
 ```ts title="app/controllers/posts_controller.ts"
+import Post from '#models/post'
 import transmit from '@adonisjs/transmit/services/main'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -160,6 +161,13 @@ export default class PostsController {
     return post
   }
 }
+```
+
+The payload can be any JSON-serializable value, including falsy values like `0`, `false`, or an empty string. The payload is optional, and subscribers receive `null` when you omit it.
+
+```ts title="app/controllers/posts_controller.ts"
+// Notify subscribers that the list changed, without sending data
+transmit.broadcast('posts')
 ```
 
 ### Excluding specific clients
@@ -180,7 +188,15 @@ export default class MessagesController {
 }
 ```
 
-The third argument accepts a single UID string or an array of UIDs to exclude.
+The third argument accepts a single UID string or an array of UIDs to exclude. The client exposes its UID through the `transmit.uid` property, so send it along with the request that triggers the broadcast.
+
+```ts title="resources/js/chat.ts"
+await fetch('/chats/1/messages', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ uid: transmit.uid, content: 'Hello!' }),
+})
+```
 
 ## Channels
 
@@ -266,7 +282,7 @@ const transmit = new Transmit({
 ```
 
 :::note
-The SSE connection at `__transmit/events` is opened by the browser's native `EventSource`, which cannot send custom headers. For token-based auth, authenticate the `subscribe` route instead. Channel authorization still protects private channels because clients must pass the `authorize` callback before receiving events. If your app uses cookie-based sessions, authentication works automatically because subscribe requests include cookies (`credentials: 'include'`). If you protect the unsubscribe route as well, use the `beforeUnsubscribe` hook the same way.
+The SSE connection at `__transmit/events` is opened by the browser's native `EventSource`, which cannot send custom headers. For token-based auth, authenticate the `subscribe` route instead, or provide an `eventSourceFactory` that supports headers (see [client configuration options](#client-configuration-options)). Channel authorization still protects private channels because clients must pass the `authorize` callback before receiving events. If your app uses cookie-based sessions, authentication works automatically because subscribe requests include cookies (`credentials: 'include'`). If you protect the unsubscribe route as well, use the `beforeUnsubscribe` hook the same way.
 :::
 
 ## Client-side setup
@@ -333,10 +349,18 @@ unsubscribe()
 
 ### Deleting a subscription
 
-Call `delete` to unsubscribe from a channel entirely.
+Call `delete` to unsubscribe from a channel entirely. Once deleted, calling `transmit.subscription` with the same channel name returns a fresh subscription you can create again.
 
 ```ts title="resources/js/chat.ts"
 await subscription.delete()
+```
+
+### Closing the connection
+
+Call `close` to terminate the SSE connection, for example when the user logs out.
+
+```ts title="resources/js/app.ts"
+transmit.close()
 ```
 
 ### Listening to connection status
@@ -357,7 +381,18 @@ transmit.on('reconnecting', () => {
 })
 ```
 
-The available status events are `initializing`, `connected`, `disconnected`, and `reconnecting`.
+The available status events are `connected`, `disconnected`, and `reconnecting`. Use the `off` method with the same callback to stop listening.
+
+```ts title="resources/js/app.ts"
+const onConnected = () => {
+  console.log('SSE connection established')
+}
+
+transmit.on('connected', onConnected)
+
+// Later
+transmit.off('connected', onConnected)
+```
 
 ### Client configuration options
 
@@ -390,7 +425,7 @@ const transmit = new Transmit({
 
 :::option{name="uidGenerator" dataType="() => string"}
 
-Custom function to generate the client's unique identifier. Defaults to `crypto.randomUUID()`.
+Custom function to generate the client's unique identifier. Defaults to `crypto.randomUUID()`, which browsers only expose in [secure contexts](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts). You must provide a custom generator when serving your application over plain HTTP, for example on a local network.
 
 ```ts
 import { nanoid } from 'nanoid'
@@ -456,7 +491,7 @@ Callback invoked when a subscription is successfully deleted.
 
 :::option{name="eventSourceFactory" dataType="(url: string | URL, options: { withCredentials: boolean }) => EventSource"}
 
-Custom factory for creating the `EventSource` instance. Useful for environments where the native `EventSource` is not available.
+Custom factory for creating the `EventSource` instance. Useful for environments where the native `EventSource` is not available, or to send custom headers with the SSE connection using a library like [`@microsoft/fetch-event-source`](https://www.npmjs.com/package/@microsoft/fetch-event-source). See the [client README](https://github.com/adonisjs/transmit-client#authenticated-event-stream) for a complete adapter.
 
 :::
 
@@ -624,13 +659,19 @@ const subscribers = transmit.getSubscribersFor('chats/1/messages')
 console.log(`${subscribers.length} clients connected to this chat`)
 ```
 
+:::note
+Subscriptions are not synchronized across server instances. When running multiple instances, `getSubscribersFor` only returns the clients connected to the current instance.
+:::
+
 ## Multi-instance synchronization
 
 When running multiple server instances behind a load balancer, events broadcast on one instance will not reach clients connected to other instances. Transmit solves this with a transport layer that synchronizes events across all instances using a message bus.
 
+Each transport has a dedicated import path, so you only need to install the client library of the transport you use.
+
 ### Redis transport
 
-Install the `ioredis` package and configure the Redis transport.
+Install the `ioredis` package and configure the Redis transport. The `redis` function accepts any [ioredis connection option](https://redis.github.io/ioredis/interfaces/CommonRedisOptions.html).
 
 ```sh
 npm install ioredis
@@ -639,7 +680,7 @@ npm install ioredis
 ```ts title="config/transmit.ts"
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/transmit'
-import { redis } from '@adonisjs/transmit/transports'
+import { redis } from '@adonisjs/transmit/transports/redis'
 
 export default defineConfig({
   pingInterval: '30s',
@@ -656,16 +697,23 @@ export default defineConfig({
 
 ### MQTT transport
 
+Install the `mqtt` package and configure the MQTT transport. The `mqtt` function accepts the broker `host`, plus an optional `port`, `protocol`, and `options` object forwarded to the [MQTT.js client](https://github.com/mqttjs/MQTT.js#client).
+
+```sh
+npm install mqtt
+```
+
 ```ts title="config/transmit.ts"
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/transmit'
-import { mqtt } from '@adonisjs/transmit/transports'
+import { mqtt } from '@adonisjs/transmit/transports/mqtt'
 
 export default defineConfig({
   pingInterval: '30s',
   transport: {
     driver: mqtt({
-      url: env.get('MQTT_URL'),
+      host: env.get('MQTT_HOST'),
+      port: env.get('MQTT_PORT'),
     }),
   },
 })
