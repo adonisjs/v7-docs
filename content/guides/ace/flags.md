@@ -9,6 +9,7 @@ This guide covers defining command flags within custom commands. You will learn 
 - Defining boolean, string, number, and array flags
 - Customizing flag names and descriptions
 - Creating flag aliases for shorthand usage
+- Making flags required
 - Setting default values for flags
 - Transforming and validating flag values
 - Accessing all provided flags
@@ -140,7 +141,16 @@ node ace make:controller users
 # Works - optional flag is not mentioned
 
 node ace make:controller users --model
-# Error: Missing value for flag --model
+# Error: Missing value for option "model"
+```
+
+If an empty value is meaningful for your command, set the `allowEmptyValue` option to accept it. This option is available for string and array flags.
+
+```ts title="commands/make_controller.ts"
+@flags.string({
+  allowEmptyValue: true,
+})
+declare model: string
 ```
 
 ## Defining number flags
@@ -174,7 +184,7 @@ node ace create:user --score 100
 # this.score = 100
 
 node ace create:user --score abc
-# Error: Flag --score must be a valid number
+# Error: Invalid value. The "score" flag accepts a "numeric" value
 ```
 
 ## Defining array flags
@@ -260,6 +270,26 @@ Multiple single-character aliases can be combined after a single hyphen.
 ```sh
 node ace make:controller users -rs
 # Equivalent to --resource --singular
+```
+
+## Making flags required
+
+Flags are optional by default. Set the `required` option to `true` when your command cannot run without a flag. Ace will display an error if the user does not mention the flag.
+
+```ts title="commands/deploy.ts"
+@flags.string({
+  required: true,
+  description: 'Deployment environment',
+})
+declare environment: string
+```
+
+```sh
+node ace deploy
+# Error: Missing required option "environment"
+
+node ace deploy --environment=production
+# this.environment = 'production'
 ```
 
 ## Setting default values
@@ -360,17 +390,20 @@ export default class MakeControllerCommand extends BaseCommand {
   
   async run() {
     /**
-     * Access all defined flags
+     * Access all mentioned flags. Flags the user did not
+     * mention are left out of the object
      */
     console.log(this.parsed.flags)
-    // Output: { resource: true, singular: false }
+    // node ace make:controller --resource
+    // Output: { resource: true }
     
     /**
      * Access flags that were mentioned but not defined
      * (only available when allowUnknownFlags is true)
      */
     console.log(this.parsed.unknownFlags)
-    // Output: ['--some-unknown-flag']
+    // node ace make:controller --some-unknown-flag -x
+    // Output: ['some-unknown-flag', 'x']
   }
 }
 ```
