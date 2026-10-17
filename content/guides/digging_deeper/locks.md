@@ -16,7 +16,7 @@ This guide covers atomic locks in AdonisJS applications. You will learn how to:
 
 Atomic locks prevent race conditions when multiple processes or parts of your codebase might perform concurrent actions on the same resource. Consider a payment processing scenario where a queue job could be enqueued twice due to a network retry. Without proper locking, the system might charge the user twice. Atomic locks ensure that only one process can execute the critical section at a time.
 
-The `@adonisjs/lock` package is a wrapper over [Verrou](https://verrou.dev), a framework-agnostic locking library created and maintained by the AdonisJS core team. It supports three storage backends: Redis, database, and memory.
+The `@adonisjs/lock` package is a wrapper over [Verrou](https://verrou.dev), a framework-agnostic locking library created and maintained by the AdonisJS core team. It supports four storage backends: Redis, database, DynamoDB, and memory.
 
 ## Installation
 
@@ -24,6 +24,12 @@ Install and configure the package using the following command.
 
 ```sh
 node ace add @adonisjs/lock
+```
+
+The command prompts you to select a store (`database`, `redis`, or `dynamodb`). You can skip the prompt by passing the `--store` flag.
+
+```sh
+node ace add @adonisjs/lock --store=redis
 ```
 
 :::disclosure{title="See steps performed by the add command"}
@@ -43,9 +49,15 @@ node ace add @adonisjs/lock
 
 3. Creates the `config/lock.ts` file.
 
-4. Defines the `LOCK_STORE` environment variable and its validation inside the `start/env.ts` file.
+4. Defines the `LOCK_STORE` environment variable and its validation inside the `start/env.ts` file. The validation allows the selected store and the `memory` store.
 
-5. Creates a database migration for the locks table (if using the database store).
+    ```ts title="start/env.ts"
+    {
+      LOCK_STORE: Env.schema.enum(['redis', 'memory'] as const)
+    }
+    ```
+
+5. Creates a database migration for the `locks` table (only when you select the database store).
 
 :::
 
@@ -56,6 +68,7 @@ The configuration is stored in the `config/lock.ts` file.
 ```ts title="config/lock.ts"
 import env from '#start/env'
 import { defineConfig, stores } from '@adonisjs/lock'
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 
 const lockConfig = defineConfig({
   default: env.get('LOCK_STORE'),
@@ -75,6 +88,15 @@ const lockConfig = defineConfig({
     }),
 
     /**
+     * DynamoDB store to manage locks.
+     * Requires the @aws-sdk/client-dynamodb package.
+     */
+    dynamodb: stores.dynamodb({
+      table: { name: 'locks' },
+      connection: new DynamoDBClient({ region: env.get('AWS_REGION') }),
+    }),
+
+    /**
      * Memory store could be used during testing.
      */
     memory: stores.memory()
@@ -87,6 +109,8 @@ declare module '@adonisjs/lock/types' {
   export interface LockStoresList extends InferLockStores<typeof lockConfig> {}
 }
 ```
+
+The generated config file only contains the store you selected during installation, along with the `memory` store. The example above lists every store for reference.
 
 ### Redis store
 
@@ -106,7 +130,7 @@ The `connectionName` is a reference to the connection defined within the `config
 
 The `database` store has a peer dependency on the `@adonisjs/lucid` package. You must [configure Lucid](../database/lucid.md) before using the database store.
 
-The `connectionName` is a reference to a database connection defined within the `config/database.ts` file. If not defined, the default database connection is used.
+The `connectionName` is a reference to a database connection defined within the `config/database.ts` file. If not defined, the default database connection is used. The store supports the PostgreSQL, MySQL, and SQLite (`better-sqlite3` and `sqlite3`) dialects.
 
 ```ts title="config/lock.ts"
 {
@@ -117,7 +141,7 @@ The `connectionName` is a reference to a database connection defined within the 
 }
 ```
 
-The data is stored within the `locks` table. A migration for this table is automatically created during installation. However, if needed, you can manually create a migration with the following contents.
+The data is stored within the table defined by the `tableName` option. Always set it explicitly, since it defaults to `verrou` when omitted. A migration for the `locks` table is automatically created during installation. However, if needed, you can manually create a migration with the following contents.
 
 :::disclosure{title="Migration file contents"}
 
@@ -143,6 +167,29 @@ export default class extends BaseSchema {
 
 :::
 
+### DynamoDB store
+
+The `dynamodb` store uses the AWS SDK to persist locks in a DynamoDB table. Install the `@aws-sdk/client-dynamodb` package before using it.
+
+```sh
+npm i @aws-sdk/client-dynamodb
+```
+
+The store accepts the table name and an instance of the `DynamoDBClient`. The table is created automatically (with `key` as the partition key) if it does not exist.
+
+```ts title="config/lock.ts"
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+
+{
+  dynamodb: stores.dynamodb({
+    table: { name: 'locks' },
+    connection: new DynamoDBClient({
+      region: env.get('AWS_REGION'),
+    }),
+  }),
+}
+```
+
 ### Environment variables
 
 The default store is configured using the `LOCK_STORE` environment variable.
@@ -163,7 +210,13 @@ const lock = lockManager.createLock('processing_payment:order:42', '30s')
 
 The lock key should uniquely identify the resource being protected. A common pattern is to use a descriptive prefix followed by an identifier, such as `processing_payment:order:${orderId}` or `sending_email:user:${userId}`.
 
-The TTL accepts either a time expression string (like `'10s'`, `'5m'`, or `'1h'`) or a number in milliseconds. The TTL acts as a safety mechanism. If a process crashes while holding a lock, the lock will automatically expire after the TTL, preventing deadlocks.
+The TTL accepts either a time expression string (like `'10s'`, `'5m'`, or `'1h'`) or a number in milliseconds, and defaults to `30s` when omitted. The TTL acts as a safety mechanism. If a process crashes while holding a lock, the lock will automatically expire after the TTL, preventing deadlocks. Passing `null` creates a lock that never expires, which you should only do when you are certain the lock will be released.
+
+Locks are created using the default store. Use the `use` method to create a lock with a different store.
+
+```ts
+const lock = lockManager.use('redis').createLock('processing_payment:order:42', '30s')
+```
 
 ## Acquiring locks
 
@@ -183,7 +236,7 @@ export default class PaymentService {
       '30s'
     )
     
-    const [acquired, result] = await lock.run(async () => {
+    const [, charge] = await lock.run(async () => {
       /**
        * This callback only executes after acquiring the lock.
        * The lock is automatically released when the callback
@@ -194,16 +247,12 @@ export default class PaymentService {
       return charge
     })
 
-    if (!acquired) {
-      return { success: false, message: 'Payment already in progress' }
-    }
-
-    return { success: true, charge: result }
+    return charge
   }
 }
 ```
 
-By default, `run` waits indefinitely until the lock becomes available. You can configure this behavior using options.
+The `run` method returns a tuple containing a boolean (whether the lock was acquired) and the callback's return value. It retries every 250ms, indefinitely, until the lock becomes available, and it does not accept retry options. Use `runImmediately` when the callback should be skipped if the lock is already held, or acquire the lock manually with [retry options](#lock-options) when you need a timeout.
 
 ### Running immediately or not at all
 
@@ -215,7 +264,7 @@ const [acquired, result] = await lock.runImmediately(async () => {
 })
 
 if (!acquired) {
-  // Lock was not available
+  // Lock was held by another process. Skip the work.
 }
 ```
 
@@ -235,7 +284,7 @@ if (acquired) {
 }
 ```
 
-The `acquireImmediately` method attempts to acquire the lock without waiting and returns `true` if successful.
+The `acquire` method returns `false` when the lock could not be acquired within the configured retry limits. The `acquireImmediately` method attempts to acquire the lock without waiting and returns `true` if successful.
 
 ```ts
 const acquired = await lock.acquireImmediately()
@@ -251,31 +300,31 @@ Prefer the `run` method over manual acquisition when possible. It handles lock r
 
 ## Lock options
 
-When acquiring a lock, you can configure retry behavior and timeouts.
+When acquiring a lock with the `acquire` method, you can configure the retry behavior using the `retry` option. If the lock cannot be acquired within these limits, `acquire` returns `false`.
 
 ::::options
 
-:::option{name="timeout"}
-Maximum time to wait before giving up on acquiring the lock. Accepts a time expression string or milliseconds.
+:::option{name="retry.timeout"}
+Maximum time to wait before giving up on acquiring the lock. Accepts a time expression string or milliseconds. Defaults to no timeout.
 
 ```ts
-await lock.acquire({ timeout: '5s' })
+await lock.acquire({ retry: { timeout: '5s' } })
 ```
 :::
 
-:::option{name="attempts"}
-Maximum number of retry attempts before throwing an error.
+:::option{name="retry.attempts"}
+Maximum number of attempts before giving up. Defaults to `Infinity`.
 
 ```ts
-await lock.acquire({ attempts: 3 })
+await lock.acquire({ retry: { attempts: 3 } })
 ```
 :::
 
-:::option{name="delay"}
-Delay between retry attempts. Accepts a time expression string or milliseconds.
+:::option{name="retry.delay"}
+Delay between retry attempts. Accepts a time expression string or milliseconds. Defaults to `250ms`.
 
 ```ts
-await lock.acquire({ delay: '100ms' })
+await lock.acquire({ retry: { delay: '100ms' } })
 ```
 :::
 
@@ -285,10 +334,16 @@ You can combine these options for fine-grained control.
 
 ```ts
 const acquired = await lock.acquire({
-  timeout: '10s',
-  attempts: 5,
-  delay: '500ms'
+  retry: {
+    timeout: '10s',
+    attempts: 5,
+    delay: '500ms',
+  },
 })
+
+if (!acquired) {
+  // Could not acquire the lock within the retry limits
+}
 ```
 
 ## Checking lock state
@@ -300,19 +355,32 @@ const lock = lockManager.createLock('my_resource', '30s')
 
 /**
  * Check if the lock is currently held by any process.
+ * This method queries the store.
  */
 const locked = await lock.isLocked()
 
 /**
- * Check if the lock has expired.
+ * Check if the lock acquired by this instance has expired.
+ * This method is synchronous and does not query the store.
  */
-const expired = await lock.isExpired()
+const expired = lock.isExpired()
 
 /**
- * Get the remaining time in milliseconds before the lock expires.
- * Returns null if the lock is not held.
+ * Get the remaining time in milliseconds before the lock
+ * acquired by this instance expires. Returns null if the
+ * lock has not been acquired or has no TTL.
  */
-const remaining = await lock.getRemainingTime()
+const remaining = lock.getRemainingTime()
+```
+
+## Releasing locks owned by others
+
+The `release` method only releases a lock owned by the current instance. Releasing a lock held by another owner throws the `E_LOCK_NOT_OWNED` exception. If you must release a lock regardless of its owner (for example, from an admin command that clears stuck locks), use the `forceRelease` method.
+
+```ts
+import lockManager from '@adonisjs/lock/services/main'
+
+await lockManager.createLock('batch_job:123').forceRelease()
 ```
 
 ## Extending locks
@@ -341,16 +409,17 @@ try {
 
 ## Sharing locks between processes
 
-In distributed systems, you might need to acquire a lock in one process and release it in another. The `serialize` method converts a lock into a string that can be stored and restored elsewhere.
+In distributed systems, you might need to acquire a lock in one process and release it in another. The `serialize` method converts a lock into a plain object that can be stored and restored elsewhere.
 
 ```ts title="app/jobs/start_processing.ts"
+import redis from '@adonisjs/redis/services/main'
 import lockManager from '@adonisjs/lock/services/main'
 
 const lock = lockManager.createLock('batch_job:123', '5m')
 await lock.acquire()
 
 /**
- * Serialize the lock for storage. This string contains
+ * Serialize the lock for storage. This object contains
  * all information needed to restore the lock.
  */
 const serialized = lock.serialize()
@@ -359,15 +428,16 @@ const serialized = lock.serialize()
  * Store the serialized lock (e.g., in a database or cache)
  * for retrieval by another process.
  */
-await redis.set('batch_job:123:lock', serialized)
+await redis.set('batch_job:123:lock', JSON.stringify(serialized))
 ```
 
 In another process, restore the lock using `restoreLock`.
 
 ```ts title="app/jobs/finish_processing.ts"
+import redis from '@adonisjs/redis/services/main'
 import lockManager from '@adonisjs/lock/services/main'
 
-const serialized = await redis.get('batch_job:123:lock')
+const serialized = JSON.parse((await redis.get('batch_job:123:lock'))!)
 
 /**
  * Restore the lock from its serialized form.
