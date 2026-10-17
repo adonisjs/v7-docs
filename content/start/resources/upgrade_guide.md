@@ -85,17 +85,16 @@ import { generateRegistry } from '@tuyau/core/hooks'
 export default defineConfig({
   hooks: {
     init: [
-      // [!code highlight:2]
-      // Always needed
-      indexEntities(),
-
-      // [!code highlight:6]
-      // If using Inertia (adjust framework to match yours)
-      indexPages({ framework: 'react' }),
-      generateRegistry(),
+      // [!code highlight:5]
+      // Always needed. Without Inertia, call indexEntities() with no options
       indexEntities({
         transformers: { enabled: true, withSharedProps: true },
       }),
+
+      // [!code highlight:3]
+      // If using Inertia (adjust framework to match yours)
+      indexPages({ framework: 'react' }),
+      generateRegistry(),
 
       // [!code highlight:2]
       // If using Bouncer
