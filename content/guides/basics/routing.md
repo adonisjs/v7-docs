@@ -608,12 +608,12 @@ router.on('/contact').renderInertia('contact', { title: 'Contact us' })
 
 ## Redirect from a route
 
-You can redirect one path to another using `redirectToRoute()` or `redirectToPath()`. This is useful for handling deprecated URLs, shortening URLs, or creating aliases.
+You can redirect one path to another using `redirect()` or `redirectToPath()`. This is useful for handling deprecated URLs, shortening URLs, or creating aliases.
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
 // Redirect to a named route
-router.on('/posts').redirectToRoute('articles.index')
+router.on('/posts').redirect('articles.index')
 
 // Redirect to a static URL
 router.on('/posts').redirectToPath('https://medium.com/my-blog')
@@ -626,10 +626,10 @@ If your route has dynamic params, you can forward them to the destination route 
 import router from '@adonisjs/core/services/router'
 
 // Forward the :id param to the destination route
-router.on('/posts/:id').redirectToRoute('articles.show')
+router.on('/posts/:id').redirect('articles.show')
 
 // Override the param with a specific value
-router.on('/featured').redirectToRoute('articles.show', { id: 1 })
+router.on('/featured').redirect('articles.show', { id: 1 })
 ```
 
 When someone visits `/posts/42`, they're redirected to the `articles.show` route with `id: 42`. When they visit `/featured`, they're redirected with `id: 1`.
@@ -640,7 +640,7 @@ Redirects can also include query strings via the `qs` option:
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
-router.on('/posts').redirectToRoute('articles.index', {}, {
+router.on('/posts').redirect('articles.index', {}, {
   qs: { limit: 20, page: 1 },
 })
 ```
