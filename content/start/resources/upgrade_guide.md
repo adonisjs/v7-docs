@@ -110,6 +110,19 @@ export default defineConfig({
 })
 ```
 
+## Bouncer policies are indexed automatically
+Bouncer no longer reads policies from the `app/policies/main.ts` file. The `indexPolicies` hook scans the `app/policies` directory and generates the `.adonisjs/server/policies.ts` barrel file, which you import using the `#generated/policies` alias.
+
+Once you have registered the `indexPolicies` hook (see the previous section), delete the `app/policies/main.ts` file and update the import inside the `initialize_bouncer_middleware.ts` file.
+
+```ts title="app/middleware/initialize_bouncer_middleware.ts"
+import * as abilities from '#abilities/main'
+// [!code --]
+import { policies } from '#policies/main'
+// [!code ++]
+import { policies } from '#generated/policies'
+```
+
 ## Assembler hooks have been renamed
 The assembler hook names have changed. If you were using the `onBuildStarting` hook (the most common one, used for Vite), update it to `buildStarting`.
 

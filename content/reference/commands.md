@@ -727,6 +727,12 @@ Create a new Bouncer policy class. The policies are stored inside the `app/polic
 node ace make:policy post
 ```
 
+Pass action names after the policy name to pre-define them as methods. The `--model` flag defines the model imported by the policy. It defaults to the policy name.
+
+```sh
+node ace make:policy post view edit delete --model=Article
+```
+
 ## inspect\:rcfile
 View the contents of the `adonisrc.ts` file after merging the defaults. You may use this command to inspect the available configuration options and override them per your application requirements.
 

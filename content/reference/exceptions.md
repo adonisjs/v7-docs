@@ -37,7 +37,7 @@ if (error instanceof lucidErrors.E_ROW_NOT_FOUND) {
 
 ## E_AUTHORIZATION_FAILURE
 
-The exception is raised when a bouncer authorization check fails. The exception is self-handled and [uses content-negotiation](../guides/auth/authorization.md#throwing-authorizationexception) to return an appropriate error response to the client.
+The exception is raised when a bouncer authorization check fails. The exception is self-handled and [uses content-negotiation](../guides/auth/authorization.md#using-authorize) to return an appropriate error response to the client.
 
 - **Status code**: 403
 - **Self handled**: Yes

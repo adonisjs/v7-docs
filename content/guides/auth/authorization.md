@@ -28,8 +28,9 @@ node ace add @adonisjs/bouncer
 :::disclosure{title="Steps performed by the add command"}
 
 1. Registers the `@adonisjs/bouncer/bouncer_provider` service provider and `@adonisjs/bouncer/commands` inside the `adonisrc.ts` file.
-2. Creates the `app/abilities/main.ts` file to define and export abilities.
-3. Creates the `initialize_bouncer_middleware.ts` file inside the middleware directory and registers it within the `start/kernel.ts` file.
+2. Registers the `indexPolicies` init hook inside the `adonisrc.ts` file. This hook generates the policies [barrel file](../concepts/barrel_files.md).
+3. Creates the `app/abilities/main.ts` file to define and export abilities.
+4. Creates the `initialize_bouncer_middleware.ts` file inside the middleware directory and registers it within the `start/kernel.ts` file.
 
 :::
 
@@ -112,7 +113,12 @@ export default class PostsController {
 
 ### Using authorize
 
-The `authorize` method throws an `AuthorizationException` when authorization fails. This exception is automatically converted to an appropriate HTTP response based on content negotiation.
+The `authorize` method throws an [`E_AUTHORIZATION_FAILURE`](../../reference/exceptions.md#e_authorization_failure) exception when authorization fails. This exception is self-handled and converted to an HTTP response based on content negotiation.
+
+- HTML requests receive the error message as plain text with the response status code (`403` by default).
+- JSON requests receive an `errors` array containing the error message.
+- JSON API requests (`application/vnd.api+json`) receive an `errors` array containing the error `code` and `title`.
+- Form submissions (`POST`, `PUT`, `PATCH`, and `DELETE` requests expecting HTML) are redirected back to the previous page when the session package is installed. The form input is flashed (except passwords and the CSRF token), the error message is flashed under the `error` key, and also added to the flashed errors under the `E_AUTHORIZATION_FAILURE` key. This lets you display the error on the form the user just submitted.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -157,7 +163,7 @@ export default class PostsController {
 }
 ```
 
-The `AuthorizationResponse` object has three properties: `authorized` (boolean), `message` (string or undefined), and `status` (number or undefined). You can use these to create custom error responses with specific status codes and messages.
+The `AuthorizationResponse` object has the `authorized` (boolean), `message` (string or undefined), and `status` (number or undefined) properties. You can use these to create custom error responses with specific status codes and messages.
 
 ## Custom authorization responses
 
@@ -179,6 +185,23 @@ export const editPost = Bouncer.ability((user: User, post: Post) => {
 
 In this example, when authorization fails, the error message will be "Post not found" with a 404 status code instead of the default 403 Forbidden. This is useful when you want to hide the existence of a resource from unauthorized users.
 
+When your application uses [`@adonisjs/i18n`](../digging_deeper/i18n.md), you can attach a translation identifier to the response using the `t` method. The exception handler will translate the message using the current request locale and fall back to the message passed to `deny` when the translation is missing. Without a custom identifier, Bouncer uses the `errors.E_AUTHORIZATION_FAILURE` identifier.
+
+```ts title="app/abilities/main.ts"
+import User from '#models/user'
+import Post from '#models/post'
+import { Bouncer, AuthorizationResponse } from '@adonisjs/bouncer'
+
+export const editPost = Bouncer.ability((user: User, post: Post) => {
+  if (user.id === post.userId) {
+    return AuthorizationResponse.allow()
+  }
+
+  // [!code highlight]
+  return AuthorizationResponse.deny('Post not found', 404).t('errors.not_found')
+})
+```
+
 ## Defining policies
 
 A **policy** is a class that groups multiple authorization checks for a specific resource. Policies are recommended when you need structured authorization around specific resources or when you have many authorization checks throughout your application. For example, you might create one policy for your Post model and another for your Comment model.
@@ -191,7 +214,11 @@ Generate a new policy using the `make:policy` command.
 node ace make:policy post
 ```
 
-This creates an empty policy class in the `app/policies` directory.
+This creates an empty policy class in the `app/policies` directory. You may also pass action names after the policy name to pre-define methods, and the `--model` flag to import a model other than the one inferred from the policy name.
+
+```sh
+node ace make:policy post view edit delete --model=Article
+```
 
 ```ts title="app/policies/post_policy.ts"
 import User from '#models/user'
@@ -280,7 +307,7 @@ export default class PostsController {
 }
 ```
 
-The [barrel file](../concepts/barrel_files.md) is automatically generated when you start your development server and stays up-to-date as you add or remove policies. This file exports an object where each key is the policy name and the value is the lazy import of that policy module.
+The [barrel file](../concepts/barrel_files.md) is generated by the `indexPolicies` hook registered in your `adonisrc.ts` file. It is created when you start the development server or build your application, and stays up-to-date as you add or remove policies. This file exports an object where each key is the policy name and the value is the lazy import of that policy module.
 
 ## Policy hooks
 
@@ -474,8 +501,10 @@ You can create a custom Bouncer instance for a different user, such as when send
 
 ```ts title="app/services/notification_service.ts"
 import User from '#models/user'
+import Post from '#models/post'
 import { Bouncer } from '@adonisjs/bouncer'
 import * as abilities from '#abilities/main'
+import { editPost } from '#abilities/main'
 import { policies } from '#generated/policies'
 
 export default class NotificationService {
