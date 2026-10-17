@@ -9,6 +9,7 @@ This guide covers file uploads in AdonisJS, from basic single file uploads to ad
 - Accept and validate file uploads in your application
 - Store files permanently using FlyDrive
 - Handle multiple file uploads and direct cloud uploads
+- Stream uploads yourself by self-processing multipart requests
 - Secure your file upload endpoints
 
 ## Overview
@@ -286,6 +287,18 @@ export default class ProfileAvatarController {
 
 - Store the filename in your database after moving. You'll need it later to display the avatar or generate download links.
 
+:::tip
+If you do not need Drive, the `move()` method moves the file to a directory on the local filesystem. When you omit the `name` option, the file receives a random UUID-based name (for example `3f6e2c1a-....jpg`). The client-provided filename is never used implicitly because it cannot be trusted.
+
+```ts title="app/controllers/profile_avatar_controller.ts"
+import app from '@adonisjs/core/services/app'
+
+await payload.avatar.move(app.makePath('storage/avatars'), {
+  name: `${auth.getUserOrFail().id}.${payload.avatar.extname}`,
+})
+```
+:::
+
 ### Accessing your uploaded files
 
 The `@adonisjs/drive` package includes a built-in file server that automatically serves uploaded files. The file server registers routes under `/uploads` followed by your directory structure.
@@ -485,11 +498,77 @@ The first step requests a signed URL from your AdonisJS application. The second 
 
 For production applications, consider using a library like Uppy.io that provides additional features like upload progress tracking, automatic retries, resumable uploads, and user-friendly interfaces.
 
+## Self-processing multipart streams
+
+By default, the bodyparser writes every uploaded file to the `tmp` directory before your controller runs. For some endpoints, you will prefer to stream files straight to their destination (for example, an S3 bucket) without touching the local disk. You can do this by disabling auto-processing for the route and processing the multipart stream yourself.
+
+First, list the route pattern under `processManually` inside the bodyparser config.
+
+```ts title="config/bodyparser.ts"
+import { defineConfig } from '@adonisjs/core/bodyparser'
+
+export default defineConfig({
+  multipart: {
+    autoProcess: true,
+    processManually: ['/projects/:id/assets'],
+  },
+})
+```
+
+Then, register a file handler using `request.multipart.onFile()` and start processing the stream with `request.multipart.process()`. The handler receives each file part as a readable stream, along with a `reportChunk` function. You must pass every chunk to `reportChunk`, since the bodyparser uses it to enforce the size limit, the allowed extensions, and the magic-number file type detection.
+
+```ts title="app/controllers/project_assets_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import string from '@adonisjs/core/helpers/string'
+import drive from '@adonisjs/drive/services/main'
+
+export default class ProjectAssetsController {
+  async store({ request, response, params }: HttpContext) {
+    /**
+     * Use "*" to handle every file field, or pass a field
+     * name to handle a specific one
+     */
+    request.multipart.onFile(
+      '*',
+      { size: '50mb', extnames: ['png', 'jpg', 'pdf'] },
+      async (part, reportChunk) => {
+        part.pause()
+        part.on('data', reportChunk)
+
+        const key = `projects/${params.id}/${string.uuid()}`
+        await drive.use().putStream(key, part)
+
+        /**
+         * The returned object is available as "file.meta"
+         */
+        return { key }
+      }
+    )
+
+    await request.multipart.process()
+
+    const assets = request.files('assets')
+    const invalidAsset = assets.find((asset) => !asset.isValid)
+    if (invalidAsset) {
+      return response.badRequest(invalidAsset.errors)
+    }
+
+    return assets.map((asset) => asset.meta.key)
+  }
+}
+```
+
+When a file fails validation, the bodyparser emits an error on its stream (which also rejects `putStream`) and records the failure in `file.errors`. Other failures, such as a rejected upload to your storage provider, are recorded in `file.errors` with the `fatal` type. Use `request.multipart.abort(error)` from inside a handler to stop processing the entire request.
+
+:::note
+Form fields sent alongside the files are available through `request.input()` and `request.all()` only after `request.multipart.process()` resolves.
+:::
+
 ## Restricting file upload routes
 
 Now that you understand how to implement file uploads, it's important to secure your application against potential abuse.
 
-By default, AdonisJS processes multipart requests (file uploads) on all routes that use `POST`, `PUT`, and `PATCH` methods. This means any endpoint in your application can potentially receive and process file uploads, even if you didn't intend for it to handle files. This unrestricted access allows attackers to target any endpoint in your application to upload files, potentially straining your server's resources, filling up disk space, or using your application to distribute malicious content.
+By default, AdonisJS processes multipart requests (file uploads) on all routes that use `POST`, `PUT`, `PATCH`, and `DELETE` methods. This means any endpoint in your application can potentially receive and process file uploads, even if you didn't intend for it to handle files. This unrestricted access allows attackers to target any endpoint in your application to upload files, potentially straining your server's resources, filling up disk space, or using your application to distribute malicious content.
 
 As a first security measure, you must allow multipart auto-processing only on specific routes that actually need to handle files. Configure this in your bodyparser settings.
 
@@ -505,8 +584,8 @@ export default defineConfig({
 })
 ```
 
-This configuration ensures that only the specified routes will process multipart requests. All other routes will reject file uploads, preventing attackers from uploading files to random endpoints.
+This configuration ensures that only the specified routes will process multipart requests. On all other routes, the bodyparser leaves the multipart stream untouched, so no files are written to the `tmp` directory and `request.file()` returns `null`. This prevents attackers from uploading files to random endpoints.
 
 If you have public endpoints that accept file uploads (endpoints that don't require authentication), apply strict rate limiting to prevent abuse. See the [rate limiting guide](../../guides/security/rate_limiting.md) for implementation details.
 
-For comprehensive bodyparser configuration options, refer to the [BodyParser guide](./body_parser.md).
+For comprehensive bodyparser configuration options, refer to the [BodyParser guide](./body_parser.md) and the [bodyparser config reference](../../reference/config/bodyparser.md).
