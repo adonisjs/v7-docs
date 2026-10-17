@@ -89,10 +89,10 @@ The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/s
 
 The `@adonisjs/ally` package raises the exception when the OAuth service does not provide the OAuth code during the redirect.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods. The exception is self-handled and uses content negotiation to flash the error message and redirect back, or return a JSON/JSONAPI error response. The message is translated using the `errors.E_OAUTH_MISSING_CODE` key when i18n is configured.
 
 - **Status code**: 500
-- **Self handled**: No
+- **Self handled**: Yes
 
 ```ts
 import { errors as allyErrors } from '@adonisjs/ally'
@@ -102,16 +102,42 @@ if (error instanceof allyErrors.E_OAUTH_MISSING_CODE) {
 
 ## E_OAUTH_STATE_MISMATCH
 
-The `@adonisjs/ally` package raises the exception when the CSRF state defined during the redirect is missing.
+The `@adonisjs/ally` package raises the exception when the CSRF state defined during the redirect does not match the state sent back by the OAuth service. A missing state cookie (or a missing `state` param) also counts as a mismatch.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods. The exception is self-handled the same way as `E_OAUTH_MISSING_CODE`, and the message is translated using the `errors.E_OAUTH_STATE_MISMATCH` key.
 
 - **Status code**: 400
-- **Self handled**: No
+- **Self handled**: Yes
 
 ```ts
 import { errors as allyErrors } from '@adonisjs/ally'
 if (error instanceof allyErrors.E_OAUTH_STATE_MISMATCH) {
+}
+```
+
+## E_UNKNOWN_ALLY_PROVIDER
+
+The `@adonisjs/ally` package raises the exception when `ally.use()` or `ally.allowsLocalSignup()` receives a provider name that is not defined inside the `config/ally.ts` file. You can avoid it by checking the provider name with `ally.has()` first. The message is translated using the `errors.E_UNKNOWN_ALLY_PROVIDER` key.
+
+- **Status code**: 404
+- **Self handled**: Yes
+
+```ts
+import { errors as allyErrors } from '@adonisjs/ally'
+if (error instanceof allyErrors.E_UNKNOWN_ALLY_PROVIDER) {
+}
+```
+
+## E_LOCAL_SIGNUP_DISALLOWED
+
+The `@adonisjs/ally` package raises the exception when you call `ally.use(provider, { intent: 'signup' })` for a provider configured with [`disallowLocalSignup: true`](../guides/auth/social_authentication.md#disallow-signups-for-a-provider). The message is translated using the `errors.E_LOCAL_SIGNUP_DISALLOWED` key.
+
+- **Status code**: 403
+- **Self handled**: Yes
+
+```ts
+import { errors as allyErrors } from '@adonisjs/ally'
+if (error instanceof allyErrors.E_LOCAL_SIGNUP_DISALLOWED) {
 }
 ```
 
