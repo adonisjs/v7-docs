@@ -261,9 +261,43 @@ To include a literal dollar sign in a value, escape it with a backslash.
 PRICE=\$99.99
 ```
 
+### Reading values from files
+
+A value prefixed with `file:` is replaced with the contents of the referenced file. The path is resolved relative to the application root, and an absolute path works as well. This is useful with secret managers such as Docker secrets or Kubernetes, which mount each secret as a file instead of exposing it as an environment variable.
+
+```bash title=".env"
+DB_PASSWORD=file:/run/secrets/db_password
+GCS_KEY=file:gcs_key.json
+```
+
+AdonisJS throws an error at startup when the referenced file does not exist. To keep a literal value that starts with `file:`, escape the colon with a backslash (`file\:not-a-path`).
+
+:::warning
+Do not write the prefix as a URL (`file://gcs_key.json`). The text after `file:` becomes `//gcs_key.json`, which is treated as a network path and fails to load. Use `file:gcs_key.json` for a relative path or `file:/absolute/path` for an absolute one.
+:::
+
+You can register your own prefixes with `Env.defineIdentifier`. The callback receives the value after the prefix and returns the resolved value. Identifiers must be defined before calling `Env.create`.
+
+```ts title="start/env.ts"
+import { Env } from '@adonisjs/core/env'
+
+/**
+ * Resolves values such as "base64:aGVsbG8=" to their decoded form
+ */
+Env.defineIdentifier('base64', (value) => {
+  return Buffer.from(value, 'base64').toString()
+})
+
+export default await Env.create(new URL('../', import.meta.url), {
+  API_TOKEN: Env.schema.secret(),
+})
+```
+
+Defining an identifier that already exists throws an `E_IDENTIFIER_ALREADY_DEFINED` exception. Use `Env.defineIdentifierIfMissing` when the identifier may already be registered by a package and you only want to provide a fallback implementation.
+
 ### Environment-specific .env files
 
-AdonisJS supports multiple `.env` files for different environments and use cases. The framework loads these files in a specific order, with later files overriding earlier ones.
+AdonisJS supports multiple `.env` files for different environments and use cases. When the same variable is defined in more than one file, the file with the higher priority wins.
 
 | File | Purpose | Git status |
 |------|---------|------------|
@@ -273,20 +307,31 @@ AdonisJS supports multiple `.env` files for different environments and use cases
 | `.env.staging` | Staging-specific variables | Ignored |
 | `.env.production` | Production-specific variables | Ignored |
 | `.env.test` | Test-specific variables, loaded when `NODE_ENV=test` | Ignored |
+| `.env.[NODE_ENV].local` | Local overrides for one environment, for example `.env.development.local` | Ignored |
 | `.env.example` | Template showing required variables with placeholder values | Committed |
 
-The loading order depends on your `NODE_ENV` value. For `NODE_ENV=development`, AdonisJS loads files in this order:
+The files AdonisJS reads depend on your `NODE_ENV` value. For `NODE_ENV=development`, the files are listed below from the highest to the lowest priority.
 
-1. `.env` (base variables)
-2. `.env.development` (environment-specific)
-3. `.env.local` (local overrides)
+1. `.env.development.local` (local overrides for development)
+2. `.env.local` (local overrides)
+3. `.env.development` (environment-specific)
+4. `.env` (base variables)
 
 For `NODE_ENV=test`, the order is:
 
-1. `.env` (base variables)
+1. `.env.test.local` (local overrides for tests)
 2. `.env.test` (test-specific)
+3. `.env` (base variables)
 
-Note that `.env.local` is not loaded during tests. This prevents local development settings from interfering with test runs.
+Note that `.env.local` is not loaded when `NODE_ENV` is `test` or `testing`. This prevents local development settings from interfering with test runs.
+
+Variables that already exist in `process.env` take precedence over every `.env` file. This lets your hosting platform or CI pipeline override a value without editing any file. A variable defined with an empty value (for example, `SENTRY_DSN=`) counts as defined, so it still overrides the same variable from a lower priority file.
+
+By default, AdonisJS looks for these files in the application root. You can set the `ENV_PATH` environment variable to load them from a different directory instead. The path is resolved relative to the application root.
+
+```sh
+ENV_PATH=./config/env node bin/server.js
+```
 
 The `.env.example` file serves as documentation for your team. It lists all required environment variables with placeholder values, helping new developers set up their local environment. Unlike other `.env` files, you should commit `.env.example` to version control.
 ```bash title=".env.example"
@@ -337,7 +382,7 @@ When your application starts, AdonisJS reads the `.env` file and validates each 
 The schema provides several validation methods.
 
 :::option{name="Env.schema.string"}
-Validates the value is a non-empty string. You can validate the string format by speficying one of the following formats.
+Validates the value is a non-empty string. You can validate the string format by specifying one of the following formats.
 
 ```ts
 // Validates the value is a valid hostname or IP

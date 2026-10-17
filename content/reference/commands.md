@@ -849,7 +849,7 @@ node ace env:add MY_VARIABLE value --type=string
 
 <dd>
 
-Define the type of the environment variable. The value must be one of the following: `string`, `boolean`, `number`, `enum`.
+Define the type of the environment variable. The value must be one of the following: `string`, `secret`, `boolean`, `number`, `enum`.
 
 </dd>
 
