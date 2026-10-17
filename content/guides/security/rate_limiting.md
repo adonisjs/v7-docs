@@ -35,7 +35,9 @@ node ace add @adonisjs/limiter
 
 1. Installs the `@adonisjs/limiter` package using the detected package manager.
 
-2. Registers the following service provider inside the `adonisrc.ts` file.
+2. Prompts you to select the `redis` or `database` store. You can skip the prompt using the `--store` flag, for example `node ace add @adonisjs/limiter --store=redis`.
+
+3. Registers the following service provider inside the `adonisrc.ts` file.
     ```ts
     {
       providers: [
@@ -45,16 +47,16 @@ node ace add @adonisjs/limiter
     }
     ```
 
-3. Creates the `config/limiter.ts` file.
+4. Creates the `config/limiter.ts` file with the selected store and the `memory` store.
 
-4. Creates the `start/limiter.ts` file for defining HTTP throttle middleware.
+5. Creates the `start/limiter.ts` file for defining HTTP throttle middleware.
 
-5. Defines the following environment variable and its validation inside the `start/env.ts` file.
+6. Defines the following environment variable and its validation inside the `start/env.ts` file.
    ```ts
    LIMITER_STORE=redis
    ```
 
-6. Optionally creates the database migration for the `rate_limits` table if using the `database` store.
+7. Creates the database migration for the `rate_limits` table when you select the `database` store.
 
 :::
 
@@ -93,7 +95,7 @@ declare module '@adonisjs/limiter/types' {
 
 The `default` property specifies which store to use for rate limiting. The `stores` object defines all available storage backends. We recommend always configuring the `memory` store so you can use it during testing.
 
-See also: [Rate limiter config stub](https://github.com/adonisjs/limiter/blob/2.x/stubs/config/limiter.stub)
+See also: [Rate limiter config stub](https://github.com/adonisjs/limiter/blob/3.x/stubs/config/limiter.stub)
 
 ### Environment variables
 
@@ -463,7 +465,7 @@ const reportsLimiter = limiter.use({
 
 ### Limiting expensive operations
 
-The `attempt` method executes a callback only if the rate limit hasn't been exceeded. It returns the callback's result, or `undefined` if the limit was reached:
+The `attempt` method executes a callback only if the rate limit hasn't been exceeded. It returns the callback's result, or `undefined` if the limit was reached. Pass an amount as the third argument to consume more than one request per attempt:
 
 ```ts title="app/services/reports_service.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -492,7 +494,7 @@ export async function generateUserReport(userId: number) {
 
 ### Preventing brute-force login attacks
 
-The `penalize` method is designed for scenarios where you want to consume a request only when an operation fails. This is perfect for login protection where you want to track failed attempts, not successful ones.
+The `penalize` method is designed for scenarios where you want to consume a request only when an operation fails. This is perfect for login protection where you want to track failed attempts, not successful ones. Like `attempt`, it accepts an amount as the third argument when a failure should consume more than one request.
 
 ```ts title="app/controllers/session_controller.ts"
 import User from '#models/user'
@@ -623,7 +625,7 @@ export async function handleApiRequest(userId: number) {
 
 ## Incrementing without throwing
 
-The `increment` method works like `consume` but does not throw an exception when the limit is exceeded, it also accepts an optional amount. Instead of throwing an exception, it returns the limiter response object, allowing you to check the remaining requests and decide how to handle the situation:
+The `increment` method works like `consume`, including the optional amount, but it does not throw an exception when the limit is exceeded. Instead, it returns the limiter response object, allowing you to compare the consumed requests against the limit and decide how to handle the situation:
 
 ```ts title="app/services/api_service.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -637,7 +639,11 @@ export async function handleApiRequest(userId: number) {
   const key = `api_user_${userId}`
   const response = await requestsLimiter.increment(key, 5)
 
-  if (response.remainingPoints < 0) {
+  /**
+   * The remaining count never goes below zero, so compare
+   * the consumed requests with the limit instead.
+   */
+  if (response.consumed > response.limit) {
     throw new Error('Rate limit exceeded')
   }
 
@@ -684,7 +690,7 @@ await requestsLimiter.block('a_unique_key', '30 mins')
 
 Sometimes you need to restore requests to a user. For example, if a background job completes, you might want to let the user queue another one.
 
-The decrement method reduces the request count. By default, it decrements by 1, but you can specify a custom amount as the second argument.
+The `decrement` method reduces the request count. By default, it decrements by 1, but you can specify a custom amount as the second argument.
 
 ```ts title="app/jobs/process_report.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -704,13 +710,13 @@ export async function processReportJob(userId: number) {
      * Job completed - give the slot back so
      * another job can be queued.
      */
-    await jobsLimiter.decrement(key, 5)
+    await jobsLimiter.decrement(key)
   })
 }
 ```
 
 :::info
-Just like increment and consume, providing an amount `<= 0` will cause the method to fallback to `1`.
+Just like `increment` and `consume`, providing an amount `<= 0` will cause the method to fallback to `1`.
 :::
 
 :::tip

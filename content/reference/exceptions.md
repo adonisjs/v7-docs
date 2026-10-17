@@ -51,7 +51,7 @@ if (error instanceof bouncerErrors.E_AUTHORIZATION_FAILURE) {
 
 ## E_TOO_MANY_REQUESTS
 
-The exception is raised by the [@adonisjs/rate-limiter](../guides/security/rate_limiting.md) package when a request exhausts all the requests allowed during a given duration. The exception is self-handled and [uses content-negotiation](../guides/security/rate_limiting.md#handling-throttleexception) to return an appropriate error response to the client.
+The exception is raised by the [@adonisjs/limiter](../guides/security/rate_limiting.md) package when a request exhausts all the requests allowed during a given duration. The exception is self-handled and [uses content-negotiation](../guides/security/rate_limiting.md#handling-throttleexception) to return an appropriate error response to the client.
 
 - **Status code**: 429
 - **Self handled**: Yes
