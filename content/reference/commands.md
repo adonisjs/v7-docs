@@ -558,6 +558,67 @@ node ace make:view posts/create
 node ace make:view posts/list
 ```
 
+## make\:page
+Create a new Inertia page component inside the `inertia/pages` directory. The command is registered by the `@adonisjs/inertia` package. It detects the frontend framework from the existing pages and prompts you when it cannot decide.
+
+- Form: `NA`
+- Suffix: `NA`
+- File name example: `posts/index.tsx` or `posts/index.vue`
+
+```sh
+node ace make:page posts/index
+# ./inertia/pages/posts/index.tsx
+```
+
+<dl>
+
+<dt>
+
+--react, --vue
+
+</dt>
+
+<dd>
+
+Skip framework detection and create a React or Vue component.
+
+```sh
+node ace make:page posts/index --vue
+# ./inertia/pages/posts/index.vue
+```
+
+</dd>
+
+<dt>
+
+--contents-from
+
+</dt>
+
+<dd>
+
+Use the contents of an existing file instead of the default stub. This is useful when scaffolding pages from your own templates.
+
+```sh
+node ace make:page posts/index --contents-from=stubs/page.tsx
+```
+
+</dd>
+
+<dt>
+
+--force
+
+</dt>
+
+<dd>
+
+Overwrite the page component if it already exists. You may use the `-f` alias.
+
+</dd>
+
+</dl>
+
 ## make\:provider
 
 Create a [service provider file](../guides/concepts/service_providers.md). Providers are stored inside the `providers` directory at the root of your application and use the following naming conventions.

@@ -371,12 +371,62 @@ export default defineConfig({
     // ...
   },
   // Replaced by inertia_middleware (see below)
+
+  ssr: {
+    enabled: false,
+    // [!code --]
+    entrypoint: 'inertia/app/ssr.tsx',
+    // [!code ++]
+    entrypoint: 'inertia/ssr.tsx',
+    // [!code --]
+    bundle: 'ssr/ssr.js',
+  },
 })
 ```
 
 - The `entrypoint` config option has been removed. This configuration option was not used anywhere.
 - The `history.encrypt` option has been renamed to `encryptHistory` as a top-level property.
 - The `sharedData` property has been removed in favor of the Inertia middleware (covered below).
+- The `ssr.bundle` option has been removed. The SSR bundle is now produced by `@adonisjs/vite` from the `ssr.entrypoint` file (covered below).
+
+### Inertia 3 and the Vite plugin
+The Inertia integration now targets Inertia 3. Upgrade the Inertia client package for your framework. Inertia 3 requires React 19 or Vue 3.5.
+
+```sh
+# React
+npm i @inertiajs/react@latest react@latest react-dom@latest
+
+# Vue
+npm i @inertiajs/vue3@latest vue@latest
+```
+
+Inertia 3 also ships client-side breaking changes, such as renamed router events and the removal of the bundled Axios client. Follow the [Inertia v3 upgrade guide](https://inertiajs.com/upgrade-guide) to update your frontend code.
+
+The Inertia Vite plugin has been removed. Remove it from `vite.config.ts` and declare the SSR entrypoint under the `serverEntryPoints` option of the AdonisJS Vite plugin instead. The `serverEntryPoints` entry is only needed when you use server-side rendering.
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import adonisjs from '@adonisjs/vite/client'
+// [!code --]
+import inertia from '@adonisjs/inertia/client'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    // [!code --]
+    inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.tsx' } }),
+    adonisjs({
+      // [!code --]
+      entrypoints: ['inertia/app/app.tsx'],
+      // [!code ++:2]
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'],
+      reload: ['resources/views/**/*.edge'],
+    }),
+  ],
+})
+```
 
 ### File structure changes
 The Inertia entrypoint and SSR files have been moved out of the `app` subdirectory and now live directly in the `inertia` root.
@@ -424,7 +474,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      * In that case, we must always assume that HttpContext is not fully hydrated
      * with all the properties.
      */
-    const { session, auth } = ctx as Partial<HttpContext>
+    const { auth } = ctx as Partial<HttpContext>
 
     /**
      * Data shared with all Inertia pages. Make sure you are using
@@ -432,11 +482,20 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      */
     return {
       errors: ctx.inertia.always(this.getValidationErrors(ctx)),
-      flash: ctx.inertia.always({
-        error: session?.flashMessages.get('error'),
-        success: session?.flashMessages.get('success'),
-      }),
       user: ctx.inertia.always(auth?.user ? UserTransformer.transform(auth.user) : undefined),
+    }
+  }
+
+  flash(ctx: HttpContext) {
+    /**
+     * Flash messages are sent in the dedicated `flash` field of the
+     * page object (read with `usePage().flash`) instead of props.
+     */
+    const { session } = ctx as Partial<HttpContext>
+
+    return {
+      error: session?.flashMessages.get('error') as string | undefined,
+      success: session?.flashMessages.get('success') as string | undefined,
     }
   }
 

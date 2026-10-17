@@ -227,7 +227,7 @@ Enables server-side rendering. See [Server-side rendering](#server-side-renderin
 :::
 
 :::option{name="ssr.entrypoint" type="string"}
-Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`.
+Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`. The same path must be listed under `serverEntryPoints` in `vite.config.ts` so it gets bundled for production.
 :::
 
 :::option{name="ssr.pages" type="string[] | (ctx, page) => boolean"}
@@ -1520,7 +1520,7 @@ See also: [Shield](../security/securing_ssr_applications.md#csrf-configuration-r
 
 Asset versioning tells the frontend when your JavaScript or CSS bundles have changed, triggering a full page reload instead of a partial update. This ensures users always run the latest version of your frontend code after a deployment.
 
-By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier. To pin the version to a custom value, set `assetsVersion` in `config/inertia.ts` to a git commit hash, build timestamp, or any other identifier you control.
+By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier. The hash is computed once and reused for the lifetime of the process. In development, the Vite dev server serves assets directly and the version stays constant. To pin the version to a custom value, set `assetsVersion` in `config/inertia.ts` to a git commit hash, build timestamp, or any other identifier you control.
 
 ```ts title="config/inertia.ts"
 const inertiaConfig = defineConfig({
@@ -1558,7 +1558,7 @@ async checkout({ inertia }: HttpContext) {
 
 ### Clearing browser history
 
-Call `inertia.clearHistory()` before rendering to clear the client-side history stack. This is useful after sign-out, where you don't want the user to navigate back to authenticated pages.
+Call `inertia.clearHistory()` to clear the client-side history stack on the next Inertia page response. This is useful after sign-out, where you don't want the user to navigate back to authenticated pages. When the session middleware is in use, the instruction is stored in the session, so it survives redirects and applies to the page rendered after the redirect.
 
 ```ts
 async destroy({ inertia, auth }: HttpContext) {
@@ -1591,7 +1591,7 @@ See [history encryption](https://inertiajs.com/history-encryption) on the Inerti
 
 Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO.
 
-The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntryPoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
+The starter kit ships with the `inertia/ssr.tsx` entrypoint, and `config/inertia.ts` already points at it. Enabling SSR takes two changes. First, turn on the `ssr.enabled` flag.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
@@ -1606,17 +1606,20 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-If you are adding SSR to an existing application, add the same entrypoint to `serverEntryPoints` in `vite.config.ts`.
+Then declare the same entrypoint under `serverEntryPoints` in `vite.config.ts`. AdonisJS loads the SSR entrypoint through Vite during development and imports the bundled file in production, so the build must know about it. Without this entry, production builds will not contain the SSR bundle and rendering will fail.
 
 ```ts title="vite.config.ts"
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 import adonisjs from '@adonisjs/vite/client'
 
 export default defineConfig({
   plugins: [
+    react(),
     adonisjs({
       entryPoints: ['inertia/app.tsx'],
-      serverEntryPoints: ['inertia/ssr.tsx'], // [!code highlight]
+      serverEntryPoints: ['inertia/ssr.tsx'], // [!code ++]
+      reload: ['resources/views/**/*.edge'],
     }),
   ],
 })
