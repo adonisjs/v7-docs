@@ -155,7 +155,7 @@ export default defineConfig({
     // bcrypt: drivers.bcrypt({
     //   rounds: 10,
     //   saltSize: 16,
-    //   version: '2b',
+    //   version: 0x62,
     // }),
   },
 })
@@ -223,6 +223,17 @@ Length of the raw hash output in bytes. The final PHC string will be longer.
 
 Argon2 supports an optional secret (sometimes called a "pepper") that adds an additional layer of protection. Unlike the salt which is stored with the hash, the secret is kept separately, typically in environment variables. Even if an attacker obtains your database, they cannot crack the hashes without the secret.
 
+The `secret` option accepts a `Secret` instance rather than a plain string, so the value is not leaked through logs or error messages. Validate the environment variable with `Env.schema.secret()` and the driver will release the value only when computing a hash.
+
+```ts title="start/env.ts"
+import { Env } from '@adonisjs/core/env'
+
+export default await Env.create(new URL('../', import.meta.url), {
+  // [!code ++]
+  HASH_SECRET: Env.schema.secret(),
+})
+```
+
 :::warning
 If you add a secret to an existing application, all previously hashed passwords become invalid because they were created without the secret and cannot be verified with it. You must either reset all passwords or implement a migration strategy that rehashes passwords on next login.
 :::
@@ -242,7 +253,8 @@ export default defineConfig({
       parallelism: 4,
       /**
        * The secret adds protection beyond what's stored in the database.
-       * Store this in your environment variables, never in code.
+       * env.get returns a Secret instance because of the
+       * Env.schema.secret() validation rule.
        */
       secret: env.get('HASH_SECRET'),
     }),
@@ -264,7 +276,7 @@ export default defineConfig({
     bcrypt: drivers.bcrypt({
       rounds: 10,
       saltSize: 16,
-      version: '2b',
+      version: 0x62,
     }),
   },
 })
@@ -279,8 +291,8 @@ Cost factor as a power of 2. A value of 10 means 2^10 (1024) iterations. Each in
 Length of the random salt in bytes.
 :::
 
-:::option{name="version" dataType="string" defaultValue="2b"}
-Bcrypt version identifier. Use `'2b'` (current) unless you need compatibility with older `'2a'` hashes.
+:::option{name="version" dataType="number" defaultValue="0x62"}
+Bcrypt version defined as the hex char code of the version letter. `0x62` produces `$2b$` hashes (current) and `0x61` produces `$2a$` hashes. Use `0x61` only when you need compatibility with older `2a` hashes.
 :::
 ::::
 
@@ -371,6 +383,8 @@ Rehashing during login is the standard approach because it's the only time you h
 
 Switching from one algorithm to another follows the same pattern as parameter updates. When you change the default driver, `needsReHash` returns `true` for any hash created with a different algorithm.
 
+However, `hash.verify` always uses the default driver and does not detect the algorithm from the hash. Verifying a Scrypt hash with the Argon2 driver returns `false`, so during the migration you must pick the driver that can read the stored hash.
+
 :::warning
 Keep your old driver configured until all users have logged in and their passwords have been rehashed. Removing the old driver before migration completes will prevent users with old hashes from authenticating. Monitor your database to track migration progress before removing the old configuration.
 :::
@@ -390,7 +404,7 @@ export default defineConfig({
      * Keep the old driver configured so existing hashes
      * can still be verified during the migration period.
      */
-    scrypt: drivers.scrypt(),
+    scrypt: drivers.scrypt({}),
     argon: drivers.argon2({
       variant: 'id',
       iterations: 3,
@@ -399,6 +413,42 @@ export default defineConfig({
     }),
   },
 })
+```
+
+Use the `isValidHash` method to find out whether the stored hash belongs to the old driver, and verify it with that driver. Once verified, `needsReHash` returns `true` and the password is rehashed with the new default.
+
+```ts title="app/services/auth_service.ts"
+import hash from '@adonisjs/core/services/hash'
+import User from '#models/user'
+
+export default class AuthService {
+  async login(email: string, password: string) {
+    const user = await User.findBy('email', email)
+    if (!user) {
+      return null
+    }
+
+    /**
+     * Hashes created before the migration are verified
+     * with the old driver. Everything else uses the default.
+     */
+    const hasher = hash.use('scrypt').isValidHash(user.password)
+      ? hash.use('scrypt')
+      : hash.use()
+
+    const isValid = await hasher.verify(user.password, password)
+    if (!isValid) {
+      return null
+    }
+
+    if (hash.needsReHash(user.password)) {
+      user.password = await hash.make(password)
+      await user.save()
+    }
+
+    return user
+  }
+}
 ```
 
 ## Using multiple drivers
@@ -509,7 +559,7 @@ For specialized requirements, you can create custom hash drivers. A driver must 
 
 ```ts title="app/hash_drivers/pbkdf2.ts"
 import crypto from 'node:crypto'
-import {
+import type {
   HashDriverContract,
   ManagerDriverFactory,
 } from '@adonisjs/core/types/hash'
@@ -533,7 +583,7 @@ export class Pbkdf2Driver implements HashDriverContract {
 
   /**
    * Check if a string looks like a hash from this driver.
-   * Used to determine which driver should verify a hash.
+   * Exposed as hash.isValidHash() to your application.
    */
   isValidHash(value: string): boolean {
     return value.startsWith('$pbkdf2$')
@@ -623,7 +673,7 @@ export function pbkdf2Driver(config: Pbkdf2Config): ManagerDriverFactory {
 Register your custom driver in the hash configuration.
 
 ```ts title="config/hash.ts"
-import { defineConfig, drivers } from '@adonisjs/core/hash'
+import { defineConfig } from '@adonisjs/core/hash'
 import { pbkdf2Driver } from '#app/hash_drivers/pbkdf2'
 
 export default defineConfig({
