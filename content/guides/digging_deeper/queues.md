@@ -17,6 +17,7 @@ This guide covers background job processing with queues in AdonisJS. You will le
 - Configure retry strategies with exponential, linear, or fixed backoff
 - Schedule recurring jobs using cron expressions or intervals
 - Start workers to process jobs from queues
+- Trace dispatched and executed jobs with OpenTelemetry
 - Test job dispatching with the fake adapter
 
 ## Overview
@@ -52,13 +53,16 @@ node ace add @adonisjs/queue
       ],
       preloads: [
         // ...other preloads
-        () => import('#start/scheduler')
+        {
+          file: () => import('#start/scheduler'),
+          environment: ['web'],
+        }
       ]
     }
     ```
 
 3. Creates the `config/queue.ts` file.
-4. Creates the `start/scheduler.ts` preload file for defining scheduled jobs.
+4. Creates the `start/scheduler.ts` preload file for defining scheduled jobs. The preload only runs in the `web` environment, so schedules are registered when your HTTP server starts.
 5. Defines the `QUEUE_DRIVER` environment variable and its validation.
 6. If you select the database driver, creates a migration to set up queue tables.
 
@@ -122,12 +126,13 @@ Global retry configuration applied to all jobs unless overridden at the queue or
 :::
 
 :::option{name="queues" dataType="Record<string, QueueConfig>"}
-Per-queue configuration allowing you to set different retry policies or default job options for specific queues.
+Per-queue configuration allowing you to set a different adapter, retry policy, or default job options for specific queues. Jobs dispatched to a queue use its `adapter` unless the dispatch selects one with `.with()`.
 
 ```ts title="config/queue.ts"
 {
   queues: {
     emails: {
+      adapter: 'database',
       retry: {
         maxRetries: 5,
       },
@@ -178,6 +183,8 @@ export default defineConfig({
   adapters: {
     database: drivers.database({
       connectionName: 'primary',
+      // Optional, defaults to 'queue_jobs'
+      tableName: 'queue_jobs',
     }),
   },
   // ...
@@ -208,6 +215,26 @@ export default class extends BaseSchema {
 ```
 
 You must have `@adonisjs/lucid` installed and configured for this adapter to work.
+
+:::warning
+Jobs tables created before `@adonisjs/queue@0.6.2` do not have the columns required by [job deduplication](#deduplicating-jobs). Create a migration that calls `addDedupColumns` once before using `.dedup()`.
+
+```ts title="database/migrations/xxxx_add_queue_dedup_columns.ts"
+import { BaseSchema } from '@adonisjs/lucid/schema'
+import { QueueSchemaService } from '@adonisjs/queue'
+
+export default class extends BaseSchema {
+  async up() {
+    const schemaService = new QueueSchemaService(this.db.getWriteClient())
+
+    // Pass your table name if you changed the default 'queue_jobs'
+    await schemaService.addDedupColumns()
+  }
+}
+```
+
+Tables created by the migration that ships with `0.6.2` and later already include these columns.
+:::
 
 #### Sync
 
@@ -930,6 +957,50 @@ When `true`, the worker finishes running jobs before stopping on SIGINT/SIGTERM 
 :::
 
 ::::
+
+## OpenTelemetry
+
+:::warning
+The OpenTelemetry integration is experimental. Its API may change in future releases.
+:::
+
+The `@adonisjs/queue/otel` entry point exports a `QueueInstrumentation` class that traces your jobs. It creates a **producer** span every time a job is dispatched and a **consumer** span every time a worker executes it, following the OpenTelemetry messaging semantic conventions. Spans you create inside `execute()`, such as database queries or HTTP calls, become children of the consumer span, so you can follow a job from the request that dispatched it to the queries it ran.
+
+If you use [@adonisjs/otel](/guides/digging-deeper/opentelemetry), register the instrumentation inside `config/otel.ts`. The `manuallyRegister` call hooks into the queue manager before it is initialized, which is how the instrumentation attaches the job context to the spans created during execution.
+
+```ts title="config/otel.ts"
+import env from '#start/env'
+import { defineConfig } from '@adonisjs/otel'
+import { QueueManager } from '@adonisjs/queue'
+import { QueueInstrumentation } from '@adonisjs/queue/otel'
+
+const queueInstrumentation = new QueueInstrumentation({
+  /**
+   * 'link' (default) starts a new trace for each job execution
+   * and links it to the dispatch span. 'parent' makes the
+   * execution a child of the dispatch span, in the same trace.
+   */
+  executionSpanLinkMode: 'link',
+})
+queueInstrumentation.manuallyRegister({ QueueManager })
+
+export default defineConfig({
+  serviceName: env.get('APP_NAME'),
+  serviceVersion: env.get('APP_VERSION'),
+  environment: env.get('APP_ENV'),
+  instrumentations: {
+    '@adonisjs/queue': queueInstrumentation,
+  },
+})
+```
+
+:::warning
+The worker runs through `bin/console.ts`, which does not load OpenTelemetry by default. Without it, you will only see producer spans. Import the `otel.ts` file at the top of `bin/console.ts` to trace job executions as well.
+
+```ts title="bin/console.ts"
+import '../otel.js' // [!code ++]
+```
+:::
 
 ## Testing
 
