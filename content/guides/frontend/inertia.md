@@ -684,6 +684,54 @@ import { Form, Link } from '@adonisjs/inertia/vue'
 
 ::::
 
+These components resolve route names using the [Tuyau client](./api_client.md) defined in `inertia/client.ts`, which they read from a `TuyauProvider` wrapping your application. The starter kits register the provider in the frontend entrypoint. If you are adding Inertia to an existing application, wrap the app yourself.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/app.tsx"
+import { client } from './client'
+import { createRoot } from 'react-dom/client'
+import { createInertiaApp } from '@inertiajs/react'
+import { TuyauProvider } from '@adonisjs/inertia/react'
+
+createInertiaApp({
+  // ...other options
+  setup({ el, App, props }) {
+    createRoot(el).render(
+      // [!code highlight:3]
+      <TuyauProvider client={client}>
+        <App {...props} />
+      </TuyauProvider>
+    )
+  },
+})
+```
+:::
+
+:::tab{title="Vue"}
+```ts title="inertia/app.ts"
+import { client } from '~/client'
+import { createApp, h } from 'vue'
+import { createInertiaApp } from '@inertiajs/vue3'
+import { TuyauProvider } from '@adonisjs/inertia/vue'
+
+createInertiaApp({
+  // ...other options
+  setup({ el, App, props, plugin }) {
+    createApp({
+      // [!code highlight]
+      render: () => h(TuyauProvider, { client }, { default: () => h(App, props) }),
+    })
+      .use(plugin)
+      .mount(el)
+  },
+})
+```
+:::
+
+::::
+
 ### Creating links
 
 The `Link` component creates navigation links using route names defined in your AdonisJS routes.

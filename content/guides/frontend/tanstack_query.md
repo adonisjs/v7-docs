@@ -6,19 +6,20 @@ description: Learn how to integrate TanStack Query with Tuyau for type-safe API 
 
 This guide covers the TanStack Query integration for Tuyau. You will learn how to:
 
-- Install and configure `@tuyau/react-query` or `@tuyau/vue-query`
+- Install and configure `@tuyau/react-query`, `@tuyau/vue-query`, or `@tuyau/svelte-query`
 - Generate type-safe query and mutation options
 - Implement infinite scrolling with pagination
 - Manage cache invalidation at different levels of granularity
+- Pass request options to the underlying HTTP client
 - Handle errors from failed API calls
 
 ## Overview
 
-The `@tuyau/react-query` and `@tuyau/vue-query` packages provide seamless integration between Tuyau and [TanStack Query](https://tanstack.com/query). Instead of creating custom hooks or composables, Tuyau generates type-safe options objects that you pass directly to TanStack Query's standard primitives like `useQuery`, `useMutation`, and `useInfiniteQuery`.
+The `@tuyau/react-query`, `@tuyau/vue-query`, and `@tuyau/svelte-query` packages provide seamless integration between Tuyau and [TanStack Query](https://tanstack.com/query). Instead of creating custom hooks or composables, Tuyau generates type-safe options objects that you pass directly to TanStack Query's standard primitives like `useQuery`, `useMutation`, and `useInfiniteQuery`.
 
 This approach gives you complete control over TanStack Query's features while maintaining end-to-end type safety. Query keys are automatically generated based on your route names and parameters, and cache invalidation becomes straightforward and type-safe. The integration works exclusively with route names, ensuring that your API calls remain decoupled from URL structures.
 
-Both adapters share the same API surface. The only differences are framework-specific imports and component syntax.
+All adapters share the same API surface. The only differences are framework-specific imports and component syntax. The examples in this guide use React and Vue. See [Svelte usage](#svelte-usage) for the Svelte specifics.
 
 ## Prerequisites
 
@@ -46,21 +47,29 @@ npm install @tanstack/vue-query @tuyau/vue-query
 ```
 :::
 
+:::tab{title="Svelte"}
+```bash
+npm install @tanstack/svelte-query @tuyau/svelte-query
+```
+:::
+
 ::::
 
 :::note
-Make sure `@tuyau/react-query` (or `@tuyau/vue-query`) and `@tuyau/core` are on compatible versions. If you see type errors after installing, check that both packages share the same major and prerelease tag (e.g., both on `1.x` or both on `next`).
+Keep the adapter and `@tuyau/core` on compatible versions. If you see type errors after installing, upgrade `@tuyau/core` to the latest `1.x` release. The Svelte adapter requires `@tuyau/core@1.2.2` or later, Svelte 5, and `@tanstack/svelte-query` v6.
 :::
 
 ## Setup
 
 Create your Tuyau client with TanStack Query integration. The `api` object provides access to all your routes with type-safe query and mutation options. The `client` object is the core Tuyau client, and `queryClient` is the standard TanStack Query client used for cache management and invalidation.
 
+The examples import the registry from the `@generated` alias configured in Inertia applications. In a monorepo, import it from your backend package instead (for example, `@my-app/backend/registry`). See the [installation guide](./api_client.md#installation) for both setups.
+
 ::::tabs
 
 :::tab{title="React"}
 ```ts title="src/lib/client.ts"
-import { registry } from '~registry'
+import { registry } from '@generated/registry'
 import { createTuyau } from '@tuyau/core/client'
 import { QueryClient } from '@tanstack/react-query'
 import { createTuyauReactQueryClient } from '@tuyau/react-query'
@@ -74,7 +83,7 @@ export const api = createTuyauReactQueryClient({ client })
 
 :::tab{title="Vue"}
 ```ts title="src/lib/client.ts"
-import { registry } from '~registry'
+import { registry } from '@generated/registry'
 import { createTuyau } from '@tuyau/core/client'
 import { QueryClient } from '@tanstack/vue-query'
 import { createTuyauVueQueryClient } from '@tuyau/vue-query'
@@ -83,6 +92,20 @@ export const queryClient = new QueryClient()
 
 export const client = createTuyau({ baseUrl: import.meta.env.VITE_API_URL, registry })
 export const api = createTuyauVueQueryClient({ client })
+```
+:::
+
+:::tab{title="Svelte"}
+```ts title="src/lib/client.ts"
+import { registry } from '@generated/registry'
+import { createTuyau } from '@tuyau/core/client'
+import { QueryClient } from '@tanstack/svelte-query'
+import { createTuyauSvelteQueryClient } from '@tuyau/svelte-query'
+
+export const queryClient = new QueryClient()
+
+export const client = createTuyau({ baseUrl: import.meta.env.VITE_API_URL, registry })
+export const api = createTuyauSvelteQueryClient({ client })
 ```
 :::
 
@@ -100,6 +123,35 @@ const postsQuery = useQuery(
     {},
     {
       retry: 3, // TanStack Query handles retries
+    }
+  )
+)
+```
+
+### Request options
+
+The options you pass to `createTuyau` (such as `headers`, `timeout`, or `hooks`) apply to every request made through the adapter. To set options only for TanStack Query requests, pass them as `globalOptions` when creating the adapter. To set options for a single query or mutation, pass them under the `tuyau` key of the TanStack Query options. Local `tuyau` options override `globalOptions`.
+
+Both accept any [Ky option](https://github.com/sindresorhus/ky#options) except `retry`, which stays disabled, plus an `abortOnUnmount` flag that forwards TanStack Query's abort signal to the request. When enabled, the request is cancelled if the query is no longer needed, for example when the component unmounts.
+
+```ts title="src/lib/client.ts"
+export const api = createTuyauReactQueryClient({
+  client,
+  globalOptions: {
+    timeout: 10_000,
+    abortOnUnmount: true,
+  },
+})
+```
+
+```ts
+const postsQuery = useQuery(
+  api.posts.index.queryOptions(
+    {},
+    {
+      tuyau: {
+        headers: { 'X-Request-Source': 'dashboard' },
+      },
     }
   )
 )
@@ -627,23 +679,25 @@ const createProduct = useMutation(
 
 ### queryFilter() - Custom filtering
 
-Use `queryFilter()` with a predicate function for fine-grained control over which queries to invalidate. The predicate function receives the query state and can inspect cached data to make invalidation decisions.
+Use `queryFilter()` to build a filter for the queries of a single endpoint. The first argument narrows the filter to a specific request, and the second argument accepts any [TanStack Query filter](https://tanstack.com/query/latest/docs/framework/react/guides/filters#query-filters), such as a `predicate` function that receives the query and can inspect its cached data. The `pathFilter()` method accepts the same filters as its only argument.
 
 ```ts
 const archivePost = useMutation(
   api.posts.archive.mutationOptions({
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       /**
-       * Invalidate only queries where the post is marked as active.
-       * Use the predicate to inspect the cached data and decide
-       * whether to invalidate based on custom logic.
+       * Invalidate the cached post only when it is still
+       * marked as active.
        */
-      const filter = api.posts.pathFilter({
-        predicate: (query) => {
-          const data = query.state.data
-          return data?.post?.status === 'active'
-        },
-      })
+      const filter = api.posts.show.queryFilter(
+        { params: { id: variables.params.id } },
+        {
+          predicate: (query) => {
+            const data = query.state.data
+            return data?.post?.status === 'active'
+          },
+        }
+      )
 
       queryClient.invalidateQueries(filter)
     }
@@ -651,9 +705,11 @@ const archivePost = useMutation(
 )
 ```
 
+Infinite queries have their own `infiniteQueryKey()` and `infiniteQueryFilter()` helpers, which work like `queryKey()` and `queryFilter()`.
+
 ## Error handling
 
-When an API call fails, Tuyau throws an `HTTPError` (from [Ky](https://github.com/sindresorhus/ky)) that TanStack Query captures and exposes through its standard error state.
+When an API call fails, Tuyau throws a `TuyauError` that TanStack Query captures and exposes through its standard error state. The `error` is typed using the error responses inferred from your controller, exactly like the [`.safe()` errors](./api_client.md#error-handling) of the core client.
 
 ### Accessing errors in queries and mutations
 
@@ -669,19 +725,24 @@ if (postsQuery.isError) {
 
 ### Inspecting HTTP status codes
 
-The `error` object is a Ky `HTTPError` with a `response` property. Use it to inspect the status code.
+Use `isStatus()` to narrow the error to a specific status code. After the check, `error.response` is typed as the payload your controller returns for that status. Use `isValidationError()` for the 422 responses of routes using `request.validateUsing()`, and the `kind` property to tell network failures apart from HTTP errors.
 
-```ts
-import { HTTPError } from 'ky'
+```tsx
+const createPost = useMutation(api.posts.store.mutationOptions())
 
-const postsQuery = useQuery(api.posts.index.queryOptions())
-
-if (postsQuery.isError && postsQuery.error instanceof HTTPError) {
-  const status = postsQuery.error.response.status
-
-  if (status === 401) {
-    window.location.href = '/login'
+if (createPost.error?.isValidationError()) {
+  // error.response is typed as { errors: SimpleError[] }
+  for (const err of createPost.error.response.errors) {
+    console.log(err.field, err.message)
   }
+}
+
+if (createPost.error?.isStatus(401)) {
+  window.location.href = '/login'
+}
+
+if (createPost.error?.kind === 'network') {
+  console.log('The server is unreachable')
 }
 ```
 
@@ -690,11 +751,14 @@ if (postsQuery.isError && postsQuery.error instanceof HTTPError) {
 Rather than checking status codes in every component, configure a global handler using the `queryClient` default options. This prevents retrying unauthorized requests and lets you handle 401s consistently across your application.
 
 ```ts title="src/lib/client.ts"
+import { QueryClient } from '@tanstack/react-query'
+import { TuyauError } from '@tuyau/core/client'
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: (failureCount, error) => {
-        if (error instanceof HTTPError && error.response.status === 401) {
+        if (error instanceof TuyauError && error.status === 401) {
           return false // Don't retry on 401
         }
         return failureCount < 3
@@ -703,3 +767,34 @@ export const queryClient = new QueryClient({
   },
 })
 ```
+
+## Svelte usage
+
+The Svelte adapter exposes the same `queryOptions()`, `infiniteQueryOptions()`, `mutationOptions()`, and cache helpers. TanStack Svelte Query v6 expects a function returning the options, so wrap each call in an arrow function. Svelte tracks the reactive state read inside the function and re-evaluates the options when it changes.
+
+```svelte title="src/routes/posts/+page.svelte"
+<script lang="ts">
+  import { createQuery, createMutation } from '@tanstack/svelte-query'
+  import { api, queryClient } from '$lib/client'
+
+  let search = $state('')
+
+  const posts = createQuery(() =>
+    api.posts.index.queryOptions({ query: { search } })
+  )
+
+  const createPost = createMutation(() =>
+    api.posts.store.mutationOptions({
+      onSuccess: () => queryClient.invalidateQueries(api.posts.pathFilter()),
+    })
+  )
+</script>
+
+<input bind:value={search} placeholder="Search posts..." />
+
+{#each posts.data?.posts ?? [] as post (post.id)}
+  <article>{post.title}</article>
+{/each}
+```
+
+Call `createQuery` and the other TanStack functions during component initialization, inside a `QueryClientProvider`. Outside of a provider, pass the query client as the second argument, for example `createQuery(() => options, () => queryClient)`.

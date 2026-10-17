@@ -263,7 +263,7 @@ export default hooks.routesScanned((devServer, routesScanner) => {
 ```
 
 :::note
-The types extracted by the routes scanner are internal import references pointing to your controllers and validators. They are not fully resolved standalone types that can be used in a separate project. Generating standalone types requires additional tooling like [Tuyau](https://tuyau.julr.dev/docs/introduction).
+The types extracted by the routes scanner are internal import references pointing to your controllers and validators. They are not fully resolved standalone types that can be used in a separate project. Generating standalone types requires additional tooling like [Tuyau](../frontend/api_client.md).
 :::
 
 ## IndexGenerator

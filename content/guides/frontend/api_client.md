@@ -186,11 +186,17 @@ Then, in your frontend workspace, add your backend as a workspace dependency so 
 
 The `"*"` version range tells npm to resolve `@my-app/backend` from your local workspace. Make sure the package name matches the `name` field in your backend's `package.json`.
 
+:::warning
+The frontend must use the same `@tuyau/core` version as the backend that generates the registry. Starting with `@tuyau/core@1.2.3`, the registry encodes route tokens in a compact format that older clients cannot read.
+
+If your frontend installs its own copy of `@tuyau/core` (for example, with pnpm, which does not hoist dependencies), pin it to the same version as the backend and upgrade both together.
+:::
+
 :::
 
 :::step{title="Enable experimental decorators"}
 
-Tuyau uses TypeScript decorators internally. Enable them in your frontend `tsconfig.json`. You also need to include your backend source files so TypeScript can resolve the shared types during type-checking.
+The generated registry references your backend controllers, validators, and transformers, so your frontend `tsconfig.json` must include the backend source files for TypeScript to resolve the shared types during type-checking. Since the backend code uses decorators (for example, in Lucid models), you must also enable `experimentalDecorators`.
 
 ```json title="apps/frontend/tsconfig.json"
 {
@@ -400,7 +406,7 @@ const user = await client.api.users.show({
 Each segment of the route name becomes a property access. The route `users.show` becomes `client.api.users.show()`. This syntax provides excellent autocomplete and keeps your code clean.
 
 :::note
-Route name segments that contain underscores are converted to camelCase in the proxy syntax. For example, a route named `auth.new_account.store` becomes `client.api.auth.newAccount.store()`.
+Route name segments that contain underscores or dashes are converted to camelCase in the proxy syntax. For example, a route named `auth.new_account.store` (or `auth.new-account.store`) becomes `client.api.auth.newAccount.store()`.
 :::
 
 ### Using the request method
@@ -422,7 +428,9 @@ This approach is functionally identical to the proxy syntax but provides a diffe
 
 ### Using HTTP method functions
 
-Sometimes you need to call endpoints that are not part of your AdonisJS backend, for example a third-party API or a legacy service. In these cases, you can use HTTP method functions that accept URLs directly.
+The HTTP method functions (`get`, `post`, `put`, `patch`, `delete`, and `head`) look up an endpoint by its HTTP method and route pattern instead of its name. They are useful for routes that have no meaningful name, or when you prefer to think in terms of URLs.
+
+The pattern must match a route pattern from the generated registry exactly, including the leading slash and the parameter placeholders. Tuyau substitutes the `params` into the pattern to build the final URL. Calling a pattern that does not exist in the registry is a type error and throws at runtime, so you cannot use these functions to call third-party APIs.
 
 ```ts
 const user = await client.get('/users/:id', {
@@ -439,8 +447,6 @@ const updated = await client.patch('/posts/:id', {
   body: { title: 'Updated title' }
 })
 ```
-
-This syntax mirrors the fetch API but maintains type safety for parameters and responses.
 
 ## Working with parameters
 
@@ -861,17 +867,16 @@ const profileUrl = urlFor('users.profile', { id: '123' })
 
 ### Method-specific URL generation
 
-For more control, use method-specific variants like `urlFor.get` or `urlFor.post`. These return an object containing both the HTTP method and URL.
+For more control, use method-specific variants like `urlFor.get` or `urlFor.post`. They only look up routes registered for that HTTP method and return an object containing the URL, the HTTP method, and a `form` object with `action` and `method` properties. This is useful when you need to know both the URL and which HTTP method should be used, for example when building generic link or form components.
 
 ```ts
 const userUrl = urlFor.get('users.show', { id: 1 })
-// Returns: { method: 'get', url: '/users/1' }
+// userUrl.url: '/users/1'
+// userUrl.method: 'GET'
 
 const createUserUrl = urlFor.post('users.store')
-// Returns: { method: 'post', url: '/users' }
+// createUserUrl.form: { action: '/users', method: 'POST' }
 ```
-
-This is useful when you need to know both the URL and which HTTP method should be used, for example when building generic link components.
 
 ### Query parameters in URLs
 
@@ -881,7 +886,7 @@ Add query parameters to generated URLs using the `qs` option. Query parameters a
 const postsUrl = urlFor.get('posts.index', {}, {
   qs: { page: 2, limit: 10, status: 'published' }
 })
-// Returns: { method: 'get', url: '/posts?page=2&limit=10&status=published' }
+// postsUrl.url: '/posts?page=2&limit=10&status=published'
 ```
 
 ### Wildcard parameters
@@ -892,7 +897,7 @@ For routes with wildcard parameters, pass them as arrays.
 // Route: router.get('docs/*', [controllers.Docs, 'show'])
 
 const docsUrl = urlFor.get('docs.show', { '*': ['introduction', 'getting-started'] })
-// Returns: { method: 'get', url: '/docs/introduction/getting-started' }
+// docsUrl.url: '/docs/introduction/getting-started'
 ```
 
 ### Positional parameters
@@ -908,7 +913,7 @@ const url1 = urlFor.get('users.posts.show', { id: '123', postId: '456' })
 // Using array syntax (positional)
 const url2 = urlFor.get('users.posts.show', ['123', '456'])
 
-// Both return: { method: 'get', url: '/users/123/posts/456' }
+// Both url1.url and url2.url are '/users/123/posts/456'
 ```
 
 Positional parameters can be convenient when parameter names are obvious from context.
@@ -1043,7 +1048,7 @@ const post = await client.api.posts.show({ params: { id: '1' } })
 
 ## SuperJSON
 
-As described above, when data crosses the HTTP boundary, rich JavaScript types like `Date`, `BigInt`, `Map`, or `Set` are lost — they get serialized to strings or plain objects by `JSON.stringify()`. [SuperJSON](https://github.com/flightcontrolhq/superjson) solves this by automatically preserving type information during serialization, so you receive proper typed values on the frontend instead of plain strings.
+As described above, when data crosses the HTTP boundary, rich JavaScript types like `Date`, `BigInt`, `Map`, or `Set` are lost, since they get serialized to strings or plain objects by `JSON.stringify()`. [SuperJSON](https://github.com/flightcontrolhq/superjson) solves this by automatically preserving type information during serialization, so you receive proper typed values on the frontend instead of plain strings.
 
 The `@tuyau/superjson` package provides both a server-side middleware and a client-side plugin that work together transparently.
 
@@ -1084,7 +1089,7 @@ That's it for the basic setup. Native JavaScript types like `Date`, `BigInt`, `M
 
 ### Custom recipes
 
-SuperJSON only handles native JavaScript types out of the box. If your application uses custom classes — like Luxon `DateTime` which is used by Lucid models for date fields — SuperJSON won't recognize them and they will end up as plain strings on the frontend.
+SuperJSON only handles native JavaScript types out of the box. If your application uses custom classes, like the Luxon `DateTime` used by Lucid models for date fields, SuperJSON won't recognize them and they will end up as plain strings on the frontend.
 
 You can teach SuperJSON how to handle any custom type by registering a recipe with three things: an `isApplicable` check to identify the type, a `serialize` function to convert it to a JSON-safe value, and a `deserialize` function to reconstruct it on the other side.
 
@@ -1237,7 +1242,9 @@ credentials: 'include'
 ::::
 
 :::note
-When `credentials: 'include'` is set, Tuyau automatically handles CSRF protection. It reads the `XSRF-TOKEN` cookie and sends it as an `X-XSRF-TOKEN` header with every request. No extra configuration is needed.
+Tuyau automatically handles CSRF protection in the browser. Before every request, it reads the `XSRF-TOKEN` cookie from `document.cookie` and, when present, sends it as an `X-XSRF-TOKEN` header. No extra configuration is needed.
+
+The browser only exposes cookies set for the frontend's own domain, so this works when both apps share a domain. When the frontend and backend live on different domains, attach the token yourself using the `hooks.beforeRequest` option.
 :::
 
 ### Advanced options
@@ -1338,14 +1345,14 @@ By default, `generateRegistry` includes all named routes. Use the `routes` optio
 ```ts title="adonisrc.ts"
 generateRegistry({
   routes: {
-    only: ['api.*'],                          // substring match
+    only: ['api.'],                           // substring match
     // or
     except: [/^admin\./, (name) => name.startsWith('internal.')],
   },
 })
 ```
 
-Filters accept strings (substring match), RegExp, or functions. You cannot use `only` and `except` together.
+Filters accept strings (substring match), RegExp, or functions receiving the route name. You cannot use `only` and `except` together. See [Excluding routes from frontend bundle](../basics/url_builder.md#excluding-routes-from-frontend-bundle) for more examples.
 
 ## Related resources
 
@@ -1368,16 +1375,17 @@ function App() {
 }
 ```
 
-The `<Link>` component's `route` prop is fully typed. TypeScript ensures you use valid route names and provide required parameters. See the [Inertia documentation](https://docs.adonisjs.com/guides/inertia) for complete details on this integration and additional features.
+The `<Link>` component's `route` prop is fully typed. TypeScript ensures you use valid route names and provide required parameters. See the [Inertia documentation](./inertia.md) for complete details on this integration and additional features.
 
 ### TanStack Query integration
 
-The `@tuyau/tanstack-query` package provides React hooks that integrate Tuyau with TanStack Query (formerly React Query) for data fetching, caching, and state management. See the [TanStack Query guide](./tanstack_query.md) for instructions on setting up and using these hooks in your React components.
+The `@tuyau/react-query`, `@tuyau/vue-query`, and `@tuyau/svelte-query` packages integrate Tuyau with TanStack Query for data fetching, caching, and state management. They generate type-safe options objects that you pass to TanStack Query's own primitives. See the [TanStack Query guide](./tanstack_query.md) for instructions on setting up and using them.
 
 ### Starter kits
 
 Rather than setting up Tuyau manually, consider using one of these starter kits with Tuyau pre-configured:
 
-- **[React Starter Kit](https://github.com/adonisjs/react-starter-kit)** - Official AdonisJS starter with React, Inertia, and Tuyau ready to use
-- **[Vue Starter Kit](https://github.com/adonisjs/vue-starter-kit)** - Official AdonisJS starter with Vue, Inertia, and Tuyau ready to use
-- **[Monorepo Starter Kit](https://github.com/Julien-R44/adonis-starter-kit)** - Complete monorepo setup with separate frontend and backend packages
+- **[Inertia React starter kit](https://github.com/adonisjs/starter-kits/tree/main/inertia-react)**: Official AdonisJS starter with React, Inertia, and Tuyau ready to use.
+- **[Inertia Vue starter kit](https://github.com/adonisjs/starter-kits/tree/main/inertia-vue)**: Official AdonisJS starter with Vue, Inertia, and Tuyau ready to use.
+- **[API monorepo starter kit](https://github.com/adonisjs/starter-kits/tree/main/api-monorepo)**: Official monorepo setup with an AdonisJS API backend and a frontend workspace consuming it through Tuyau.
+- **[TanStack Router starter kit](https://github.com/Julien-R44/adonis-starter-kit)**: Community monorepo setup with a TanStack Router frontend and Tuyau.

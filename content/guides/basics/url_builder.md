@@ -337,7 +337,7 @@ urlFor('posts.index', [], {
 
 You can configure which routes are available in the frontend URL builder to reduce bundle size and prevent exposing internal routes. The URL builder is generated using an Assembler hook named `generateRegistry` registered in your `adonisrc.ts` file.
 
-Define routes to exclude using the `exclude` option.
+Use the `routes.except` option to list the routes to leave out of the generated registry.
 
 ```ts title="adonisrc.ts"
 import { defineConfig } from '@adonisjs/core/app'
@@ -347,22 +347,38 @@ export default defineConfig({
   hooks: {
     init: [
       generateRegistry({
-        exclude: ['admin.*'],
+        routes: {
+          except: ['admin.'],
+        },
       }),
     ],
   },
 })
 ```
 
-The exclude pattern can use one of the following approaches, tested against the route name:
-
-:::option{name="Wildcard pattern"}
-
-Exclude all routes starting with the prefix before the wildcard.
+Alternatively, use the `routes.only` option to list the routes to keep. Every other route is left out. You cannot use `only` and `except` at the same time, and doing so raises an error when the registry is generated.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: ['admin.*', 'api.internal.*'],
+  routes: {
+    only: ['posts.', 'session.'],
+  },
+})
+```
+
+Each pattern is tested against the route name and can use one of the following approaches.
+
+::::options
+
+:::option{name="String"}
+
+Matches every route whose name contains the string. For example, `'admin.'` matches `admin.users.index` and `admin.posts.store`. Strings are not glob patterns, so a value like `'admin.*'` only matches route names that literally contain `admin.*`.
+
+```ts title="adonisrc.ts"
+generateRegistry({
+  routes: {
+    except: ['admin.', 'api.internal.'],
+  },
 })
 ```
 
@@ -370,45 +386,44 @@ generateRegistry({
 
 :::option{name="Regular expression"}
 
-Use a custom regular expression to exclude matching routes.
+Matches every route whose name passes the regular expression. Use it when you need to anchor the match, for example to target a prefix only.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [/^admin\./, /^api\.internal\./],
+  routes: {
+    except: [/^admin\./, /^api\.internal\./],
+  },
 })
 ```
 
 :::
 
-:::option{name="Custom function"}
+:::option{name="Function"}
 
-Write a custom function for advanced filtering logic. Return `false` to skip the route and `true` to include it.
+Receives the route name and returns `true` when the route matches the pattern. With `except`, returning `true` leaves the route out. With `only`, returning `true` keeps it.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [
-    (route) => {
-      // Exclude all routes on the admin domain
-      if (route.domain === 'admin.myapp.com') {
-        return false
-      }
-      // Include all other routes
-      return true
-    }
-  ],
+  routes: {
+    except: [(routeName) => routeName.startsWith('internal.')],
+  },
 })
 ```
 
 :::
 
-You can combine multiple patterns for complex filtering requirements.
+::::
+
+You can combine multiple patterns in the same list. A route matches the list when it matches at least one of the patterns.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [
-    'admin.*',
-    /^api\.internal\./,
-    (route) => route.domain !== 'admin.myapp.com'
-  ],
+  routes: {
+    except: [
+      'admin.',
+      /^api\.internal\./,
+      (routeName) => routeName.endsWith('.debug'),
+    ],
+  },
 })
 ```

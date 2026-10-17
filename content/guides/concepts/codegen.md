@@ -74,7 +74,7 @@ The `RoutesList` interface containing every registered route, including its name
 
 ::::
 
-Packages can extend the same process. For example, Tuyau uses the generated route information to create a typed API client that knows your endpoints, parameters, and response types.
+Packages can extend the same process. For example, the `generateRegistry` hook from [Tuyau](../frontend/api_client.md) uses the scanned routes to write a registry to `.adonisjs/client/registry`. The registry powers a typed API client and frontend URL builder that know your endpoints, parameters, and response types.
 
 ## How codegen runs
 
