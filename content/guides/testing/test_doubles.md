@@ -139,7 +139,10 @@ test.group('User registration', () => {
      * Assert the email was sent with correct recipient and subject
      */
     fake.mails.assertSent(VerifyEmailNotification, ({ message }) => {
-      return message.hasTo('user@example.com').hasSubject('Please verify your email address')
+      return (
+        message.hasTo('user@example.com') &&
+        message.hasSubject('Please verify your email address')
+      )
     })
   })
 

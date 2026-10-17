@@ -381,9 +381,9 @@ if (error instanceof redisErrors.E_MULTIPLE_REDIS_PSUBSCRIPTIONS) {
 
 The exception is raised by the `@adonisjs/mail` package when unable to send the email using a given transport. Usually, this will happen when the HTTP API of the email service returns a non-200 HTTP response.
 
-You may access the network request error using the `error.cause` property. The `cause` property is the [error object](https://github.com/sindresorhus/got/blob/main/documentation/8-errors.md) returned by `got` (npm package).
+You may access the network request error using the `error.cause` property. The `cause` property is the [error object](https://github.com/sindresorhus/ky#httperror) thrown by `ky` (npm package).
 
-- **Status code**: 400
+- **Status code**: 500
 - **Self handled**: No
 
 ```ts

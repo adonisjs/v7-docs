@@ -149,6 +149,8 @@ After the email has been queued, the event is dispatched by the `@adonisjs/mail`
 import emitter from '@adonisjs/core/services/emitter'
 
 emitter.on('mail:queued', (event) => {
+  console.log(event.metaData)
+
   console.log(event.mailerName)
   console.log(event.message)
   console.log(event.views)

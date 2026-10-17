@@ -104,15 +104,17 @@ export default class PostsController {
 For contexts outside of templates and HTTP responses, such as background jobs, email notifications, or service classes, import the `urlFor` function from the URL builder service.
 
 ```ts title="app/services/notification_service.ts"
+import mail from '@adonisjs/mail/services/main'
 import { urlFor } from '@adonisjs/core/services/url_builder'
 
 export default class NotificationService {
   async sendPostNotification(post: Post) {
     const postUrl = urlFor('posts.show', { id: post.id })
-    
-    await mail.send({
-      subject: 'New post published',
-      html: `<a href="${postUrl}">View post</a>`
+
+    await mail.send((message) => {
+      message
+        .subject('New post published')
+        .html(`<a href="${postUrl}">View post</a>`)
     })
   }
 }

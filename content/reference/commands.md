@@ -682,6 +682,34 @@ node ace make:mail storage --intent=warning
 
 </dd>
 
+<dt>
+
+--contents-from
+
+</dt>
+
+<dd>
+
+Use the contents of the given file as the generated mail class instead of the default stub.
+
+```sh
+node ace make:mail shipment --contents-from=./stubs/shipment_mail.ts
+```
+
+</dd>
+
+<dt>
+
+--force
+
+</dt>
+
+<dd>
+
+Overwrite the mail file if it already exists. Can also be passed as `-f`.
+
+</dd>
+
 </dl>
 
 ## make\:policy
