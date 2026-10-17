@@ -35,8 +35,9 @@ node ace add @adonisjs/session
 1. Installs the `@adonisjs/session` package using the detected package manager.
 2. Registers the `@adonisjs/session/session_provider` service provider inside the `adonisrc.ts` file.
 3. Creates the `config/session.ts` configuration file.
-4. Defines the `SESSION_DRIVER` environment variable.
+4. Defines the `SESSION_DRIVER` environment variable and its validation inside the `start/env.ts` file.
 5. Registers the `@adonisjs/session/session_middleware` middleware inside the `start/kernel.ts` file.
+6. Registers the `@adonisjs/session/commands` commands inside the `adonisrc.ts` file.
 :::
 
 ## Choosing a storage driver
@@ -99,8 +100,10 @@ export default defineConfig({
     }),
 
     dynamodb: stores.dynamodb({
-      region: env.get('AWS_REGION'),
-      endpoint: env.get('AWS_ENDPOINT'),
+      clientConfig: {
+        region: env.get('AWS_REGION'),
+        endpoint: env.get('AWS_ENDPOINT'),
+      },
       tableName: 'sessions',
     }),
   }
@@ -111,11 +114,29 @@ export default defineConfig({
 
 :::option{name="age" type="string | number"}
 
-Session lifetime before expiration. Accepts a string duration like `'2 hours'` or `'7 days'`, or a number in milliseconds. After this period, the session expires and data is deleted.
+Session lifetime before expiration. Accepts a string duration like `'2 hours'` or `'7 days'`, or a number in seconds. After this period of inactivity, the session expires and data is deleted. Defaults to `'2h'`.
 ```ts
 age: '2 hours'
 // or
-age: 7200000 // 2 hours in milliseconds
+age: 7200 // 2 hours in seconds
+```
+
+:::
+
+:::option{name="enabled" dataType="boolean"}
+
+Turns session management on or off. When `false`, the session middleware skips reading and writing sessions. Defaults to `true`.
+```ts
+enabled: true
+```
+
+:::
+
+:::option{name="cookieName" dataType="string"}
+
+The name of the cookie that stores the session ID. Defaults to `'adonis_session'`, and the generated config file sets it to `'adonis-session'`. Only change this if it conflicts with other cookies in your application.
+```ts
+cookieName: 'adonis-session'
 ```
 
 :::
@@ -162,7 +183,7 @@ SESSION_DRIVER=cookie
 
 :::option{name="cookie" type="object"}
 
-Cookie configuration object that controls how the session cookie behaves. This includes settings for cookie name, domain, path, and security options. See the [Cookie configuration](#cookie-configuration) section for detailed options.
+Cookie configuration object that controls how the session cookie behaves. This includes settings for domain, path, and security options. The cookie lifetime is computed from `age` and `clearWithBrowser`, so `maxAge` and `expires` are not accepted here. See the [Cookie configuration](#cookie-configuration) section for detailed options.
 
 :::
 
@@ -179,17 +200,6 @@ An object defining all available session stores. Each key represents a driver na
 Sessions use cookies to store the session ID (or the entire session data for the cookie driver). Configure cookie behavior with these options:
 
 ::::options
-
-:::option{name="cookie.name" dataType="string"}
-
-The name of the cookie that stores the session ID. Only change this if it conflicts with other cookies in your application.
-```ts
-cookie: {
-  name: 'adonis-session'
-}
-```
-
-:::
 
 :::option{name="cookie.domain" dataType="string"}
 
@@ -304,7 +314,7 @@ The Database driver stores session data in SQL databases, ideal for production a
 
 :::option{name="stores.database.connectionName" dataType="string"}
 
-The name of the database connection to use for session storage. This connection must be configured in your `config/database.ts` file.
+The name of the database connection to use for session storage. This connection must be configured in your `config/database.ts` file. Defaults to the primary connection.
 ```ts
 stores: {
   database: stores.database({
@@ -322,6 +332,19 @@ The name of the database table where session data will be stored. Defaults to `'
 stores: {
   database: stores.database({
     tableName: 'sessions'
+  })
+}
+```
+
+:::
+
+:::option{name="stores.database.gcProbability" dataType="number"}
+
+The probability (in percent) that a request deletes the expired sessions from the table. Defaults to `2`, meaning 2% of the requests run the cleanup. Set it to `0` to disable the cleanup and delete expired rows with your own scheduled job instead.
+```ts
+stores: {
+  database: stores.database({
+    gcProbability: 2
   })
 }
 ```
@@ -357,26 +380,33 @@ npm install @aws-sdk/client-dynamodb
 
 ::::options
 
-:::option{name="stores.dynamodb.region" dataType="string"}
+:::option{name="stores.dynamodb.clientConfig" dataType="DynamoDBClientConfig"}
 
-The AWS region where your DynamoDB table is located.
+The configuration used to create a new `DynamoDBClient`. It accepts every option of the AWS SDK client, such as `region`, `endpoint` (useful with DynamoDB Local), and `credentials`.
 ```ts
 stores: {
   dynamodb: stores.dynamodb({
-    region: env.get('AWS_REGION')
+    clientConfig: {
+      region: env.get('AWS_REGION'),
+      endpoint: env.get('AWS_ENDPOINT'),
+    }
   })
 }
 ```
 
 :::
 
-:::option{name="stores.dynamodb.endpoint" dataType="string"}
+:::option{name="stores.dynamodb.client" dataType="DynamoDBClient"}
 
-Optional custom endpoint URL for DynamoDB. Useful for local development with DynamoDB Local or when using custom endpoints.
+An existing `DynamoDBClient` instance to reuse, instead of `clientConfig`. Define one of the two options.
 ```ts
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+
+const client = new DynamoDBClient({ region: env.get('AWS_REGION') })
+
 stores: {
   dynamodb: stores.dynamodb({
-    endpoint: env.get('AWS_ENDPOINT')
+    client
   })
 }
 ```
@@ -385,11 +415,24 @@ stores: {
 
 :::option{name="stores.dynamodb.tableName" dataType="string"}
 
-The name of the DynamoDB table where session data will be stored.
+The name of the DynamoDB table where session data will be stored. Defaults to `'Session'`.
 ```ts
 stores: {
   dynamodb: stores.dynamodb({
     tableName: 'sessions'
+  })
+}
+```
+
+:::
+
+:::option{name="stores.dynamodb.keyAttribute" dataType="string"}
+
+The name of the table attribute that holds the session ID. Defaults to `'key'`.
+```ts
+stores: {
+  dynamodb: stores.dynamodb({
+    keyAttribute: 'key'
   })
 }
 ```
@@ -406,7 +449,7 @@ The File driver stores session data in the local filesystem, suitable for develo
 
 :::option{name="stores.file.location" dataType="string"}
 
-The directory path where session files will be stored. Defaults to `tmp/sessions` within your application root.
+The directory path where session files will be stored. This option is required, and the generated config uses `app.tmpPath('sessions')`.
 ```ts
 stores: {
   file: stores.file({
@@ -681,6 +724,8 @@ session.flashOnly(['title', 'content', 'category'])
 session.flashExcept(['password', 'credit_card'])
 ```
 
+Uploaded files are never flashed, since a file cannot be restored in a form field and would only grow the session. If the next request needs details about an uploaded file, flash them explicitly, such as the file `clientName`.
+
 Access flashed form data in templates using the `old()` helper.
 ```edge title="resources/views/posts/create.edge"
 <input type="text" name="title" value="{{ old('title') }}" />
@@ -688,7 +733,7 @@ Access flashed form data in templates using the `old()` helper.
 ```
 
 :::note
-When using AdonisJS validators, validation errors and form data are automatically flashed on validation failure. You don't need to manually flash them.
+When using AdonisJS validators, validation errors and form data are automatically flashed on validation failure. You don't need to manually flash them. The `password`, `password_confirmation`, `_csrf`, and `_method` fields are left out. For Inertia requests, only the errors are flashed, since the Inertia form keeps its own input state.
 :::
 
 ### Re-flashing messages
@@ -899,7 +944,7 @@ import {
 /**
  * The config you want to accept
  */
-export type MongoDBConfig = {
+export type MongoDbConfig = {
   collection: string;
   database: string
 }
@@ -909,7 +954,7 @@ export type MongoDBConfig = {
  * It implements the four required methods: read, write, destroy, and touch.
  */
 export class MongoDbStore implements SessionStoreContract {
-  constructor(protected config: MongoDBConfig) {}
+  constructor(protected config: MongoDbConfig) {}
 
   /**
    * Read session data for a given session ID.
@@ -922,11 +967,7 @@ export class MongoDbStore implements SessionStoreContract {
   /**
    * Write session data for a given session ID.
    */
-  async write(
-    sessionId: string,
-    data: SessionData,
-    expiresAt: Date
-  ): Promise<void> {
+  async write(sessionId: string, data: SessionData): Promise<void> {
     // Save session data to your storage
   }
 
@@ -940,8 +981,8 @@ export class MongoDbStore implements SessionStoreContract {
   /**
    * Update the session's expiration time without changing data.
    */
-  async touch(sessionId: string, expiresAt: Date): Promise<void> {
-    // Update expiration timestamp in your storage
+  async touch(sessionId: string): Promise<void> {
+    // Extend the expiration timestamp in your storage
   }
 }
 
@@ -952,7 +993,7 @@ export class MongoDbStore implements SessionStoreContract {
  */
 export function mongoDbStore(config: MongoDbConfig): SessionStoreFactory {
   return (ctx, sessionConfig) => {
-    return new MongoDBStore(config)
+    return new MongoDbStore(config)
   }
 }
 ```
