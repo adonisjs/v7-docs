@@ -25,19 +25,27 @@ If you're new to the concept of sessions, we recommend reading this [introductio
 
 ## Installation
 
-Install and configure the sessions package by running the following Ace command:
+Install and configure the sessions package by running the following Ace command. You will be prompted to select the storage driver, or you may pass it using the `--store` flag. The `cookie`, `file`, `redis`, and `database` drivers can be selected this way.
 ```sh
 node ace add @adonisjs/session
+
+# Skip the prompt
+node ace add @adonisjs/session --store=redis
 ```
 
 :::disclosure{title="See steps performed by the add command"}
 
 1. Installs the `@adonisjs/session` package using the detected package manager.
 2. Registers the `@adonisjs/session/session_provider` service provider inside the `adonisrc.ts` file.
-3. Creates the `config/session.ts` configuration file.
+3. Creates the `config/session.ts` configuration file with the selected driver.
 4. Defines the `SESSION_DRIVER` environment variable and its validation inside the `start/env.ts` file.
 5. Registers the `@adonisjs/session/session_middleware` middleware inside the `start/kernel.ts` file.
 6. Registers the `@adonisjs/session/commands` commands inside the `adonisrc.ts` file.
+7. Creates the migration for the sessions table when the `database` driver is selected.
+:::
+
+:::note
+The `redis` and `database` drivers require the [`@adonisjs/redis`](../database/redis.md) and [`@adonisjs/lucid`](../database/lucid.md) packages to be configured. The `dynamodb` driver must be configured manually, as explained in the [DynamoDB driver](#dynamodb-driver) section.
 :::
 
 ## Choosing a storage driver
@@ -327,7 +335,7 @@ stores: {
 
 :::option{name="stores.database.tableName" dataType="string"}
 
-The name of the database table where session data will be stored. Defaults to `'sessions'`. Make sure to create the migration for the session table using the `node ace make:session-table` command.
+The name of the database table where session data will be stored. Defaults to `'sessions'`. Make sure to create the migration for the session table using the `node ace make:session-table` command, unless it was created when configuring the package with the `database` driver.
 ```ts
 stores: {
   database: stores.database({
