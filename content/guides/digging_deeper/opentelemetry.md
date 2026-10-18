@@ -253,25 +253,33 @@ This adds a `ConsoleSpanExporter` that outputs spans to your terminal, helping y
 
 ### Enabling and disabling
 
-OpenTelemetry is automatically disabled when `NODE_ENV === 'test'` to avoid noise during tests. You can override this behavior.
+The SDK is disabled by default when `NODE_ENV === 'test'`. Set `enabled: true` to start it in tests, or `enabled: false` to prevent it from starting in any environment.
+
+Setting `enabled: false` leaves the ESM loader hook installed. The hook must load before `config/otel.ts` because the configuration can import dependencies that need instrumentation.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
 
 export default defineConfig({
-  serviceName: 'my-app',
-  
-  /**
-   * Force enable in tests
-   */
-  enabled: true,
-  
-  /**
-   * Or force disable in any environment
-   */
-  enabled: false,
+	enabled: false,
 })
 ```
+
+#### Skip initialization
+
+Set `OTEL_SDK_DISABLED=true` before starting your application to skip the hook as well as the SDK. With this flag, `init()` returns before it registers the hook, imports the SDK, or loads `config/otel.ts`, even if the configuration contains `enabled: true`. The provider and middleware can remain registered.
+
+For a built application, run this command from the build directory:
+
+```sh title="Terminal"
+OTEL_SDK_DISABLED=true node bin/server.js
+```
+
+:::warning
+Set the variable in your shell or deployment environment before `init()` runs. A value loaded later from `.env` by `#start/env` is too late.
+:::
+
+Only `true`, in any letter case, skips initialization. Other values leave the configuration in control, so `OTEL_SDK_DISABLED=false` does not force the SDK to start. Changing the flag after initialization does not remove an existing hook or stop a running SDK.
 
 ### Sampling
 
