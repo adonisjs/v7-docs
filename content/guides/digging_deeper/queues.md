@@ -31,7 +31,7 @@ The package supports multiple backends. The **Redis** adapter is recommended for
 
 ## Installation
 
-Install and configure the package using the following command:
+The package requires `@adonisjs/core` 7.6 or later. Install and configure it using the following command:
 
 ```sh
 node ace add @adonisjs/queue
@@ -64,10 +64,22 @@ node ace add @adonisjs/queue
 
 3. Creates the `config/queue.ts` file.
 4. Creates the `start/scheduler.ts` preload file for defining scheduled jobs. The preload only runs in the `web` environment, so schedules are registered when your HTTP server starts.
-5. Defines the `QUEUE_DRIVER` environment variable and its validation.
-6. If you select the database driver, creates a migration to set up queue tables.
+5. Creates the `app/jobs` directory and registers the `#jobs/*` import alias inside the `package.json` file.
+
+    ```json title="package.json"
+    {
+      "imports": {
+        "#jobs/*": "./app/jobs/*.js"
+      }
+    }
+    ```
+
+6. Defines the `QUEUE_DRIVER` environment variable and its validation.
+7. If you select the database driver, creates a migration to set up queue tables.
 
 :::
+
+The examples in this guide import jobs with the `#jobs/*` alias. If you configured the package with an earlier version, add the alias to the `imports` object of your `package.json` file yourself.
 
 ## Configuration
 
@@ -931,7 +943,7 @@ Process the `default` queue and every queue defined in the `queues` config.
 :::
 
 :::option{name="--concurrency (-c)" dataType="number"}
-The number of jobs to process simultaneously. Overrides `worker.concurrency` from the config.
+The number of jobs to process simultaneously. Must be a positive integer. Overrides `worker.concurrency` from the config.
 :::
 
 :::option{name="--adapter (-a)" dataType="string"}
@@ -949,6 +961,8 @@ You must start the worker as a separate process alongside your web server. Jobs 
 
 In production, use a process manager like [PM2](https://pm2.keymetrics.io/) or a container orchestrator to keep the worker running and restart it on failure.
 :::
+
+When the worker cannot start, the command prints the reason and exits with status `1`. This happens when you combine `--queue` with `--all-queues`, pass an `--adapter` that is not configured, pass a `--concurrency` that is not a positive integer, or set an invalid option in the `worker` config. Your process manager sees the failure instead of a worker that never processes jobs.
 
 When the worker receives `SIGTERM` or `SIGINT`, it stops picking up new jobs and waits for every running job to finish before it closes the Redis and database connections. Your process manager can stop a worker during a deploy without a job running twice. Configure the stop timeout of your process manager to be longer than your slowest job, otherwise it kills the worker before the jobs finish.
 
@@ -1034,7 +1048,7 @@ The command upgrades every configured adapter. Each step checks whether it is ne
 - On SQL adapters, it converts the dates of the schedules table to epoch milliseconds and adds the unique index used by [job deduplication](#deduplicating-jobs). On MySQL, it also converts the payload and error columns to `LONGTEXT`.
 
 :::warning
-Stop every process running the previous version before running the command. That includes the workers and your HTTP server, which dispatches jobs and defines schedules. Then run `queue:migrate` and start the new version. You cannot go back to the previous version once the storage is migrated.
+Stop every process running the previous version before running the command. That includes the workers and your HTTP server, which dispatches jobs and defines schedules. Then run `queue:migrate` before you start the new workers and HTTP server. Until the storage is migrated, a worker using SQL tables of the previous version processes no job, and the schedules stored on Redis by the previous version stay invisible. You cannot go back to the previous version once the storage is migrated.
 
 On MySQL, converting the columns to `LONGTEXT` copies each table and blocks writes to it until the copy completes. Plan for a short downtime on large tables.
 :::
@@ -1046,6 +1060,32 @@ node ace queue:migrate --timezone=Europe/Paris
 ```
 
 Get this value right. The command drops the old date columns, and a wrong time zone shifts every schedule date for good.
+
+The command can only upgrade the tables of adapters created with `drivers.database()` or `drivers.kysely()`, because these drivers know the connection to use. For an adapter you created with the `knex()` or `kysely()` functions of `@boringnode/queue`, the command only checks the schedule dates and prints a warning. Upgrade these tables yourself with the schema service of the adapter, inside a migration for example.
+
+```ts title="database/migrations/xxxx_upgrade_queue_tables.ts"
+import { BaseSchema } from '@adonisjs/lucid/schema'
+import { KnexQueueSchemaService } from '@adonisjs/queue/drivers/knex_adapter'
+
+export default class extends BaseSchema {
+  async up() {
+    const schemaService = new KnexQueueSchemaService(this.db.getWriteClient())
+
+    if (await schemaService.needsScheduleDatesMigration('queue_schedules')) {
+      // The timezone is only used on MySQL, where dates have no time zone
+      await schemaService.migrateScheduleDates('queue_schedules', { timezone: 'Europe/Paris' })
+    }
+
+    await schemaService.migrateTextColumns({
+      jobsTable: 'queue_jobs',
+      schedulesTable: 'queue_schedules',
+    })
+    await schemaService.addDedupColumns('queue_jobs')
+  }
+}
+```
+
+With Kysely, use `KyselyQueueSchemaService` from `@adonisjs/queue/drivers/kysely_adapter`. It provides the same methods.
 
 ::::options
 
