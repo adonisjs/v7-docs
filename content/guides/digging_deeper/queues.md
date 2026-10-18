@@ -17,6 +17,7 @@ This guide covers background job processing with queues in AdonisJS. You will le
 - Configure retry strategies with exponential, linear, or fixed backoff
 - Schedule recurring jobs using cron expressions or intervals
 - Start workers to process jobs from queues
+- Upgrade the queue storage after updating the package
 - Trace dispatched and executed jobs with OpenTelemetry
 - Test job dispatching with the fake adapter
 
@@ -126,7 +127,7 @@ Global retry configuration applied to all jobs unless overridden at the queue or
 :::
 
 :::option{name="queues" dataType="Record<string, QueueConfig>"}
-Per-queue configuration allowing you to set a different adapter, retry policy, or default job options for specific queues. Jobs dispatched to a queue use its `adapter` unless the dispatch selects one with `.with()`.
+Per-queue configuration allowing you to set a different adapter, retry policy, or default job options for specific queues. Jobs dispatched to a queue use its `adapter` unless the dispatch selects one with `.with()`. A worker processes jobs from a single adapter, so a queue stored on another adapter needs its own worker started with [`--adapter`](#worker-options).
 
 ```ts title="config/queue.ts"
 {
@@ -143,7 +144,11 @@ Per-queue configuration allowing you to set a different adapter, retry policy, o
 :::
 
 :::option{name="defaultJobOptions" dataType="JobOptions"}
-Default options applied to all jobs. Individual jobs can override these in their `static options` property.
+Default options applied to all jobs, including `maxRetries`, `retry`, `timeout`, and `failOnTimeout`. You can also set them per queue inside `queues`. Individual jobs can override these in their `static options` property.
+:::
+
+:::option{name="hotReload" dataType="boolean"}
+Import the job file again before every execution, so a running process uses the latest version of your jobs. By default, it is enabled when the process runs with hot-hook (`node ace serve --hmr` or `node ace queue:work --hmr`) and disabled otherwise. See [Reloading jobs during development](#reloading-jobs-during-development).
 :::
 
 ::::
@@ -182,6 +187,7 @@ export default defineConfig({
   default: 'database',
   adapters: {
     database: drivers.database({
+      // Optional, defaults to the primary connection
       connectionName: 'primary',
       // Optional, defaults to 'queue_jobs'
       tableName: 'queue_jobs',
@@ -191,22 +197,22 @@ export default defineConfig({
 })
 ```
 
-When selecting the database driver during installation, a migration is automatically created. If you need to create the tables manually, use `QueueSchemaService`:
+When selecting the database driver during installation, a migration is automatically created. If you need to create the tables manually, use `KnexQueueSchemaService`:
 
 ```ts title="database/migrations/xxxx_create_queue_tables.ts"
 import { BaseSchema } from '@adonisjs/lucid/schema'
-import { QueueSchemaService } from '@adonisjs/queue'
+import { KnexQueueSchemaService } from '@adonisjs/queue/drivers/knex_adapter'
 
 export default class extends BaseSchema {
   async up() {
-    const schemaService = new QueueSchemaService(this.db.getWriteClient())
+    const schemaService = new KnexQueueSchemaService(this.db.getWriteClient())
 
     await schemaService.createJobsTable()
     await schemaService.createSchedulesTable()
   }
 
   async down() {
-    const schemaService = new QueueSchemaService(this.db.getWriteClient())
+    const schemaService = new KnexQueueSchemaService(this.db.getWriteClient())
 
     await schemaService.dropSchedulesTable()
     await schemaService.dropJobsTable()
@@ -217,28 +223,14 @@ export default class extends BaseSchema {
 You must have `@adonisjs/lucid` installed and configured for this adapter to work.
 
 :::warning
-Jobs tables created before `@adonisjs/queue@0.6.2` do not have the columns required by [job deduplication](#deduplicating-jobs). Create a migration that calls `addDedupColumns` once before using `.dedup()`.
-
-```ts title="database/migrations/xxxx_add_queue_dedup_columns.ts"
-import { BaseSchema } from '@adonisjs/lucid/schema'
-import { QueueSchemaService } from '@adonisjs/queue'
-
-export default class extends BaseSchema {
-  async up() {
-    const schemaService = new QueueSchemaService(this.db.getWriteClient())
-
-    // Pass your table name if you changed the default 'queue_jobs'
-    await schemaService.addDedupColumns()
-  }
-}
-```
-
-Tables created by the migration that ships with `0.6.2` and later already include these columns.
+Tables created by a previous version of the package must be upgraded before the new version uses them. Run `node ace queue:migrate` after updating the package. See [Upgrading the queue storage](#upgrading-the-queue-storage).
 :::
 
 #### Sync
 
 The Sync adapter executes jobs immediately in the same process, without a separate worker. This is useful for development and testing when you want to see job results right away.
+
+Like the Redis and Database adapters, it passes the payload through JSON. Each attempt receives a fresh copy, so a `Date` arrives as a string, a class instance loses its class, and a dispatch rejects when the payload holds a value JSON cannot encode, such as a `BigInt`.
 
 ```ts title="config/queue.ts"
 import { defineConfig, drivers } from '@adonisjs/queue'
@@ -321,7 +313,9 @@ Job priority from 1 to 10. Lower numbers are processed first. Defaults to `5`.
 :::
 
 :::option{name="timeout" dataType="Duration"}
-Maximum execution time before the job is timed out. Accepts a number in milliseconds or a duration string like `'30s'` or `'5m'`. No timeout by default.
+Maximum execution time before the job is timed out. Accepts a number in milliseconds or a duration string like `'30s'` or `'5m'`. No timeout by default, and `0` disables the timeout.
+
+The timeout must be a whole number of milliseconds no larger than 2147483647 (about 24.8 days). The application fails to boot when a job declares an invalid timeout, such as `'30d'`, so you find the mistake before the job is dispatched.
 :::
 
 :::option{name="failOnTimeout" dataType="boolean"}
@@ -338,6 +332,8 @@ Controls whether completed jobs are kept in the history. Set to `true` to remove
 ```ts
 { removeOnComplete: { age: '7d', count: 1000 } }
 ```
+
+The `age` and `count` constraints apply to the whole queue, not to each job class. Dispatch job classes that need a different retention to their own queue.
 :::
 
 :::option{name="removeOnFail" dataType="JobRetention"}
@@ -636,6 +632,14 @@ export default class NewsletterService {
 
 When a job throws an error, the queue system automatically retries it according to the configured retry policy. You can configure retries at three levels, with more specific settings taking priority: **job > queue > global**.
 
+At the queue and global levels, you can set retries with the `retry` option or with `maxRetries` and `retry` inside `defaultJobOptions`. The queue system resolves `maxRetries` and the backoff separately, and takes each one from the first place that sets it:
+
+1. The `static options` of the job.
+2. The `defaultJobOptions` of the queue.
+3. The `retry` option of the queue.
+4. The global `defaultJobOptions`.
+5. The global `retry` option.
+
 ### Backoff strategies
 
 A backoff strategy controls the delay between retry attempts. The package provides four built-in strategies:
@@ -738,6 +742,8 @@ export default class ProcessPayment extends Job<ProcessPaymentPayload> {
 
 Scheduled jobs run automatically at defined intervals or cron expressions. Define your schedules in the `start/scheduler.ts` preload file.
 
+The preload runs every time your HTTP server starts, so every deploy defines your schedules again. This does not reset them. A paused schedule stays paused, and it keeps its run count and its next run unless you change its timing. When a run was missed while the application was stopped, it runs once when a worker starts, as long as the schedule is active and has not reached its run limit or end date.
+
 ### Cron schedules
 
 Use a cron expression for precise scheduling:
@@ -784,7 +790,7 @@ A duration interval between runs. Mutually exclusive with `.cron()`.
 :::
 
 :::option{name=".id(scheduleId)" dataType="string"}
-A custom identifier for the schedule. Defaults to the job class name. If a schedule with this ID already exists, it will be updated.
+A custom identifier for the schedule. Defaults to the job class name. If a schedule with this ID already exists, it is updated and keeps its status, run count, and next run.
 :::
 
 :::option{name=".timezone(tz)" dataType="string"}
@@ -880,6 +886,12 @@ node ace queue:scheduler:remove <schedule-id>
 node ace queue:scheduler:clear
 ```
 
+These commands read the schedules of the default adapter. Use the `--adapter` flag (or `-a`) to read the schedules stored on another adapter.
+
+```sh
+node ace queue:scheduler:list --adapter=database
+```
+
 ## Running the worker
 
 Jobs are not processed until you start a worker. The worker is a long-running process that polls the queue for available jobs and executes them.
@@ -898,15 +910,61 @@ node ace queue:work
 # Process specific queues
 node ace queue:work --queue=payments,emails
 
+# Process the default queue and every queue defined in the config
+node ace queue:work --all-queues
+
 # Set concurrency (number of jobs processed simultaneously)
 node ace queue:work --concurrency=10
+
+# Process jobs from a specific adapter
+node ace queue:work --adapter=database
 ```
+
+::::options
+
+:::option{name="--queue (-q)" dataType="string"}
+A comma-separated list of queues to process. Defaults to the `default` queue. You cannot combine it with `--all-queues`.
+:::
+
+:::option{name="--all-queues" dataType="boolean"}
+Process the `default` queue and every queue defined in the `queues` config.
+:::
+
+:::option{name="--concurrency (-c)" dataType="number"}
+The number of jobs to process simultaneously. Overrides `worker.concurrency` from the config.
+:::
+
+:::option{name="--adapter (-a)" dataType="string"}
+The adapter to process jobs from. Defaults to the `default` adapter. A worker processes jobs from a single adapter, so start one worker for each adapter that stores jobs.
+:::
+
+:::option{name="--hmr" dataType="boolean"}
+Run the worker with hot-hook, so changed jobs reload without restarting the worker. Use it during development only. See [Reloading jobs during development](#reloading-jobs-during-development).
+:::
+
+::::
 
 :::warning
 You must start the worker as a separate process alongside your web server. Jobs dispatched from your application will not be processed until a worker is running.
 
 In production, use a process manager like [PM2](https://pm2.keymetrics.io/) or a container orchestrator to keep the worker running and restart it on failure.
 :::
+
+When the worker receives `SIGTERM` or `SIGINT`, it stops picking up new jobs and waits for every running job to finish before it closes the Redis and database connections. Your process manager can stop a worker during a deploy without a job running twice. Configure the stop timeout of your process manager to be longer than your slowest job, otherwise it kills the worker before the jobs finish.
+
+Run one worker per process. Starting a second worker in a process where a worker is already running throws an error.
+
+### Reloading jobs during development
+
+By default, a running worker keeps the version of your jobs it loaded at startup, and you must restart it after every change. Start the worker with the `--hmr` flag to reload jobs as you edit them:
+
+```sh
+node ace queue:work --hmr
+```
+
+The worker runs with [hot-hook](https://github.com/Julien-R44/hot-hook), the same way `node ace serve --hmr` runs your HTTP server. A changed job is imported again on its next execution, and a job that is already running finishes with the version it started with. When you change a file hot-hook cannot reload, such as a config file, the worker waits for its running jobs to finish and restarts. Adding, removing, or renaming a job requires a manual restart, because the worker builds its list of jobs at startup.
+
+The same applies to jobs that run inside your HTTP server, such as with the Sync adapter, when you start it with `node ace serve --hmr`. The queue system enables the [`hotReload`](#configuration) option whenever the process runs with hot-hook. Set `hotReload` in your config to override this behavior.
 
 ### Worker configuration
 
@@ -937,7 +995,7 @@ How long the worker waits before polling again when no jobs are available. Defau
 :::
 
 :::option{name="timeout" dataType="Duration"}
-Global maximum execution time for any job. Can be overridden per job via `JobOptions.timeout`. No timeout by default.
+Global maximum execution time for any job. The `timeout` of a job or of `defaultJobOptions` takes precedence. No timeout by default.
 :::
 
 :::option{name="stalledThreshold" dataType="Duration"}
@@ -949,11 +1007,62 @@ How often the worker checks for stalled jobs. Defaults to `'30s'`.
 :::
 
 :::option{name="maxStalledCount" dataType="number"}
-Maximum number of times a stalled job can be recovered before it is permanently failed. Defaults to `1`.
+Maximum number of times a stalled job can be recovered before it is permanently failed. The job then fails through its `failed` method. Defaults to `1`.
+:::
+
+:::option{name="unknownJobRetries" dataType="number"}
+How many times a job whose class the worker does not know goes back to the queue before it fails. During a rolling deploy, a worker running the previous version can pick up a job that only the new version defines. The job runs again 30 seconds later, giving the new workers time to start. Set it to `0` to fail these jobs immediately. Defaults to `10`.
 :::
 
 :::option{name="gracefulShutdown" dataType="boolean"}
-When `true`, the worker finishes running jobs before stopping on SIGINT/SIGTERM signals. Defaults to `true`.
+When `true`, the worker stops on SIGINT/SIGTERM signals and waits for running jobs to finish before exiting. Defaults to `true`.
+:::
+
+::::
+
+## Upgrading the queue storage
+
+A new version of the package can change how the adapters store jobs and schedules. After updating `@adonisjs/queue`, run the `queue:migrate` command to upgrade the storage created by the previous version:
+
+```sh
+node ace queue:migrate
+```
+
+The command upgrades every configured adapter. Each step checks whether it is needed, so the command does nothing on a storage that is already up to date, such as the tables created by a fresh install. It handles the following changes:
+
+- On Redis, it moves the schedules to their new keys.
+- On SQL adapters, it converts the dates of the schedules table to epoch milliseconds and adds the unique index used by [job deduplication](#deduplicating-jobs). On MySQL, it also converts the payload and error columns to `LONGTEXT`.
+
+:::warning
+Stop every process running the previous version before running the command. That includes the workers and your HTTP server, which dispatches jobs and defines schedules. Then run `queue:migrate` and start the new version. You cannot go back to the previous version once the storage is migrated.
+
+On MySQL, converting the columns to `LONGTEXT` copies each table and blocks writes to it until the copy completes. Plan for a short downtime on large tables.
+:::
+
+Older versions stored the schedule dates without a time zone when using MySQL, or the Kysely driver with PostgreSQL. In that case, the command stops with an error and asks for the `--timezone` flag. Pass the time zone the previous version wrote the dates in, which is the time zone of your application process unless you configured the database driver otherwise. If you set the mysql2 `timezone: 'Z'` option, pass `UTC`.
+
+```sh
+node ace queue:migrate --timezone=Europe/Paris
+```
+
+Get this value right. The command drops the old date columns, and a wrong time zone shifts every schedule date for good.
+
+::::options
+
+:::option{name="--adapter (-a)" dataType="string"}
+The name of the adapter to migrate. Defaults to every configured adapter.
+:::
+
+:::option{name="--timezone" dataType="string"}
+The IANA time zone the previous version wrote the schedule dates in, such as `Europe/Paris`. Required only when the dates are stored without a time zone.
+:::
+
+:::option{name="--database-timezone" dataType="string"}
+MySQL only. The session time zone of the connections used by the previous version, such as `+02:00`, when it differs from the one of the migration connection.
+:::
+
+:::option{name="--force" dataType="boolean"}
+Skip the confirmation prompt the command shows in production.
 :::
 
 ::::
@@ -1051,6 +1160,10 @@ test.group('Orders', (group) => {
   })
 })
 ```
+
+:::note
+The fake adapter passes payloads through JSON, like the real adapters. A payload holding a `Date` is recorded with a string, so compare it with `date.toISOString()` in your assertions.
+:::
 
 ### Assertion methods
 
