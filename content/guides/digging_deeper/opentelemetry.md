@@ -565,6 +565,31 @@ export default class PaymentService {
 }
 ```
 
+### Tracing async iteration
+
+When a callback or method returns a Promise, `record()`, `@span()`, and `@spanAll()` return a chained Promise to end the span and propagate errors. Custom properties and methods on the original Promise, including `Symbol.asyncIterator`, are not preserved. This affects APIs that return a Promise that also supports async iteration, such as paginated lists.
+
+To trace the full iteration, consume the iterator inside an async `record()` callback. The span stays open until the loop finishes and captures errors from subsequent pages and item processing.
+
+:::warning
+Leave methods that return the original iterable undecorated. If you use `@spanAll()` on their class, replace it with `@span()` on individual methods that consume the iterable.
+:::
+
+```ts title="app/services/process_items.ts"
+import { record } from '@adonisjs/otel/helpers'
+
+export async function processItems<T>(
+  items: AsyncIterable<T>,
+  processItem: (item: T) => Promise<void>
+) {
+  await record('items.process', async () => {
+    for await (const item of items) {
+      await processItem(item)
+    }
+  })
+}
+```
+
 ### Setting attributes on the current span
 
 Use `setAttributes` to add metadata to the currently active span without creating a new one.
