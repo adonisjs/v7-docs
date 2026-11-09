@@ -1,22 +1,32 @@
 [
   {
+    "logo": "./logos/encore.svg",
+    "name": "Encore",
+    "url": "https://encore.dev/",
+    "tier": "gold"
+  },
+  {
     "logo": "./logos/route4me.svg",
     "name": "Route4Me",
-    "url": "https://route4me.com/"
+    "url": "https://route4me.com/",
+    "tier": "bronze"
   },
   {
     "logo": "./logos/galaxy.svg",
     "name": "Galaxy Cloud",
-    "url": "https://galaxycloud.app/"
+    "url": "https://galaxycloud.app/",
+    "tier": "bronze"
   },
   {
     "logo": "./logos/ezycourse.svg",
     "name": "Ezycourse",
-    "url": "https://ezycourse.com/"
+    "url": "https://ezycourse.com/",
+    "tier": "bronze"
   },
   {
     "logo": "./logos/testmu.svg",
     "name": "TestMu AI",
-    "url": "https://www.testmuai.com/"
+    "url": "https://www.testmuai.com/",
+    "tier": "bronze"
   }
 ]

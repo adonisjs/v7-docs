@@ -13,13 +13,37 @@
                 'text-xs font-medium inline-block hover:underline text-gray-600 dark:text-woodsmoke-300 text-right',
             })
           </div>
-          <div class="grid grid-cols-2 border-t-2 border-amber-600 relative">
+          @let(goldSponsors = featuredSponsors.all().filter((sponsor) => sponsor.tier === 'gold'))
+          @if(goldSponsors.length)
+            <div class="grid grid-cols-1 border-t-2 border-amber-400 relative">
+              <span
+                class="absolute z-1 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-100 backdrop-blur-2xl dark:bg-woodsmoke-950 px-1.5 text-[10px] uppercase font-mono font-bold tracking-widest text-yellow-700 dark:text-amber-300 rounded-sm"
+              >
+                Gold
+              </span>
+              @each(sponsor in goldSponsors)
+                <a
+                  href="{{ utm(sponsor.url) }}"
+                  target="_blank"
+                  class="flex items-center justify-center px-2 h-16 group border-l border-b -mb-px border-gray-300 dark:border-woodsmoke-900"
+                >
+                  <span
+                    class="scale-75 sm:group-hover:scale-78 transition-transform duration-400 text-gray-700 dark:text-woodsmoke-100"
+                  >
+                    <span class="w-full block">{{{ sponsor.logo }}}</span>
+                    <span class="sr-only">{{ sponsor.name }}</span>
+                  </span>
+                </a>
+              @end
+            </div>
+          @end
+          <div class="grid grid-cols-2 border-t-2 border-amber-600 relative {{ goldSponsors.length ? 'mt-px' : '' }}">
             <span
               class="absolute z-1 top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-100 backdrop-blur-2xl dark:bg-woodsmoke-950 px-1.5 text-[10px] uppercase font-mono font-bold tracking-widest text-amber-800 dark:text-amber-600 rounded-sm"
             >
               Bronze
             </span>
-            @each(sponsor in featuredSponsors.all())
+            @each(sponsor in featuredSponsors.all().filter((sponsor) => sponsor.tier === 'bronze'))
               <a
                 href="{{ utm(sponsor.url) }}"
                 target="_blank"
