@@ -11,7 +11,7 @@ This guide covers OpenTelemetry integration in AdonisJS applications. You will l
 - Use automatic instrumentation for HTTP, database, and Redis
 - Create custom spans with helpers and decorators
 - Propagate trace context across services
-- Test your setup locally with Jaeger
+- Test your setup locally with Monocle Studio or Jaeger
 
 ## Overview
 
@@ -24,6 +24,8 @@ Observability is essential for understanding what happens inside your applicatio
 :::
 
 This package handles the complexity of OpenTelemetry setup for you. Run a single command, and your application automatically traces HTTP requests, database queries, Redis operations, and more.
+
+OpenTelemetry only collects telemetry. You still need a backend to store and explore it. You can run your own (Jaeger, Grafana, and so on) or use a hosted platform such as [Monocle](#sending-telemetry-to-monocle), which is built on OpenTelemetry and ships an AdonisJS agent.
 
 ## OpenTelemetry concepts
 
@@ -236,6 +238,12 @@ export default defineConfig({
 
 :::
 
+### Sending telemetry to Monocle
+
+:::tip
+[Monocle](https://monocle.sh) is an observability platform built on OpenTelemetry with a dedicated AdonisJS agent (`node ace add @monocle.sh/adonisjs-agent`). The agent wraps `@adonisjs/otel` with the same API and adds pre-built dashboards and error tracking. See the [Monocle AdonisJS docs](https://monocle.sh/docs/frameworks/adonisjs).
+:::
+
 ### Debug mode
 
 Enable debug mode to print spans to the console during development.
@@ -408,6 +416,49 @@ export default defineConfig({
   },
 })
 ```
+
+## Testing locally with Monocle Studio
+
+[Monocle Studio](https://monocle.sh/docs/studio/overview) is a free, open-source dashboard that runs on your machine and streams the requests, SQL queries, logs, and exceptions of your application as you develop. It needs no Docker or external services, and keeps its history between sessions.
+
+Studio works with the [Monocle agent](#sending-telemetry-to-monocle). The `config/monocle.ts` file it generates enables dev mode when `NODE_ENV` is `development`, so the agent sends telemetry to Studio instead of Monocle cloud, and you do not need a DSN locally.
+
+::::steps
+
+:::step{title="Install the agent and the Studio packages"}
+
+```sh
+node ace add @monocle.sh/adonisjs-agent
+npm install -D @monocle.sh/studio @monocle.sh/cli
+```
+
+:::
+
+:::step{title="Start Studio"}
+
+```sh
+npx monocle studio dev
+```
+
+This starts the dashboard at http://localhost:4200.
+
+:::
+
+:::step{title="Start your application"}
+
+```sh
+node ace serve --hmr
+```
+
+Make a few requests, then open http://localhost:4200 to see their traces, logs, and exceptions.
+
+:::
+
+::::
+
+:::tip
+Studio also exposes an MCP server, so coding agents such as Claude Code or Cursor can read your traces, logs, and errors while you develop.
+:::
 
 ## Testing locally with Jaeger
 

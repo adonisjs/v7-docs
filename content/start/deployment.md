@@ -205,6 +205,8 @@ Configure your hosting platform to capture stdout from your application process.
 
 Pino's structured JSON output includes timestamps, log levels, and any additional context you attach to log messages, making it straightforward to search and filter logs in your logging service.
 
+Logs tell you what happened, but not where a slow request spent its time. To correlate logs with traces, database queries, and exceptions, instrument your application with [OpenTelemetry](../guides/digging_deeper/opentelemetry.md) and send its telemetry to an observability platform such as [Monocle](https://monocle.sh).
+
 ## Database migrations
 
 Run migrations in production using the `migration:run` command with the `--force` flag.
@@ -332,3 +334,7 @@ CMD ["node", "docker-entrypoint.js"]
 ```
 
 With this setup, setting `MIGRATE=true` as an environment variable will run migrations before starting the server. For horizontal scaling where multiple containers start simultaneously, the migration locking ensures only one container runs migrations while others wait.
+
+## Deploying to your own servers
+
+If you prefer to keep your own hardware, [Tenkai](https://tenkai.cloud) turns any server (a VPS, a bare-metal machine, or a Raspberry Pi) into a deployment platform with Git deployments, managed databases, HTTPS, and rollbacks. It builds the Dockerfile above as is. See their [AdonisJS guide](https://tenkai.cloud/help/deploy-adonisjs) to get started.
