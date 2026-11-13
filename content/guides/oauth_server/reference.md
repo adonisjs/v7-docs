@@ -71,7 +71,7 @@ Lifetime options accept duration strings such as `'30m'`, `'1h'`, and `'30d'`. T
 ::::options
 
 :::option{name="store" dataType="ConfigProvider<SesameStore>"}
-The storage driver, created with `stores.lucid()` or `stores.kysely()`. A missing store throws an `InvalidArgumentsException` at boot.
+The storage driver, created with `stores.lucid()`. A missing store throws an `InvalidArgumentsException` at boot.
 :::
 
 :::option{name="issuer" dataType="string"}
@@ -206,19 +206,7 @@ Absolute HTTP or HTTPS URIs of APIs hosted outside this application that clients
 
 ### Store factories
 
-The `stores` object returns AdonisJS config providers rather than raw driver instances. `stores.lucid()` uses your application's Lucid connection. `stores.kysely(options)` uses an existing Kysely instance and accepts these options.
-
-::::options
-
-:::option{name="connection" dataType="Kysely | (app: ApplicationService) => Kysely | Promise<Kysely>"}
-The Kysely instance, or a function receiving the application and returning the instance directly or asynchronously.
-:::
-
-:::option{name="dialect" dataType="'sqlite' | 'postgres' | 'mysql'"}
-Explicit dialect selection for supported custom dialects.
-:::
-
-::::
+`stores.lucid()` returns an AdonisJS config provider rather than a raw driver instance. It uses your application's Lucid connection.
 
 ### Types
 
@@ -523,17 +511,13 @@ Adds or replaces `OIDC_JWK` in the application's `.env` file.
 Publishes the database migrations needed to upgrade to a Sésame version. It does not run them.
 
 ```sh
-node ace sesame:upgrade 0.8 --store=kysely
+node ace sesame:upgrade 0.8
 ```
 
 ::::options
 
 :::option{name="version" dataType="string"}
 Required argument. The target version as `major.minor` or `major.minor.0`. A version without bundled migrations exits with code 1.
-:::
-
-:::option{name="--store" dataType="string" defaultValue="lucid"}
-The store driver, `lucid` or `kysely`. Any other value exits with code 1.
 :::
 
 ::::
@@ -899,7 +883,7 @@ OAuth guard authentication failures use the `E_UNAUTHORIZED_ACCESS` exception of
 
 ## Storage contract
 
-The bundled Lucid and Kysely stores implement the full contract, so you only need this section to write a custom store. `SesameStore` and its record and option types are exported from `@adonisjs/sesame/storage/types` and re-exported from `@adonisjs/sesame/types`. Provide the store through an AdonisJS `ConfigProvider<SesameStore>`, as `stores.lucid()` and `stores.kysely()` do.
+The bundled Lucid store implements the full contract, so you only need this section to write a custom store. `SesameStore` and its record and option types are exported from `@adonisjs/sesame/storage/types` and re-exported from `@adonisjs/sesame/types`. Provide the store through an AdonisJS `ConfigProvider<SesameStore>`, as `stores.lucid()` does.
 
 A custom store must keep the guarantees of the bundled ones. Authorization code exchange, refresh token rotation, and pending request consumption must be atomic, so a concurrent request cannot issue a second set of tokens. Revoking a grant must invalidate every code and token issued from it, and revoked refresh tokens must stay detectable until they are purged, since replay detection depends on them.
 

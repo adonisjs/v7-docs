@@ -12,7 +12,7 @@ This guide covers running an OAuth 2.1 authorization server with the `@adonisjs/
 - How to create OAuth clients
 - How to protect API routes with the OAuth guard and scopes
 - How a client completes the authorization code flow with PKCE
-- How to load users without Lucid
+- How to load users from another data source
 
 ## Overview
 
@@ -66,41 +66,6 @@ node ace migration:run
 
 5. Creates six migrations for the clients, authorization codes, access tokens, refresh tokens, grants, and pending authorization requests tables.
 
-:::
-
-### Using Kysely instead of Lucid
-
-Sésame also ships a Kysely store supporting SQLite, PostgreSQL, and MySQL. Pass the `--store` flag to generate a Kysely config and a single Kysely migration in `database/kysely_migrations/create_oauth_tables.ts`.
-
-```sh
-node ace add @adonisjs/sesame --store=kysely
-```
-
-Point the store at your application's Kysely instance. This example assumes `#services/database` exports an initialized Kysely instance named `appDb`.
-
-```ts title="config/sesame.ts"
-import env from '#start/env'
-import { defineConfig, stores } from '@adonisjs/sesame'
-
-export default defineConfig({
-  issuer: env.get('APP_URL'),
-  store: stores.kysely({
-    connection: async () => {
-      const { appDb } = await import('#services/database')
-      return appDb
-    },
-  }),
-  loginPage: '/login',
-  consentPage: '/oauth/consent',
-})
-```
-
-If a custom Kysely dialect wraps one of the supported databases, pass `dialect: 'sqlite'`, `dialect: 'postgres'`, or `dialect: 'mysql'` to `stores.kysely()`.
-
-Move the generated migration into your Kysely migrator's `migrationFolder` and run it with your migration command. When a separate migrator uses the same database, give it unique `migrationTableName` and `migrationLockTableName` values.
-
-:::warning
-Do not run the Kysely migration with `node ace migration:run`. That command only runs Lucid migrations. Do not run Auth's bundled installer either in a Lucid-free application, since it generates a Lucid user model and migration. Instead, register `@adonisjs/auth/auth_provider` in `adonisrc.ts`, add `@adonisjs/auth/initialize_auth_middleware` to the router middleware stack, and write a [custom user provider](#custom-user-provider).
 :::
 
 ## Configuration
@@ -494,19 +459,21 @@ Public clients redirecting to a loopback address or a custom scheme always see t
 
 ## Custom user provider
 
-The Lucid `oauthUserProvider` loads users from a Lucid model. When your users live elsewhere, implement the `OAuthUserProviderContract` interface. The provider converts your user into a guard user and finds a user by ID. Sésame calls `findById` on every authenticated request.
+The `oauthUserProvider` loads users from a Lucid model. When your users live elsewhere, such as in another service, implement the `OAuthUserProviderContract` interface. The provider converts your user into a guard user and finds a user by ID. Sésame calls `findById` on every authenticated request.
 
-```ts title="app/auth/kysely_oauth_user_provider.ts"
+This example loads users from an internal users API whose base URL is stored in the `USERS_API_URL` environment variable.
+
+```ts title="app/auth/api_oauth_user_provider.ts"
+import env from '#start/env'
 import { symbols } from '@adonisjs/auth'
 import type { OAuthGuardUser, OAuthUserProviderContract } from '@adonisjs/sesame/guard'
-import { appDb } from '#services/database'
 
 type User = {
   id: string
   email: string
 }
 
-class KyselyOAuthUserProvider implements OAuthUserProviderContract<User> {
+class ApiOAuthUserProvider implements OAuthUserProviderContract<User> {
   declare [symbols.PROVIDER_REAL_USER]: User
 
   async createUserForGuard(user: User): Promise<OAuthGuardUser<User>> {
@@ -514,17 +481,17 @@ class KyselyOAuthUserProvider implements OAuthUserProviderContract<User> {
   }
 
   async findById(identifier: string | number | BigInt) {
-    const user = await appDb
-      .selectFrom('users')
-      .select(['id', 'email'])
-      .where('id', '=', String(identifier))
-      .executeTakeFirst()
+    const response = await fetch(`${env.get('USERS_API_URL')}/users/${identifier}`)
+    if (!response.ok) {
+      return null
+    }
 
-    return user ? this.createUserForGuard(user) : null
+    const user = (await response.json()) as User
+    return this.createUserForGuard(user)
   }
 }
 
-export const kyselyOAuthUserProvider = new KyselyOAuthUserProvider()
+export const apiOAuthUserProvider = new ApiOAuthUserProvider()
 ```
 
 Use the same provider for the session guard and the OAuth guard. Your login handler must verify credentials and log this user object into the session guard.
@@ -533,16 +500,16 @@ Use the same provider for the session guard and the OAuth guard. Your login hand
 import { defineConfig } from '@adonisjs/auth'
 import { sessionGuard } from '@adonisjs/auth/session'
 import { oauthGuard } from '@adonisjs/sesame/guard'
-import { kyselyOAuthUserProvider } from '../app/auth/kysely_oauth_user_provider.js'
+import { apiOAuthUserProvider } from '../app/auth/api_oauth_user_provider.js'
 
 const authConfig = defineConfig({
   default: 'web',
   guards: {
     web: sessionGuard({
       useRememberMeTokens: false,
-      provider: kyselyOAuthUserProvider,
+      provider: apiOAuthUserProvider,
     }),
-    oauth: oauthGuard({ provider: kyselyOAuthUserProvider }),
+    oauth: oauthGuard({ provider: apiOAuthUserProvider }),
   },
 })
 
