@@ -4,7 +4,7 @@ description: Refresh and revoke OAuth tokens, manage connected applications, iss
 
 # Tokens and grants
 
-This guide covers the lifecycle of OAuth tokens issued by Sésame. You will learn:
+This guide covers the lifecycle of OAuth tokens issued by Sesame. You will learn:
 
 - How refresh token rotation and replay detection work
 - How to revoke and inspect tokens
@@ -16,7 +16,7 @@ This guide covers the lifecycle of OAuth tokens issued by Sésame. You will lear
 
 ## Overview
 
-Every time a user approves a client, Sésame creates a **grant**. A grant records the client, the user, the approved scopes, an expiry, and optional application context. The authorization codes, access tokens, and refresh tokens issued from that authorization all reference the grant, which gives you a single handle to revoke everything a client obtained from one approval.
+Every time a user approves a client, Sesame creates a **grant**. A grant records the client, the user, the approved scopes, an expiry, and optional application context. The authorization codes, access tokens, and refresh tokens issued from that authorization all reference the grant, which gives you a single handle to revoke everything a client obtained from one approval.
 
 The database only stores SHA-256 hashes of access tokens, refresh tokens, authorization codes, pending authorization tokens, and client secrets. The OAuth guard looks up the token and its grant on every request, so a revocation takes effect immediately instead of waiting for the token to expire.
 
@@ -37,9 +37,9 @@ A public client omits `-u` and sends `client_id` in the body. To narrow the perm
 
 ### Rotation and replay detection
 
-Each refresh issues a new refresh token and revokes the previous one. If an attacker steals a refresh token and the legitimate client also uses it, one of them presents a token that was already rotated. Sésame treats that as a **replay** and revokes the whole grant with all its tokens. Other grants of the same user stay valid.
+Each refresh issues a new refresh token and revokes the previous one. If an attacker steals a refresh token and the legitimate client also uses it, one of them presents a token that was already rotated. Sesame treats that as a **replay** and revokes the whole grant with all its tokens. Other grants of the same user stay valid.
 
-Networks fail, so a client sometimes never receives the response to its refresh. To avoid logging out users after a lost response or two concurrent refreshes, Sésame accepts a recently revoked refresh token for 120 seconds and issues another pair. It does not return the original pair.
+Networks fail, so a client sometimes never receives the response to its refresh. To avoid logging out users after a lost response or two concurrent refreshes, Sesame accepts a recently revoked refresh token for 120 seconds and issues another pair. It does not return the original pair.
 
 :::warning
 The grace period also lets a stolen token be reused within that window. For strict replay detection, set `refreshTokenRotationGracePeriod: 0` in `config/sesame.ts`. Clients must then save both new tokens together and serialize their refresh requests, since any retry revokes the grant.
@@ -139,7 +139,7 @@ const { redirectUrl } = await sesame.approveAuthorization({
 ```
 
 :::warning
-Validate the selected team against the user's memberships before calling `approveAuthorization`. Sésame stores the context as supplied, so keep secrets out of it. The context is never exposed in token responses or introspection.
+Validate the selected team against the user's memberships before calling `approveAuthorization`. Sesame stores the context as supplied, so keep secrets out of it. The context is never exposed in token responses or introspection.
 :::
 
 Declare the context shape once to type it everywhere.
@@ -217,11 +217,11 @@ curl https://auth.example.com/oauth/token \
   --data-urlencode scope=read
 ```
 
-The response contains an access token but no refresh token and no ID token. The service requests a new token after expiry. Without `scope`, Sésame grants the client's own scopes, and it rejects `openid`, `profile`, `email`, and `offline_access` for this grant.
+The response contains an access token but no refresh token and no ID token. The service requests a new token after expiry. Without `scope`, Sesame grants the client's own scopes, and it rejects `openid`, `profile`, `email`, and `offline_access` for this grant.
 
 ## Testing
 
-With the [Japa API client](../testing/api_tests.md) and the Auth plugin configured, authenticate requests through the OAuth guard with `loginAs`. Sésame creates a real access token for the user, along with a shared `__test_client__` client on first use.
+With the [Japa API client](../testing/api_tests.md) and the Auth plugin configured, authenticate requests through the OAuth guard with `loginAs`. Sesame creates a real access token for the user, along with a shared `__test_client__` client on first use.
 
 ```ts title="tests/functional/posts.spec.ts"
 import { test } from '@japa/runner'
@@ -270,7 +270,7 @@ Revoked and expired tokens stay in the database until you remove them. Run the `
 node ace sesame:purge --hours=168
 ```
 
-The command removes revoked records and expired records older than the retention window. Pass `--revoked` or `--expired` to select only one category. Revoked refresh tokens stay until the retention cutoff on purpose: deleting them earlier would turn a replayed token into an unknown token, and Sésame could no longer detect the replay and revoke the grant.
+The command removes revoked records and expired records older than the retention window. Pass `--revoked` or `--expired` to select only one category. Revoked refresh tokens stay until the retention cutoff on purpose: deleting them earlier would turn a replayed token into an unknown token, and Sesame could no longer detect the replay and revoke the grant.
 
 Clients created through [dynamic registration](./mcp.md) that never completed an authorization pile up as well. Add `--clients` to remove the ones older than `--client-days` (30 by default). Manually created clients and Client ID Metadata Document clients are never removed.
 

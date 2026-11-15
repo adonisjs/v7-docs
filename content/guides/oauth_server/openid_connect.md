@@ -4,7 +4,7 @@ description: Issue signed ID tokens, serve the UserInfo endpoint, and switch to 
 
 # OpenID Connect and JWT access tokens
 
-This guide covers OpenID Connect (OIDC) and JWT access tokens in Sésame. You will learn:
+This guide covers OpenID Connect (OIDC) and JWT access tokens in Sesame. You will learn:
 
 - How to generate and store the signing key
 - How to enable OpenID Connect and return user claims
@@ -16,13 +16,13 @@ This guide covers OpenID Connect (OIDC) and JWT access tokens in Sésame. You wi
 
 ## Overview
 
-Sésame issues **opaque access tokens** by default. They are random strings with no embedded data, and your API checks them with the [OAuth guard](./introduction.md#protecting-routes) or the introspection endpoint. Opaque tokens authorize API requests, but they do not tell a client who the user is.
+Sesame issues **opaque access tokens** by default. They are random strings with no embedded data, and your API checks them with the [OAuth guard](./introduction.md#protecting-routes) or the introspection endpoint. Opaque tokens authorize API requests, but they do not tell a client who the user is.
 
 **OpenID Connect** adds an identity layer on top of OAuth. When a client requests the `openid` scope, the token response also contains an **ID token**: a JWT signed by your server that carries claims about the user (their identifier, and optionally their name or email). The client verifies the signature with your public key and learns who signed in, without calling your API. Access tokens remain the credential for API requests. The OAuth guard does not authenticate ID tokens, so never send an ID token as a Bearer token.
 
-Once a signing key exists, you can also issue **JWT access tokens**. This is useful when an API runs elsewhere, in another language, or without access to your database. Instead of calling Sésame, that API verifies the token signature against the keys your server publishes at `/jwks`.
+Once a signing key exists, you can also issue **JWT access tokens**. This is useful when an API runs elsewhere, in another language, or without access to your database. Instead of calling Sesame, that API verifies the token signature against the keys your server publishes at `/jwks`.
 
-Both features share the same key, so this guide starts with the key and then builds on it. It assumes you have already [installed](./introduction.md#installation) and [configured](./introduction.md#configuration) Sésame and [registered its routes](./introduction.md#registering-routes).
+Both features share the same key, so this guide starts with the key and then builds on it. It assumes you have already [installed](./introduction.md#installation) and [configured](./introduction.md#configuration) Sesame and [registered its routes](./introduction.md#registering-routes).
 
 ## Generating a signing key
 
@@ -56,7 +56,7 @@ export default await Env.create(new URL('../', import.meta.url), {
 
 ## Enabling OpenID Connect
 
-OpenID Connect requires two options in `config/sesame.ts`. The `jwk` option holds the parsed signing key. The `oidcProvider` option tells Sésame how to load the user behind a token, so it can build the ID token and answer UserInfo requests. This provider is independent from your `@adonisjs/auth` guards, and it must stay stable for the issuer.
+OpenID Connect requires two options in `config/sesame.ts`. The `jwk` option holds the parsed signing key. The `oidcProvider` option tells Sesame how to load the user behind a token, so it can build the ID token and answer UserInfo requests. This provider is independent from your `@adonisjs/auth` guards, and it must stay stable for the issuer.
 
 Keep your existing store, pages, and scopes, and add both options.
 
@@ -92,13 +92,13 @@ declare module '@adonisjs/sesame/types' {
 }
 ```
 
-Sésame recognizes the `openid`, `profile`, and `email` scopes at runtime even when you do not declare them. Declaring `profile` and `email` in the `scopes` map adds them to the inferred TypeScript scope names, so you can use them in typed calls such as `guard.hasScope('email')`.
+Sesame recognizes the `openid`, `profile`, and `email` scopes at runtime even when you do not declare them. Declaring `profile` and `email` in the `scopes` map adds them to the inferred TypeScript scope names, so you can use them in typed calls such as `guard.hasScope('email')`.
 
 If your users are not stored with Lucid, pass [your custom user provider](./introduction.md#custom-user-provider) to `oidcProvider` instead.
 
 ## Returning user claims
 
-Sésame does not guess which user fields belong in an ID token. Instead, it calls a `getOidcClaims` method on the user returned by the provider and passes it the granted scopes. Without this method, ID tokens only contain protocol claims and UserInfo only returns `sub`.
+Sesame does not guess which user fields belong in an ID token. Instead, it calls a `getOidcClaims` method on the user returned by the provider and passes it the granted scopes. Without this method, ID tokens only contain protocol claims and UserInfo only returns `sub`.
 
 The `collectOidcClaims` helper maps each scope to a set of claims and keeps only the claims for scopes the user granted. Implementing the `OidcSubject` interface lets TypeScript check the method signature.
 
@@ -124,7 +124,7 @@ export default class User extends compose(UserSchema, withAuthFinder(hash)) impl
 }
 ```
 
-The method can also return a promise when a claim needs a database query. Protocol claims such as `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti`, `nonce`, `at_hash`, `auth_time`, `acr`, `azp`, and `sid` are managed by Sésame and cannot be overridden by `getOidcClaims`. See [user providers and claims](./reference.md#user-providers-and-claims) for the full contract.
+The method can also return a promise when a claim needs a database query. Protocol claims such as `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti`, `nonce`, `at_hash`, `auth_time`, `acr`, `azp`, and `sid` are managed by Sesame and cannot be overridden by `getOidcClaims`. See [user providers and claims](./reference.md#user-providers-and-claims) for the full contract.
 
 ## Requesting an identity
 
@@ -153,11 +153,11 @@ curl https://auth.example.com/oauth/userinfo \
 
 ## JWT access tokens
 
-An opaque token only means something to the server that stored it. A JWT access token is self-contained: any API holding your public key can check it locally, which removes a network call to Sésame on every request.
+An opaque token only means something to the server that stored it. A JWT access token is self-contained: any API holding your public key can check it locally, which removes a network call to Sesame on every request.
 
 ### Enabling JWT access tokens
 
-JWT access tokens are signed with the same `jwk` as ID tokens, so configure the key [as shown above](#generating-a-signing-key) first. Sésame refuses to boot when `accessTokenFormat` is `jwt` and `jwk` is missing.
+JWT access tokens are signed with the same `jwk` as ID tokens, so configure the key [as shown above](#generating-a-signing-key) first. Sesame refuses to boot when `accessTokenFormat` is `jwt` and `jwk` is missing.
 
 ```ts title="config/sesame.ts"
 const sesameConfig = defineConfig({
@@ -171,7 +171,7 @@ const sesameConfig = defineConfig({
 
 Tokens follow [RFC 9068](https://datatracker.ietf.org/doc/html/rfc9068). The header contains `typ: at+jwt`, and the payload contains `iss`, `sub`, `client_id`, `scope`, `iat`, `exp`, and `jti`. The `aud` claim is the resource the token is bound to, or the issuer when the token is not bound to any resource.
 
-Sésame still stores only the hash of each token, so revocation, introspection, UserInfo, and the OAuth guard work as they do with opaque tokens. One difference: a JWT access token requested without `resource` is bound to the issuer, since RFC 9068 requires an `aud` claim. A guard that declares a `resource` therefore rejects it, even without `requireAudience`.
+Sesame still stores only the hash of each token, so revocation, introspection, UserInfo, and the OAuth guard work as they do with opaque tokens. One difference: a JWT access token requested without `resource` is bound to the issuer, since RFC 9068 requires an `aud` claim. A guard that declares a `resource` therefore rejects it, even without `requireAudience`.
 
 :::warning
 A resource server that only verifies the signature cannot know that a token was revoked. It will keep accepting a revoked token until the token expires.
@@ -230,7 +230,7 @@ Both the `typ` and `audience` checks matter. Without the `typ` check, a client c
 
 ### Issuing tokens for external APIs
 
-Resources registered with `sesame.registerProtectedResource()` are paths of the application that runs Sésame (see [MCP and client registration](./mcp.md#enforcing-a-resource-audience)). To bind tokens to an API hosted elsewhere, list its URI in the `externalResources` option.
+Resources registered with `sesame.registerProtectedResource()` are paths of the application that runs Sesame (see [MCP and client registration](./mcp.md#enforcing-a-resource-audience)). To bind tokens to an API hosted elsewhere, list its URI in the `externalResources` option.
 
 ```ts title="config/sesame.ts"
 const sesameConfig = defineConfig({
@@ -243,7 +243,7 @@ const sesameConfig = defineConfig({
 
 A client requests this API by adding `resource=https://api.example.com` to the authorization request, and the `aud` claim of the issued token is that URI. A more specific URI, such as `https://api.example.com/orders`, maps to the listed resource. Any other value makes the request fail with an `invalid_target` error.
 
-Sésame normalizes the listed URIs at boot and throws when one is invalid, for example when it is not an absolute `http` or `https` URI.
+Sesame normalizes the listed URIs at boot and throws when one is invalid, for example when it is not an absolute `http` or `https` URI.
 
 ## Rotating the signing key
 
@@ -280,12 +280,12 @@ const sesameConfig = defineConfig({
 
 ::::
 
-Sésame signs new tokens with `jwk` only. The `/jwks` endpoint publishes `jwk` first, then each previous key, so tokens signed with the old key keep verifying. Each key is identified by its `kid` member, or by a hash of its public components when `kid` is absent. Keys must have distinct `kid` values, and Sésame throws an error when two keys share one.
+Sesame signs new tokens with `jwk` only. The `/jwks` endpoint publishes `jwk` first, then each previous key, so tokens signed with the old key keep verifying. Each key is identified by its `kid` member, or by a hash of its public components when `kid` is absent. Keys must have distinct `kid` values, and Sesame throws an error when two keys share one.
 
 Remove the old key once every token it signed has expired. Measured from the last token signed with the old key, wait for the longest of `idTokenTtl`, `accessTokenTtl`, and `clientCredentialsAccessTokenTtl`.
 
 :::warning
-Verifiers cache the key set. Sésame serves `/jwks` with a 15 minute cache lifetime, so some verifiers will reject tokens signed with the new key until they refetch it. `createRemoteJWKSet` refetches on an unknown `kid`, but at most once every 30 seconds by default.
+Verifiers cache the key set. Sesame serves `/jwks` with a 15 minute cache lifetime, so some verifiers will reject tokens signed with the new key until they refetch it. `createRemoteJWKSet` refetches on an unknown `kid`, but at most once every 30 seconds by default.
 
 When no token may be rejected at all, publish the new key before signing with it. Add its public JWK to `previousJwks`, wait for verifier caches to expire, then make it the `jwk` and move the old key to `previousJwks`.
 :::

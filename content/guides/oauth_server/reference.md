@@ -1,5 +1,5 @@
 ---
-description: Reference for Sésame configuration options, OAuth endpoints, Ace commands, the manager and guard APIs, error codes, and the storage contract.
+description: Reference for Sesame configuration options, OAuth endpoints, Ace commands, the manager and guard APIs, error codes, and the storage contract.
 ---
 
 # Reference
@@ -15,7 +15,7 @@ This reference covers the public surface of `@adonisjs/sesame`. You will find:
 
 ## Overview
 
-Sésame turns your AdonisJS application into an OAuth 2.1 authorization server, with optional OpenID Connect. The [introduction guide](./introduction.md#configuration) walks through the setup. This page lists the exact options, request parameters, and method contracts you need once the server is running.
+Sesame turns your AdonisJS application into an OAuth 2.1 authorization server, with optional OpenID Connect. The [introduction guide](./introduction.md#configuration) walks through the setup. This page lists the exact options, request parameters, and method contracts you need once the server is running.
 
 Most APIs come from these export paths.
 
@@ -75,15 +75,15 @@ The storage driver, created with `stores.lucid()`. A missing store throws an `In
 :::
 
 :::option{name="issuer" dataType="string"}
-The public URL of the authorization server. Sésame uses it in discovery metadata, client redirects, and ID token claims.
+The public URL of the authorization server. Sesame uses it in discovery metadata, client redirects, and ID token claims.
 :::
 
 :::option{name="loginPage" dataType="string | (ctx: HttpContext, params: URLSearchParams) => string"}
-Where Sésame redirects an unauthenticated authorization request. For a string, Sésame appends the forwarded authorization parameters as a query string, using `&` when the string already contains `?`. A function receives the HTTP context and the parameters, and returns the URL.
+Where Sesame redirects an unauthenticated authorization request. For a string, Sesame appends the forwarded authorization parameters as a query string, using `&` when the string already contains `?`. A function receives the HTTP context and the parameters, and returns the URL.
 :::
 
 :::option{name="consentPage" dataType="string | (ctx: HttpContext, params: URLSearchParams) => string"}
-Where Sésame redirects when the requested scopes require the user's approval. It accepts the same forms as `loginPage`.
+Where Sesame redirects when the requested scopes require the user's approval. It accepts the same forms as `loginPage`.
 :::
 
 ::::
@@ -191,7 +191,7 @@ User provider resolving the subject and claims for ID tokens and the UserInfo en
 ::::options
 
 :::option{name="accessTokenFormat" dataType="'opaque' | 'jwt'" defaultValue="'opaque'"}
-`'opaque'` issues random strings. `'jwt'` issues RFC 9068 JWT access tokens signed with `jwk`, which resource servers can verify against the JWKS without calling Sésame. Only the token hash is stored in both cases, so revocation, introspection, and the guard behave the same. Setting `'jwt'` without `jwk` throws at boot.
+`'opaque'` issues random strings. `'jwt'` issues RFC 9068 JWT access tokens signed with `jwk`, which resource servers can verify against the JWKS without calling Sesame. Only the token hash is stored in both cases, so revocation, introspection, and the guard behave the same. Setting `'jwt'` without `jwk` throws at boot.
 :::
 
 :::option{name="accessTokenClaims" dataType="(context: AccessTokenClaimsContext) => Record<string, unknown> | Promise<Record<string, unknown>>"}
@@ -402,7 +402,7 @@ A successful response has status 201 and `Cache-Control: no-store`. It contains 
 When `clientIdMetadataDocuments` is enabled, an HTTPS URL is accepted as `client_id`. When it is disabled, URL client IDs are rejected, including stored ones. The URL must be canonical HTTPS, have a non-root path and a hostname rather than an IP address, and be at most 255 characters. Query, fragment, and userinfo are rejected. Host checks against `allowedHosts` are case-insensitive, while client ID comparisons are exact.
 
 :::note
-MySQL and MariaDB case-insensitive collations make case variants of a client ID collide, and Sésame rejects the mismatched stored ID. To support both variants, use binary collations on the client ID column and its foreign key columns.
+MySQL and MariaDB case-insensitive collations make case variants of a client ID collide, and Sesame rejects the mismatched stored ID. To support both variants, use binary collations on the client ID column and its foreign key columns.
 :::
 
 The fetched document must satisfy these rules.
@@ -508,7 +508,7 @@ Adds or replaces `OIDC_JWK` in the application's `.env` file.
 
 ### sesame:upgrade
 
-Publishes the database migrations needed to upgrade to a Sésame version. It does not run them.
+Publishes the database migrations needed to upgrade to a Sesame version. It does not run them.
 
 ```sh
 node ace sesame:upgrade 0.8
@@ -850,7 +850,7 @@ The attempted event runs when authentication starts, including requests without 
 
 A custom provider implements `OAuthUserProviderContract<User>` from `@adonisjs/sesame/guard`, which requires `[symbols.PROVIDER_REAL_USER]`, `createUserForGuard(user)`, and `findById(identifier)`. A guard user has `getId()` and `getOriginal()`. The Lucid adapter `oauthUserProvider`, the `OAuthLucidUserProvider` class, and the `OAuthLucidUserProviderOptions` type are exported from `@adonisjs/sesame/guard/lucid`.
 
-`OidcSubject`, `Scope`, and `collectOidcClaims` are exported from `@adonisjs/sesame/types`. `collectOidcClaims` combines the claims mapped to the granted scopes. Sésame filters the protocol-managed `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti`, `nonce`, `at_hash`, `auth_time`, `acr`, `azp`, and `sid` claims out of custom claims.
+`OidcSubject`, `Scope`, and `collectOidcClaims` are exported from `@adonisjs/sesame/types`. `collectOidcClaims` combines the claims mapped to the granted scopes. Sesame filters the protocol-managed `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti`, `nonce`, `at_hash`, `auth_time`, `acr`, `azp`, and `sid` claims out of custom claims.
 
 ## Errors
 

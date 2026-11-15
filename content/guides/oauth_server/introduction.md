@@ -7,7 +7,7 @@ description: Turn your AdonisJS application into an OAuth 2.1 authorization serv
 This guide covers running an OAuth 2.1 authorization server with the `@adonisjs/sesame` package. You will learn:
 
 - When your application needs an OAuth server
-- How to install and configure Sésame
+- How to install and configure Sesame
 - How to register the OAuth routes and connect your login and consent pages
 - How to create OAuth clients
 - How to protect API routes with the OAuth guard and scopes
@@ -18,21 +18,21 @@ This guide covers running an OAuth 2.1 authorization server with the `@adonisjs/
 
 The [access tokens guard](../auth/access_tokens_guard.md) works well when your own frontend or mobile app logs users in. It stops being enough when **other applications** need to act on behalf of your users: a partner integration, a CLI, or an AI agent connecting through MCP. Those applications must never see the user's password, they must only receive the permissions the user approved, and the user must be able to revoke that access later. This is what OAuth solves.
 
-Sésame turns your AdonisJS application into an **authorization server**. It implements the authorization code flow with mandatory PKCE, refresh token rotation with replay detection, token introspection and revocation, client credentials, dynamic client registration, and OpenID Connect.
+Sesame turns your AdonisJS application into an **authorization server**. It implements the authorization code flow with mandatory PKCE, refresh token rotation with replay detection, token introspection and revocation, client credentials, dynamic client registration, and OpenID Connect.
 
-Sésame does not own your users. You keep your user accounts, your login page, and your consent screen. Sésame adds the OAuth endpoints, stores clients, grants, and tokens in your database, and provides an `oauth` auth guard to authenticate requests carrying an OAuth access token.
+Sesame does not own your users. You keep your user accounts, your login page, and your consent screen. Sesame adds the OAuth endpoints, stores clients, grants, and tokens in your database, and provides an `oauth` auth guard to authenticate requests carrying an OAuth access token.
 
 The flow works as follows:
 
 1. A client application redirects the user's browser to your `/oauth/authorize` endpoint.
-2. If the user is not logged in, Sésame redirects them to your login page. Once logged in, it redirects them to your consent page.
-3. When the user approves, Sésame redirects the browser back to the client with a short-lived authorization code.
+2. If the user is not logged in, Sesame redirects them to your login page. Once logged in, it redirects them to your consent page.
+3. When the user approves, Sesame redirects the browser back to the client with a short-lived authorization code.
 4. The client exchanges the code for an access token and a refresh token at your `/oauth/token` endpoint.
 5. The client calls your API with the access token, which the `oauth` guard verifies.
 
 ## Installation
 
-Sésame requires AdonisJS 7, Node.js 24 or later, and `@adonisjs/auth` configured with a session guard as the default guard. Authorization and consent use that guard to identify the logged-in user.
+Sesame requires AdonisJS 7, Node.js 24 or later, and `@adonisjs/auth` configured with a session guard as the default guard. Authorization and consent use that guard to identify the logged-in user.
 
 Install and configure the package using the `add` command. The default store uses [Lucid](../database/lucid.md), so configure Lucid first.
 
@@ -70,7 +70,7 @@ node ace migration:run
 
 ## Configuration
 
-The configuration lives in `config/sesame.ts`. The `issuer` must be the public URL of your authorization server, since Sésame uses it in discovery metadata, redirects, and token claims. Use HTTPS in production, and never use your frontend URL or a bind address like `0.0.0.0`.
+The configuration lives in `config/sesame.ts`. The `issuer` must be the public URL of your authorization server, since Sesame uses it in discovery metadata, redirects, and token claims. Use HTTPS in production, and never use your frontend URL or a bind address like `0.0.0.0`.
 
 ```ts title="config/sesame.ts"
 import env from '#start/env'
@@ -133,11 +133,11 @@ curl http://localhost:3333/.well-known/oauth-authorization-server
 
 ## Login and consent pages
 
-Sésame does not render any HTML. When an authorization request arrives, it sends the browser to your `loginPage` if the user is not logged in, then to your `consentPage` when the requested scopes need approval. A user who already approved the same scopes skips the consent page.
+Sesame does not render any HTML. When an authorization request arrives, it sends the browser to your `loginPage` if the user is not logged in, then to your `consentPage` when the requested scopes need approval. A user who already approved the same scopes skips the consent page.
 
 ### Returning from login
 
-Sésame forwards the authorization query parameters to your login page. After a successful login, send the browser back to `/oauth/authorize` with the same parameters so the flow resumes. Always redirect to your own authorize route rather than accepting an arbitrary return URL, otherwise your login page becomes an open redirect.
+Sesame forwards the authorization query parameters to your login page. After a successful login, send the browser back to `/oauth/authorize` with the same parameters so the flow resumes. Always redirect to your own authorize route rather than accepting an arbitrary return URL, otherwise your login page becomes an open redirect.
 
 ```ts title="app/controllers/session_controller.ts"
 import User from '#models/user'
@@ -163,11 +163,11 @@ export default class SessionController {
 }
 ```
 
-Sésame validates the whole request again on `/oauth/authorize`, so you do not need to validate these parameters yourself.
+Sesame validates the whole request again on `/oauth/authorize`, so you do not need to validate these parameters yourself.
 
 ### Rendering the consent page
 
-Sésame redirects to your consent page with an `auth_token` that identifies a pending authorization request stored in the database. Load the request with `findPendingAuthorizationRequest`, which only returns it to the user who started it.
+Sesame redirects to your consent page with an `auth_token` that identifies a pending authorization request stored in the database. Load the request with `findPendingAuthorizationRequest`, which only returns it to the user who started it.
 
 ```ts title="app/controllers/oauth_consent_controller.ts"
 import sesame from '@adonisjs/sesame/services/main'
@@ -215,7 +215,7 @@ import router from '@adonisjs/core/services/router'
 router.get('/oauth/consent', [() => import('#controllers/oauth_consent_controller'), 'show'])
 ```
 
-The form posts the `auth_token` with an `accept` field. A truthy `accept` approves the request, and a missing one denies it. Sésame then redirects the browser to the client's callback.
+The form posts the `auth_token` with an `accept` field. A truthy `accept` approves the request, and a missing one denies it. Sesame then redirects the browser to the client's callback.
 
 ```edge title="resources/views/oauth/consent.edge"
 <h1>Allow {{ clientName }} to access your account?</h1>
@@ -272,7 +272,7 @@ export default class OAuthConsentController {
 Approval fails with `invalid_scope` when you pass a scope the client did not request. To attach a team or workspace to the authorization, see [grant context](./tokens_and_grants.md#attaching-application-context).
 
 :::tip
-With [Inertia](../frontend/inertia.md), submit the consent page through a native form. The callback usually lives on another origin, so an Inertia request would need your adapter's external redirect (`inertia.location()`). Sésame only sends standard HTTP redirects.
+With [Inertia](../frontend/inertia.md), submit the consent page through a native form. The callback usually lives on another origin, so an Inertia request would need your adapter's external redirect (`inertia.location()`). Sesame only sends standard HTTP redirects.
 :::
 
 ## Creating clients
@@ -288,7 +288,7 @@ node ace sesame:client
 node ace sesame:client --name="Browser app" --public --redirect-uris=https://app.example.com/callback --scopes=read --grant-types=authorization_code,refresh_token
 ```
 
-To let your users register their own applications, create clients from your code with the `createClient` method. The raw secret is only available in this result, since Sésame stores a hash.
+To let your users register their own applications, create clients from your code with the `createClient` method. The raw secret is only available in this result, since Sesame stores a hash.
 
 ```ts title="app/controllers/developer_apps_controller.ts"
 import sesame from '@adonisjs/sesame/services/main'
@@ -330,7 +330,7 @@ Disabling a client blocks client authentication and new authorization requests. 
 
 ## Protecting routes
 
-Add an `oauth` guard next to your session guard in `config/auth.ts`. Keep the session guard as the default, since Sésame uses it to identify the user during authorization.
+Add an `oauth` guard next to your session guard in `config/auth.ts`. Keep the session guard as the default, since Sesame uses it to identify the user during authorization.
 
 ```ts title="config/auth.ts"
 import { defineConfig } from '@adonisjs/auth'
@@ -417,7 +417,7 @@ To bind tokens to a specific API and reject tokens issued for another one, see [
 
 ## Authorizing a client
 
-This section shows the flow from the client's side, which helps you test your server end to end. The client first generates a random **code verifier**, its S256 **code challenge**, and a random `state`. It keeps the verifier and the state for the callback. PKCE is mandatory in OAuth 2.1, and Sésame only accepts the `S256` method.
+This section shows the flow from the client's side, which helps you test your server end to end. The client first generates a random **code verifier**, its S256 **code challenge**, and a random `state`. It keeps the verifier and the state for the callback. PKCE is mandatory in OAuth 2.1, and Sesame only accepts the `S256` method.
 
 ```ts title="client/authorize.ts"
 import { createHash, randomBytes } from 'node:crypto'
@@ -438,7 +438,7 @@ url.search = new URLSearchParams({
 }).toString()
 ```
 
-The client sends the browser to that URL. After login and consent, Sésame redirects to the callback with `code`, `state`, and `iss`. The client must compare `state` with the saved value and `iss` with the expected issuer, then exchange the code along with the verifier.
+The client sends the browser to that URL. After login and consent, Sesame redirects to the callback with `code`, `state`, and `iss`. The client must compare `state` with the saved value and `iss` with the expected issuer, then exchange the code along with the verifier.
 
 ```sh
 curl https://auth.example.com/oauth/token \
@@ -459,7 +459,7 @@ Public clients redirecting to a loopback address or a custom scheme always see t
 
 ## Custom user provider
 
-The `oauthUserProvider` loads users from a Lucid model. When your users live elsewhere, such as in another service, implement the `OAuthUserProviderContract` interface. The provider converts your user into a guard user and finds a user by ID. Sésame calls `findById` on every authenticated request.
+The `oauthUserProvider` loads users from a Lucid model. When your users live elsewhere, such as in another service, implement the `OAuthUserProviderContract` interface. The provider converts your user into a guard user and finds a user by ID. Sesame calls `findById` on every authenticated request.
 
 This example loads users from an internal users API whose base URL is stored in the `USERS_API_URL` environment variable.
 

@@ -1,10 +1,10 @@
 ---
-description: Protect an MCP endpoint with Sésame, bind tokens to a resource audience, and let external clients register through dynamic registration or Client ID Metadata Documents.
+description: Protect an MCP endpoint with Sesame, bind tokens to a resource audience, and let external clients register through dynamic registration or Client ID Metadata Documents.
 ---
 
 # MCP and client registration
 
-This guide covers protecting MCP servers and onboarding external clients with Sésame. You will learn:
+This guide covers protecting MCP servers and onboarding external clients with Sesame. You will learn:
 
 - How to bind tokens to one API with a resource audience
 - How to authenticate an MCP endpoint and request more scopes
@@ -17,9 +17,9 @@ This guide covers protecting MCP servers and onboarding external clients with S�
 
 The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) lets AI applications call tools exposed by your server. When an MCP endpoint needs a user's data, the MCP client must obtain an OAuth access token first. MCP clients do this without any manual setup: they discover your authorization server, identify themselves, run a PKCE authorization, and retry the request with a Bearer token.
 
-Sésame supplies the parts of that flow that belong to the authorization server: discovery metadata, Bearer authentication, scope challenges, and client identification. Your application still supplies the MCP transport itself (the handler that speaks the protocol).
+Sesame supplies the parts of that flow that belong to the authorization server: discovery metadata, Bearer authentication, scope challenges, and client identification. Your application still supplies the MCP transport itself (the handler that speaks the protocol).
 
-Two problems need solving before an MCP client can connect. First, a token issued for your MCP server must not be usable on another API, and the reverse. You solve this with a **resource audience**. Second, you cannot [create every client manually](./introduction.md#creating-clients) when any MCP client in the world may connect. Sésame offers two ways for clients to identify themselves: **dynamic client registration**, where the client posts its metadata to your server, and **Client ID Metadata Documents**, where the client uses the URL of a JSON document it hosts as its `client_id`.
+Two problems need solving before an MCP client can connect. First, a token issued for your MCP server must not be usable on another API, and the reverse. You solve this with a **resource audience**. Second, you cannot [create every client manually](./introduction.md#creating-clients) when any MCP client in the world may connect. Sesame offers two ways for clients to identify themselves: **dynamic client registration**, where the client posts its metadata to your server, and **Client ID Metadata Documents**, where the client uses the URL of a JSON document it hosts as its `client_id`.
 
 This guide assumes you have [registered the OAuth routes](./introduction.md#registering-routes) and know how to [protect routes with the OAuth guard](./introduction.md#protecting-routes).
 
@@ -104,7 +104,7 @@ Also reject tokens that are not bound to any resource, such as tokens issued to 
 When you add a resource to an existing API, clients may still hold older unbound tokens. Omit `requireAudience` during the transition: the guard then accepts unbound tokens while still rejecting tokens bound elsewhere. Turn it on once those tokens have expired. This transition only applies to opaque tokens: with [JWT access tokens](./openid_connect.md#jwt-access-tokens), a token requested without `resource` is bound to the issuer, so this guard rejects it either way.
 
 :::warning
-Register the exact path used by the guard. When the guard path is not registered, Sésame falls back to the closest registered resource and logs a warning once. See [resource indicators](./reference.md#resource-indicators) in the endpoints reference for how resource URIs are normalized and matched.
+Register the exact path used by the guard. When the guard path is not registered, Sesame falls back to the closest registered resource and logs a warning once. See [resource indicators](./reference.md#resource-indicators) in the endpoints reference for how resource URIs are normalized and matched.
 :::
 
 ### Requesting a bound token
@@ -230,17 +230,17 @@ curl https://auth.example.com/oauth/register \
 
 The server responds with a 201 status, the new client ID, and the registered metadata. Setting `token_endpoint_auth_method` to `none` creates a public client without a secret. For a confidential client, use `client_secret_basic` or `client_secret_post`. The secret appears only in the registration response, so the client must save it then.
 
-Sésame marks dynamic registrations with private metadata, and records the first time the client obtains a token. These markers stay out of the registration response, and allow `sesame:purge --clients` to remove registrations that never authorized (see [purging old records](./tokens_and_grants.md#purging-old-records)).
+Sesame marks dynamic registrations with private metadata, and records the first time the client obtains a token. These markers stay out of the registration response, and allow `sesame:purge --clients` to remove registrations that never authorized (see [purging old records](./tokens_and_grants.md#purging-old-records)).
 
 :::warning
 An open registration endpoint lets anyone create clients on your server. Before exposing it, test disabled registration, missing authentication (when you require a user), invalid callback URLs, unknown scopes, and disabled grant types. The [dynamic registration reference](./reference.md#dynamic-registration) lists the defaults and accepted fields.
 :::
 
-Sésame does not implement the registration access token workflow for managing a client after registration. When registered clients need updates, use your application's own authenticated management code.
+Sesame does not implement the registration access token workflow for managing a client after registration. When registered clients need updates, use your application's own authenticated management code.
 
 ## Client ID Metadata Documents
 
-With **Client ID Metadata Documents**, a public client uses the HTTPS URL of a JSON document as its `client_id`. Sésame fetches the document to learn the client name, callbacks, and permissions, so no registration request is needed. The MCP specification recommends this approach. Since the client is identified by a URL on a host it controls, you can also show that host to the user on the consent page.
+With **Client ID Metadata Documents**, a public client uses the HTTPS URL of a JSON document as its `client_id`. Sesame fetches the document to learn the client name, callbacks, and permissions, so no registration request is needed. The MCP specification recommends this approach. Since the client is identified by a URL on a host it controls, you can also show that host to the user on the consent page.
 
 ### Enabling document resolution
 
@@ -299,7 +299,7 @@ The client serves a JSON document at a canonical HTTPS URL. The `client_id` insi
 
 Serve the document with a 200 status, a `Content-Type: application/json` header, and no content encoding. Do not redirect the document URL. The client then starts authorization with that exact URL as `client_id` and S256 PKCE. Loopback callbacks may use a different port from the registered URL, but the host, path, and query must still match.
 
-Sésame validates anonymous authorization requests without storing the client. Once the user authenticates, it persists the client before displaying consent. Token, introspection, and revocation requests use the stored client and never fetch the document.
+Sesame validates anonymous authorization requests without storing the client. Once the user authenticates, it persists the client before displaying consent. Token, introspection, and revocation requests use the stored client and never fetch the document.
 
 ### Showing the client on the consent page
 
@@ -355,7 +355,7 @@ For a loopback redirect, explain in the view that the callback goes to an applic
 Consent appears on every authorization for these clients, because any process can reuse a public document URL. For the same reason, `prompt=none` returns `consent_required`. Each authorization creates its own grant, so a replay or a revocation only affects that authorization.
 
 :::note
-If you display the document's `logo_uri`, the user's browser requests the logo from its host. Sésame does not proxy logos.
+If you display the document's `logo_uri`, the user's browser requests the logo from its host. Sesame does not proxy logos.
 :::
 
 ### Disabling or removing a client
@@ -383,7 +383,7 @@ Turning the feature off, or removing a host from `allowedHosts`, rejects that cl
 
 ### Using a development fetcher
 
-Sésame fetches documents through the `ClientMetadataDocumentFetcher` class, which refuses to connect to special-use addresses such as loopback and private ranges. This protects your server against **server-side request forgery** (SSRF), where an attacker uses a crafted `client_id` to make your server call internal services. It also means a document served from your own machine is rejected during development.
+Sesame fetches documents through the `ClientMetadataDocumentFetcher` class, which refuses to connect to special-use addresses such as loopback and private ranges. This protects your server against **server-side request forgery** (SSRF), where an attacker uses a crafted `client_id` to make your server call internal services. It also means a document served from your own machine is rejected during development.
 
 You can swap the fetcher in the container for development only. This example assumes `certs/dev-ca.pem` contains your development certificate authority, and that a hostname resolves to a loopback address. The client ID URL must still pass document URL validation.
 
