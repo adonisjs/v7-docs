@@ -218,6 +218,37 @@ node ace create:user --groups=admin --groups=moderators --groups=creators
 # this.groups = ['admin', 'moderators', 'creators']
 ```
 
+Each value of an array flag is a string, even when it looks like a number. For example, `--ids=1 --ids=2` gives `['1', '2']`, not `[1, 2]`.
+
+If your command needs numbers, convert the values with the `parse` option. The `parse` method receives all the values as an array and returns the new array. Pass the type of the property to `@flags.array`, so that TypeScript accepts the `number[]` property.
+
+```ts title="commands/delete_users.ts"
+import { BaseCommand, flags } from '@adonisjs/core/ace'
+
+export default class DeleteUsersCommand extends BaseCommand {
+  static commandName = 'delete:users'
+
+  /**
+   * IDs of the users to delete
+   */
+  @flags.array<number[]>({
+    parse(values) {
+      return values.map((value) => Number(value))
+    },
+  })
+  declare ids: number[]
+
+  async run() {
+    this.logger.info(`Deleting users: ${this.ids.join(', ')}`)
+  }
+}
+```
+
+```sh
+node ace delete:users --ids=1 --ids=2
+# this.ids = [1, 2]
+```
+
 ## Customizing flag names and descriptions
 
 By default, Ace converts your property name to dashed-case for the flag name. For example, a property named `startServer` becomes `--start-server`. You can customize this using the `flagName` option.
