@@ -785,7 +785,10 @@ Cookie path. Default is `/`.
 :::
 
 :::option{name="maxAge" dataType="string | number"}
-Cookie expiry time. Can be a duration string like `'2h'` or milliseconds.
+Cookie expiry time. A number is seconds. A string is a duration, for example `'2h'`.
+
+- `0` gives a session cookie, which the browser removes when it closes.
+- A negative value expires the cookie at once. `response.clearCookie()` uses it.
 :::
 
 :::option{name="httpOnly" dataType="boolean"}
