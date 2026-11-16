@@ -261,6 +261,13 @@ To include a literal dollar sign in a value, escape it with a backslash.
 PRICE=\$99.99
 ```
 
+A reference to a variable that is missing from the `.env` file and from `process.env` resolves to an empty string. A reference from a variable to itself, or a cycle of references, also resolves to an empty string. In this example, `CORS_ORIGINS` resolves to `,http://localhost:3333` when `CORS_ORIGINS` is not set in `process.env`, and `A` and `B` resolve to empty strings.
+```bash title=".env"
+CORS_ORIGINS=$CORS_ORIGINS,http://localhost:3333
+A=$B
+B=$A
+```
+
 ### Reading values from files
 
 A value prefixed with `file:` is replaced with the contents of the referenced file. The path is resolved relative to the application root, and an absolute path works as well. This is useful with secret managers such as Docker secrets or Kubernetes, which mount each secret as a file instead of exposing it as an environment variable.
