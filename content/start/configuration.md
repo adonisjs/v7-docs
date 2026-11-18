@@ -261,12 +261,7 @@ To include a literal dollar sign in a value, escape it with a backslash.
 PRICE=\$99.99
 ```
 
-A reference to a variable that is missing from the `.env` file and from `process.env` resolves to an empty string. A reference from a variable to itself, or a cycle of references, also resolves to an empty string. In this example, `CORS_ORIGINS` resolves to `,http://localhost:3333` when `CORS_ORIGINS` is not set in `process.env`, and `A` and `B` resolve to empty strings.
-```bash title=".env"
-CORS_ORIGINS=$CORS_ORIGINS,http://localhost:3333
-A=$B
-B=$A
-```
+A reference to a variable that is missing from the `.env` file and from `process.env` resolves to an empty string.
 
 ### Reading values from files
 
