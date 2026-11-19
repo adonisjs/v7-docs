@@ -8,6 +8,7 @@ This guide covers rate limiting in AdonisJS applications. You will learn how to:
 
 - Install and configure the limiter package with Redis, database, or memory stores
 - Create throttle middleware for HTTP requests
+- Measure a new limit on real traffic using the dry run mode
 - Apply dynamic rate limits based on user authentication
 - Use rate limiting directly for login protection and job queues
 - Enforce several limits at once using multi limiters
@@ -306,6 +307,64 @@ limiter
    * for the 1-minute window to reset.
    */
   .blockFor('30 mins')
+```
+
+### Trying a limit with a dry run
+
+A new limit that is too strict will reject your legitimate users. The dry run mode lets you measure a limit on real traffic before you enforce it. Call the `dryRun` method, and the throttle middleware counts each request, but never rejects one:
+
+```ts title="start/limiter.ts"
+import limiter from '@adonisjs/limiter/services/main'
+
+export const apiThrottle = limiter.define('api', () => {
+  return limiter.allowRequests(100).every('1 hour').dryRun()
+})
+```
+
+When a request exceeds the limit, the request goes through, and the [limit:exceeded](#monitoring-rejected-requests) event is emitted with `dryRun: true`. Listen for the event to learn which clients the limit would have rejected:
+
+```ts title="start/events.ts"
+import emitter from '@adonisjs/core/services/emitter'
+import logger from '@adonisjs/core/services/logger'
+
+emitter.on('limit:exceeded', ({ key, response, dryRun }) => {
+  if (dryRun) {
+    logger.warn(
+      { key, consumed: response.consumed, limit: response.limit },
+      'request would have been throttled'
+    )
+  }
+})
+```
+
+In dry run mode, the throttle middleware behaves differently in the following ways:
+
+- The `limitExceeded` callback is not called, because no exception is thrown.
+- The `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers are not set, so clients cannot tell that the limit exists.
+- The counters use their own keys, with a `_dry` suffix on the limiter name (for example, `api_dry_ip_127.0.0.1`). When you enforce the limit later, it starts from fresh counters. A client that `blockFor` blocked during the dry run is not rejected when you enforce the limit.
+
+The `dryRun` method accepts a boolean, and `dryRun(false)` turns the dry run mode off. Use an environment variable to switch between a dry run and an enforced limit with no code change:
+
+```ts title="start/limiter.ts"
+import env from '#start/env'
+import limiter from '@adonisjs/limiter/services/main'
+
+export const apiThrottle = limiter.define('api', () => {
+  return limiter
+    .allowRequests(100)
+    .every('1 hour')
+    /**
+     * Give a default of "false". Calling "dryRun()" with
+     * "undefined" enables the dry run mode.
+     */
+    .dryRun(env.get('LIMITER_DRY_RUN', false))
+})
+```
+
+```ts title="start/env.ts"
+{
+  LIMITER_DRY_RUN: Env.schema.boolean.optional(),
+}
 ```
 
 ## Dynamic rate limiting
@@ -753,7 +812,9 @@ emitter.on('limit:exceeded', (event) => {
 
 Keys created by the throttle middleware are prefixed with the limiter name, which tells you which limiter rejected the request. For example, a limiter defined using `limiter.define('api', ...)` creates keys like `api_ip_127.0.0.1`, or `api_42` when you call `usingKey(42)`.
 
-The event is only emitted for rejected requests. Methods that update the counters without rejecting a request (`increment`, `set`, and `block`) do not emit it, and the next rejected request will. When using a multi limiter, the event is emitted once for the limiter that rejected the request first.
+The event also has a `dryRun` property. It is `true` when a throttle middleware in [dry run mode](#trying-a-limit-with-a-dry-run) lets through a request that exceeded the limit. It is `false` for each rejected request.
+
+The event is only emitted for rejected requests, and for the requests that a dry run lets through. Methods that update the counters without rejecting a request (`increment`, `set`, and `block`) do not emit it, and the next rejected request will. When using a multi limiter, the event is emitted once for the limiter that rejected the request first.
 
 :::tip
 The event is emitted for every rejected request, including each request a blocked client keeps sending during the `blockDuration`. Keep the listener lightweight by writing a log line or incrementing a metric, and avoid performing database writes inside it.
