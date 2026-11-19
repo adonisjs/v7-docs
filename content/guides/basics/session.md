@@ -744,6 +744,52 @@ Access flashed form data in templates using the `old()` helper.
 When using AdonisJS validators, validation errors and form data are automatically flashed on validation failure. You don't need to manually flash them. The `password`, `password_confirmation`, `_csrf`, and `_method` fields are left out. For Inertia requests, only the errors are flashed, since the Inertia form keeps its own input state.
 :::
 
+### Flashing field errors
+
+Sometimes a form field fails a check that your validator does not make, for example when your controller finds that an email is already registered. Use the `flashInputErrors()` method to flash an error for that field without a validation exception. The errors are stored under the `inputErrorsBag` key, the same key that validation failures fill. The [`@inputError`](../../reference/edge.md#inputerror) tag and the Inertia adapter read this key, so they display these errors exactly like validation errors.
+
+```ts title="app/controllers/new_account_controller.ts"
+import User from '#models/user'
+import { signupValidator } from '#validators/user'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class NewAccountController {
+  async store({ request, session, response }: HttpContext) {
+    const payload = await request.validateUsing(signupValidator)
+
+    if (await User.findBy('email', payload.email)) {
+      /**
+       * Flash an error for the email field, and the form data
+       * without the password, then go back to the form.
+       */
+      session.flashInputErrors({
+        email: 'This email is already registered',
+      })
+      session.flashExcept(['password', 'password_confirmation'])
+
+      return response.redirect().back()
+    }
+
+    await User.create(payload)
+    return response.redirect().toRoute('dashboard')
+  }
+}
+```
+
+A message can be a string or an array of strings. The messages are added to the messages already flashed for the same field, so calling `flashInputErrors()` twice for `email` keeps both messages.
+
+```ts
+session.flashInputErrors({
+  email: [
+    'This email is already registered',
+    'Use your work email instead',
+  ],
+  username: 'This username is taken',
+})
+```
+
+The `flashInputErrors()` method does not write to the `errorsBag` key that the `@error` tag reads, and it does not flash the request input. Call `flashAll()`, `flashOnly()`, or `flashExcept()` yourself when the form fields must be pre-filled. Inertia requests can skip this step, since the Inertia form keeps its own input state.
+
 ### Re-flashing messages
 
 Sometimes you need to keep flash messages for an additional request. Use `reflash()` to preserve all messages from the previous request for one more cycle.
