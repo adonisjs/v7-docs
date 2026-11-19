@@ -409,7 +409,7 @@ emitter.on('cache:written', (event) => {
 
 ## limit\:exceeded
 
-The event is dispatched by the `@adonisjs/limiter` package every time a request is rejected because the key has exhausted its requests. The `event.key` property is the key that exceeded the limit, and the `event.response` property contains the limiter state at the time of the rejection.
+The event is dispatched by the `@adonisjs/limiter` package every time a request is rejected because the key has exhausted its requests. The `event.key` property is the key that exceeded the limit, and the `event.response` property contains the limiter state at the time of the rejection. The `event.dryRun` property is `true` when a throttle middleware in dry run mode lets the request through, in place of a rejection.
 
 See also: [Monitoring rejected requests](../guides/security/rate_limiting.md#monitoring-rejected-requests)
 
@@ -421,5 +421,6 @@ emitter.on('limit:exceeded', (event) => {
   console.log(event.response.limit)
   console.log(event.response.remaining)
   console.log(event.response.availableIn)
+  console.log(event.dryRun)
 })
 ```
