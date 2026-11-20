@@ -185,6 +185,36 @@
     ]
   },
   {
+    "category": "OAuth server",
+    "children": [
+      {
+        "title": "Introduction",
+        "permalink": "guides/oauth-server/introduction",
+        "contentPath": "./oauth_server/introduction.md"
+      },
+      {
+        "title": "Tokens and grants",
+        "permalink": "guides/oauth-server/tokens-and-grants",
+        "contentPath": "./oauth_server/tokens_and_grants.md"
+      },
+      {
+        "title": "OpenID Connect",
+        "permalink": "guides/oauth-server/openid-connect",
+        "contentPath": "./oauth_server/openid_connect.md"
+      },
+      {
+        "title": "MCP and client registration",
+        "permalink": "guides/oauth-server/mcp",
+        "contentPath": "./oauth_server/mcp.md"
+      },
+      {
+        "title": "Reference",
+        "permalink": "guides/oauth-server/reference",
+        "contentPath": "./oauth_server/reference.md"
+      }
+    ]
+  },
+  {
     "category": "Security",
     "children": [
       {
