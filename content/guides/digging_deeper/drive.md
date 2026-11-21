@@ -9,13 +9,13 @@ This guide covers file storage management in AdonisJS using Drive. You will lear
 - Install and configure Drive for your application
 - Upload files to local or cloud storage using `moveToDisk`
 - Display files using public URLs and signed URLs
-- Configure multiple storage services (S3, GCS, R2, DigitalOcean Spaces, Supabase)
+- Configure multiple storage services (S3, GCS, R2, DigitalOcean Spaces, Supabase, Neon)
 - Implement direct uploads from the browser to cloud storage
 - Test file uploads using the Drive fakes API
 
 ## Overview
 
-AdonisJS Drive is a wrapper on top of [FlyDrive](https://flydrive.dev) (created and maintained by the AdonisJS core team). It provides a unified API for managing user-uploaded files across multiple storage providers, including the local filesystem, Amazon S3, Google Cloud Storage, Cloudflare R2, DigitalOcean Spaces, and Supabase Storage.
+AdonisJS Drive is a wrapper on top of [FlyDrive](https://flydrive.dev) (created and maintained by the AdonisJS core team). It provides a unified API for managing user-uploaded files across multiple storage providers, including the local filesystem, Amazon S3, Google Cloud Storage, Cloudflare R2, DigitalOcean Spaces, Supabase Storage, and Neon Object Storage.
 
 The key benefit of Drive is that you can switch between storage services without changing your application code. During development, you might store files on the local filesystem for convenience. In production, you switch to a cloud provider by changing an environment variable. Your controllers, services, and templates remain unchanged.
 
@@ -43,7 +43,7 @@ The command prompts you to select one or more storage services.
 :::
 
 :::tip{title="Non-interactive installation"}
-You can skip the prompts (for example, in CI scripts) by passing the service with the `--services` flag and the `--install` flag to install its peer dependencies without asking. The supported values are `fs`, `s3`, `gcs`, `r2`, `spaces`, and `supabase`.
+You can skip the prompts (for example, in CI scripts) by passing the service with the `--services` flag and the `--install` flag to install its peer dependencies without asking. The supported values are `fs`, `s3`, `gcs`, `r2`, `spaces`, `supabase`, and `neon`.
 
 ```sh
 node ace add @adonisjs/drive --services=s3 --install
@@ -321,6 +321,50 @@ await avatar.moveToDisk(key, 'supabase', {
   moveAs: 'buffer',
 })
 ```
+:::
+
+### Neon Object Storage
+
+Neon Object Storage uses the S3-compatible API. It requires path-style URLs and does not support object ACLs, so `forcePathStyle` must be `true` and `supportsACL` must be `false`.
+
+:::disclosure{title="Environment variables"}
+
+```dotenv title=".env"
+DRIVE_DISK=neon
+NEON_STORAGE_KEY=your_access_key
+NEON_STORAGE_SECRET=your_secret_key
+NEON_STORAGE_REGION=your_region
+NEON_STORAGE_BUCKET=your_bucket_name
+NEON_STORAGE_ENDPOINT=https://your_branch_id.storage.c-1.us-east-2.aws.neon.tech
+```
+
+:::
+
+:::disclosure{title="Configuration"}
+
+```ts title="config/drive.ts"
+{
+  services: {
+    neon: services.s3({
+      credentials: {
+        accessKeyId: env.get('NEON_STORAGE_KEY'),
+        secretAccessKey: env.get('NEON_STORAGE_SECRET'),
+      },
+      region: env.get('NEON_STORAGE_REGION'),
+      bucket: env.get('NEON_STORAGE_BUCKET'),
+      endpoint: env.get('NEON_STORAGE_ENDPOINT'),
+      forcePathStyle: true,
+      supportsACL: false,
+      visibility: 'public',
+    }),
+  }
+}
+```
+
+:::
+
+:::note
+Neon Object Storage sets visibility per bucket. Set `visibility` to `public` for a `public_read` bucket and to `private` for a `private` bucket.
 :::
 
 ## Basic usage
