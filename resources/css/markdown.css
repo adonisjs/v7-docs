@@ -8,7 +8,8 @@
   @apply text-gray-600 dark:text-woodsmoke-200 bg-gray-200 dark:bg-woodsmoke-800/40 font-medium dark:font-normal;
   padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 1);
   border-radius: var(--radius-sm);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .prose td code {
