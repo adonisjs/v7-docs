@@ -305,9 +305,12 @@ Shield generates a unique nonce for each request. Attackers cannot predict this 
 
 ### Configuring CSP for Vite
 
-During development, AdonisJS serves Vite assets from the same origin as your application, so `'self'` already covers scripts and stylesheets. The HMR WebSocket is the exception. It listens on its own port (`24678` by default, or the value of the `VITE_HMR_PORT` environment variable), and you must allow it in the `connectSrc` directive.
+During development, AdonisJS serves Vite assets from the same origin as your application, so `'self'` already covers scripts and stylesheets. The HMR WebSocket is the exception. It listens on its own port, and you must allow it in the `connectSrc` directive.
+
+The dev server sets the `VITE_HMR_PORT` environment variable in your application process to the port of the HMR WebSocket. Read it with `env.get` to build the WebSocket URL. The fallback `24678` is the default port of Vite.
 
 ```ts title="config/shield.ts"
+import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
@@ -316,7 +319,12 @@ const shieldConfig = defineConfig({
     enabled: true,
     directives: {
       defaultSrc: [`'self'`],
-      connectSrc: [`'self'`, ...(app.inDev ? ['ws://localhost:24678'] : [])],
+      connectSrc: [
+        `'self'`,
+        ...(app.inDev
+          ? [`ws://localhost:${env.get('VITE_HMR_PORT', '24678')}`]
+          : []),
+      ],
       scriptSrc: [`'self'`, '@nonce'],
       styleSrc: [`'self'`, '@nonce'],
     },
@@ -330,6 +338,7 @@ export default shieldConfig
 If you deploy bundled assets to a CDN, add the `@viteUrl` keyword to the directives that load those assets. The `@adonisjs/vite` package registers this keyword, and it resolves to the `assetsUrl` from `config/vite.ts` when the value is an HTTP or HTTPS URL. For relative URLs like `/assets`, it resolves to an empty string.
 
 ```ts title="config/shield.ts"
+import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/shield'
 
@@ -338,7 +347,12 @@ const shieldConfig = defineConfig({
     enabled: true,
     directives: {
       defaultSrc: [`'self'`, '@viteUrl'], // [!code highlight]
-      connectSrc: [`'self'`, ...(app.inDev ? ['ws://localhost:24678'] : [])],
+      connectSrc: [
+        `'self'`,
+        ...(app.inDev
+          ? [`ws://localhost:${env.get('VITE_HMR_PORT', '24678')}`]
+          : []),
+      ],
       scriptSrc: [`'self'`, '@nonce', '@viteUrl'], // [!code highlight]
       styleSrc: [`'self'`, '@nonce', '@viteUrl'], // [!code highlight]
     },
