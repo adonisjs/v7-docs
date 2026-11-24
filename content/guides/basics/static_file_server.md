@@ -260,7 +260,7 @@ The property is not defined by default, and every request is looked up in the `p
 :::warning
 A file in `public/` with no matching prefix is not served, even when it exists. Add an entry for each file or directory you keep outside the listed prefixes, such as `/uploads`.
 
-The middleware compares the prefixes as-is with the request URL. It does not decode the path or ignore the case, so `/Assets/app.js` and `/%61ssets/app.js` do not match `/assets`.
+The middleware compares the prefixes with the decoded URL path, so write a prefix as its folder is named, for example `/my files`. The comparison is case-sensitive, so `/Assets/app.js` does not match `/assets`.
 :::
 
 :::
