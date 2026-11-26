@@ -34,6 +34,8 @@ npm run dev
 
 The site will be available at `http://localhost:3333`.
 
+Search in development needs a build first. Run `npm run build`, then restart `npm run dev` to generate the search index in `public/pagefind`. Run the build again to include content changes in search.
+
 ## Project structure
 
 ```

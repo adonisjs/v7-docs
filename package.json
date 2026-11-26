@@ -9,7 +9,7 @@
     "build": "node ace build && node ace build:static && npm run build:search:index",
     "build:search:index": "pagefind --site build/public",
     "dev:search:index": "pagefind --site build/public --output-path=public/pagefind",
-    "predev": "npm run dev:search:index",
+    "predev": "node scripts/predev.js",
     "dev": "node ace serve --hmr",
     "lint": "eslint .",
     "format": "prettier --write .",

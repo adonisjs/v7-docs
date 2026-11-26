@@ -11,6 +11,7 @@ tmp
 
 # Frontend assets compiled code
 public/assets
+public/pagefind
 
 # Build tools specific
 npm-debug.log
