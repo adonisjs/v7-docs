@@ -31,6 +31,7 @@ edge.use(edgeMarkdown, {
       'vue',
       'dockerfile',
       'diff',
+      'prisma',
     ],
     themes: {
       light: 'github-light',
