@@ -28,5 +28,11 @@
     "name": "TestMu AI",
     "url": "https://www.testmuai.com/",
     "tier": "bronze"
+  },
+  {
+    "logo": "./logos/lfcarry.svg",
+    "name": "LFCarry",
+    "url": "https://lfcarry.com/",
+    "tier": "bronze"
   }
 ]

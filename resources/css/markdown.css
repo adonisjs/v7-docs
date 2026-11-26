@@ -108,7 +108,8 @@
   font-size: 20px;
   background: transparent;
   color: inherit;
-  padding: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .prose h2 + .prose h3 {

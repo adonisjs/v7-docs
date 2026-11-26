@@ -588,4 +588,4 @@ This configuration ensures that only the specified routes will process multipart
 
 If you have public endpoints that accept file uploads (endpoints that don't require authentication), apply strict rate limiting to prevent abuse. See the [rate limiting guide](../../guides/security/rate_limiting.md) for implementation details.
 
-For comprehensive bodyparser configuration options, refer to the [BodyParser guide](./body_parser.md) and the [bodyparser config reference](../../reference/config/bodyparser.md).
+For each bodyparser configuration option, see the [configuration section of the BodyParser guide](./body_parser.md#configuration).

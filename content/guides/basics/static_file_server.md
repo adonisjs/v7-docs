@@ -243,6 +243,28 @@ The function must return an object where keys are header names and values are he
 
 :::
 
+:::option{name="prefixes"}
+
+The `prefixes` property limits static file serving to a list of URL paths. By default, the middleware looks for a file in `public/` on every request, including the requests your routes handle. When you define `prefixes`, a request with no matching prefix continues to your routes without a filesystem lookup.
+
+```ts title="config/static.ts"
+export default defineConfig({
+  prefixes: ['/assets', '/favicon.ico', '/robots.txt'],
+})
+```
+
+A request matches when its path equals a prefix or is nested under it. In the example above, `/assets/app.js` matches `/assets`, and `/assets-old/app.js` does not. The prefixes do not change the file path, so `/assets/app.js` still serves `public/assets/app.js`.
+
+The property is not defined by default, and every request is looked up in the `public` directory.
+
+:::warning
+A file in `public/` with no matching prefix is not served, even when it exists. Add an entry for each file or directory you keep outside the listed prefixes, such as `/uploads`.
+
+The middleware compares the prefixes with the decoded URL path, so write a prefix as its folder is named, for example `/my files`. The comparison is case-sensitive, so `/Assets/app.js` does not match `/assets`.
+:::
+
+:::
+
 ::::
 
 ## Serving static files
@@ -323,7 +345,7 @@ The rule for copying public files is defined in the `adonisrc.ts` file:
 
 The `pattern` property uses glob syntax to match all files inside the `public` directory. The `reloadServer: false` setting indicates that changes to these files during development don't require restarting the development server.
 
-If you add files to the `public` directory while your development server is running, you don't need to restart. The static middleware will serve them immediately. However, if you modify the `config/static.ts` file, you will need to restart the server for the configuration changes to take effect.
+If you add files to the `public` directory while your development server is running, you don't need to restart. The static middleware will serve them immediately, provided their URL matches the `prefixes` option when you have defined it. However, if you modify the `config/static.ts` file, you will need to restart the server for the configuration changes to take effect.
 
 ## See also
 
