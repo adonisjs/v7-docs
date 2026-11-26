@@ -345,6 +345,192 @@ export default class SessionController {
 }
 ```
 
+### Remember me without Lucid
+
+The `DbRememberMeTokensProvider` works only with a Lucid model. When your users come from another data layer, such as Prisma, the user provider stores the remember me tokens itself. The session guard accepts any user provider that implements the `SessionWithTokensUserProviderContract` interface. Next to `findById` and `createUserForGuard`, the interface has four methods to create, verify, recycle, and delete tokens.
+
+You do not write the token logic yourself. The `RememberMeToken` class, exported from `@adonisjs/auth/session`, creates the secret and its hash, decodes the cookie value, and checks the hash and the expiry date. Your provider only reads and writes the rows of the tokens table.
+
+The following Prisma models map to the `users` table and to the `remember_me_tokens` table from [Creating the tokens table](#creating-the-tokens-table). The client is generated in the `database/prisma` folder, so the app imports it with the `#database/prisma/client` alias.
+
+```prisma title="prisma/schema.prisma"
+generator client {
+  provider = "prisma-client"
+  output   = "../database/prisma"
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  email            String            @unique
+  password         String
+  rememberMeTokens RememberMeToken[]
+
+  @@map("users")
+}
+
+model RememberMeToken {
+  id          Int      @id @default(autoincrement())
+  tokenableId Int      @map("tokenable_id")
+  hash        String   @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  expiresAt   DateTime @map("expires_at")
+  user        User     @relation(fields: [tokenableId], references: [id], onDelete: Cascade)
+
+  @@map("remember_me_tokens")
+}
+```
+
+The user provider imports the Prisma client from `app/services/prisma.ts`. Create that file as the [Prisma documentation](https://www.prisma.io/docs/orm/prisma-client/setup-and-configuration/introduction) shows for your database. The guard recycles a token each time it restores a session from it, so a stolen copy of a used token stops working. The provider recycles a token by deleting its row and creating a new token, which is what `DbRememberMeTokensProvider` does.
+
+```ts title="app/auth/prisma_user_provider.ts"
+import prisma from '#services/prisma'
+import { symbols } from '@adonisjs/auth'
+import type { Secret } from '@adonisjs/core/helpers'
+import { RememberMeToken } from '@adonisjs/auth/session'
+import type {
+  User,
+  RememberMeToken as RememberMeTokenRow,
+} from '#database/prisma/client'
+import type {
+  SessionGuardUser,
+  SessionWithTokensUserProviderContract,
+} from '@adonisjs/auth/types/session'
+
+class PrismaUserProvider implements SessionWithTokensUserProviderContract<User> {
+  declare [symbols.PROVIDER_REAL_USER]: User
+
+  /**
+   * Converts a row of the "remember_me_tokens" table to a token.
+   * Pass the secret only for a new token, so that the token
+   * has a value to write in the cookie.
+   */
+  #toRememberMeToken(row: RememberMeTokenRow, secret?: Secret<string>) {
+    return new RememberMeToken({
+      identifier: row.id,
+      tokenableId: row.tokenableId,
+      hash: row.hash,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      expiresAt: row.expiresAt,
+      secret,
+    })
+  }
+
+  async createUserForGuard(user: User): Promise<SessionGuardUser<User>> {
+    return { getId: () => user.id, getOriginal: () => user }
+  }
+
+  async findById(identifier: string | number | BigInt) {
+    const user = await prisma.user.findUnique({
+      where: { id: Number(identifier) },
+    })
+
+    if (!user) {
+      return null
+    }
+
+    return this.createUserForGuard(user)
+  }
+
+  async createRememberToken(user: User, expiresIn: string | number) {
+    /**
+     * Creates a random secret of 40 characters and its hash.
+     * The table stores only the hash.
+     */
+    const transientToken = RememberMeToken.createTransientToken(user.id, 40, expiresIn)
+
+    const row = await prisma.rememberMeToken.create({
+      data: {
+        tokenableId: user.id,
+        hash: transientToken.hash,
+        expiresAt: transientToken.expiresAt,
+      },
+    })
+
+    return this.#toRememberMeToken(row, transientToken.secret)
+  }
+
+  async verifyRememberToken(tokenValue: Secret<string>) {
+    /**
+     * Splits the cookie value into the token id and the secret.
+     * A value that is not a valid token returns null.
+     */
+    const decodedToken = RememberMeToken.decode(tokenValue.release())
+    if (!decodedToken) {
+      return null
+    }
+
+    const id = Number(decodedToken.identifier)
+    if (!Number.isInteger(id)) {
+      return null
+    }
+
+    const row = await prisma.rememberMeToken.findUnique({ where: { id } })
+    if (!row) {
+      return null
+    }
+
+    const token = this.#toRememberMeToken(row)
+    if (!token.verify(decodedToken.secret) || token.isExpired()) {
+      return null
+    }
+
+    return token
+  }
+
+  async recycleRememberToken(
+    user: User,
+    tokenIdentifier: string | number | BigInt,
+    expiresIn: string | number
+  ) {
+    await this.deleteRemeberToken(user, tokenIdentifier)
+    return this.createRememberToken(user, expiresIn)
+  }
+
+  async deleteRemeberToken(user: User, tokenIdentifier: string | number | BigInt) {
+    const { count } = await prisma.rememberMeToken.deleteMany({
+      where: { id: Number(tokenIdentifier), tokenableId: user.id },
+    })
+
+    return count
+  }
+}
+
+export const prismaUserProvider = new PrismaUserProvider()
+```
+
+:::note
+The interface spells the delete method `deleteRemeberToken`. Use this exact name, or TypeScript reports that the class does not implement the interface.
+:::
+
+Use the provider in place of `sessionUserProvider`, and keep `useRememberMeTokens: true`.
+
+```ts title="config/auth.ts"
+import { defineConfig } from '@adonisjs/auth'
+import { sessionGuard, sessionUserProvider } from '@adonisjs/auth/session' // [!code --]
+import { sessionGuard } from '@adonisjs/auth/session' // [!code ++]
+import { prismaUserProvider } from '../app/auth/prisma_user_provider.js' // [!code ++]
+
+const authConfig = defineConfig({
+  default: 'web',
+  guards: {
+    web: sessionGuard({
+      useRememberMeTokens: true,
+      rememberMeTokensAge: '2 years',
+      provider: sessionUserProvider({ // [!code --]
+        model: () => import('#models/user'), // [!code --]
+      }), // [!code --]
+      provider: prismaUserProvider, // [!code ++]
+    }),
+  },
+})
+
+export default authConfig
+```
+
+The `login()` method now accepts a Prisma user object. Pass `true` as the second argument to create a remember me token, as [Generating tokens during login](#generating-tokens-during-login) shows. After login, `auth.user` is the Prisma user object.
+
 ## Redirecting to the intended URL
 
 When unauthenticated users try to access a protected page, the auth middleware redirects them to the login page. After login, you will want to send them back to the page they originally requested instead of a generic dashboard.
