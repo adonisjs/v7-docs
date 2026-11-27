@@ -47,7 +47,7 @@ The body parser is configured in the `config/bodyparser.ts` file. The configurat
 import { defineConfig } from '@adonisjs/core/bodyparser'
 
 const bodyParserConfig = defineConfig({
-  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
 
   form: {
     convertEmptyStringsToNull: true,
@@ -81,7 +81,7 @@ export default bodyParserConfig
 
 :::option{name="allowedMethods"}
 
-The `allowedMethods` array defines which HTTP methods should have their request bodies parsed. By default, only `POST`, `PUT`, `PATCH`, and `DELETE` requests are processed. GET requests are excluded because they typically don't include request bodies.
+The `allowedMethods` array defines which HTTP methods should have their request bodies parsed. By default, `POST`, `PUT`, `PATCH`, `DELETE`, and [QUERY](./routing.md#the-query-method) requests are processed. `GET` requests are excluded because they typically do not include request bodies. If your app sets `allowedMethods` explicitly, add `QUERY` to parse its request body.
 
 :::
 
@@ -354,7 +354,7 @@ This is useful when your application receives data in formats like XML, YAML, or
 
 ```ts title="config/bodyparser.ts"
 const bodyParserConfig = defineConfig({
-  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
 
   // [!code ++:5]
   raw: {

@@ -288,6 +288,7 @@ The router provides dedicated methods for each standard HTTP verb. Each method c
 | `PUT` | Replace entire resources | Update all fields of a user profile |
 | `PATCH` | Update partial resources | Update only the email field of a user |
 | `DELETE` | Remove resources | Delete a blog post, remove a user account |
+| `QUERY` | Run a query with a request body | Search with filters too complex to fit in a URL |
 
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
@@ -297,15 +298,42 @@ router.post('/users', () => {})          // Create a new user
 router.put('/users/:id', () => {})       // Replace user completely
 router.patch('/users/:id', () => {})     // Update specific user fields
 router.delete('/users/:id', () => {})    // Delete a user
+router.query('/users/search', () => {})  // Search users using the request body
 ```
+
+### The QUERY method
+
+`QUERY` is a newer HTTP method defined by [RFC 10008](https://www.rfc-editor.org/rfc/rfc10008.html). Like `GET`, it is safe and idempotent, and its responses are cacheable. Like `POST`, it sends the query in the request body. Use it for search or filter endpoints whose input is too large or too structured to fit in a URL, where you would otherwise reach for a `POST` route that doesn't change anything.
+
+```ts title="start/routes.ts"
+import router from '@adonisjs/core/services/router'
+import Product from '#models/product'
+
+router.query('/products/search', async ({ request }) => {
+  const { category } = request.body()
+  return Product.query().where('category', category)
+})
+```
+
+```sh title="Terminal"
+curl -X QUERY http://localhost:3333/products/search \
+  -H 'Content-Type: application/json' \
+  -d '{"category":"books"}'
+```
+
+When `QUERY` is in `allowedMethods`, the bodyparser rejects a `QUERY` request with a missing or empty `Content-Type` header with a `400 Bad Request` response. Send a `Content-Type` that matches the request body, such as `application/json` for the example above. The router does not check this header.
+
+:::note
+The [bodyparser](./body_parser.md) only parses the body for the methods listed in the `allowedMethods` option. `QUERY` is included by default. If your app sets this list explicitly in `config/bodyparser.ts`, add `'QUERY'` to parse its request body.
+:::
 
 ### Matching multiple methods
 
-To match all HTTP methods or specify custom verbs:
+Use `router.any()` to match the common HTTP methods, or `router.route()` to specify methods explicitly:
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
-// Matches GET, POST, PUT, PATCH, DELETE, and all other methods
+// Matches GET, HEAD, POST, PUT, PATCH, DELETE, and OPTIONS
 router.any('/reports', () => {})
 
 // Match specific custom HTTP methods
@@ -313,7 +341,7 @@ router.route('/', ['TRACE'], () => {})
 router.route('/api/data', ['GET', 'POST', 'PUT'], () => {})
 ```
 
-The `.any()` method is useful for endpoints that need to respond to any HTTP method, such as webhook receivers or catch-all debugging routes.
+The `.any()` method does not include `QUERY`. Use `router.query()` or `router.route()` to register a `QUERY` route.
 
 ## Route middleware
 

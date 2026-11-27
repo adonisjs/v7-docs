@@ -568,7 +568,7 @@ Form fields sent alongside the files are available through `request.input()` and
 
 Now that you understand how to implement file uploads, it's important to secure your application against potential abuse.
 
-By default, AdonisJS processes multipart requests (file uploads) on all routes that use `POST`, `PUT`, `PATCH`, and `DELETE` methods. This means any endpoint in your application can potentially receive and process file uploads, even if you didn't intend for it to handle files. This unrestricted access allows attackers to target any endpoint in your application to upload files, potentially straining your server's resources, filling up disk space, or using your application to distribute malicious content.
+By default, AdonisJS processes multipart requests (file uploads) on all routes that use `POST`, `PUT`, `PATCH`, `DELETE`, and `QUERY` methods. This means any endpoint in your application can potentially receive and process file uploads, even if you didn't intend for it to handle files. This unrestricted access allows attackers to target any endpoint in your application to upload files, potentially straining your server's resources, filling up disk space, or using your application to distribute malicious content.
 
 As a first security measure, you must allow multipart auto-processing only on specific routes that actually need to handle files. Configure this in your bodyparser settings.
 
@@ -576,7 +576,7 @@ As a first security measure, you must allow multipart auto-processing only on sp
 import { defineConfig } from '@adonisjs/core/bodyparser'
 
 export default defineConfig({
-  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
   
   multipart: {
     autoProcess: ['/profile/avatar', '/users/:id', '/projects/:id/files']
