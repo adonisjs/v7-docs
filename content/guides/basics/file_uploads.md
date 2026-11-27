@@ -497,7 +497,7 @@ As a first security measure, you must allow multipart auto-processing only on sp
 import { defineConfig } from '@adonisjs/core/bodyparser'
 
 export default defineConfig({
-  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedMethods: ['POST', 'PUT', 'PATCH', 'DELETE', 'QUERY'],
   
   multipart: {
     autoProcess: ['/profile/avatar', '/users/:id', '/projects/:id/files']
