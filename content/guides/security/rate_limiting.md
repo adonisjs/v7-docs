@@ -840,15 +840,15 @@ test.group('Reports', (group) => {
 })
 ```
 
-You can also call `clear` without arguments to flush all configured stores:
+You can also call `clear` without arguments to clear all configured stores:
 
-```ts
+```ts title="tests/functional/reports.spec.ts"
 return () => limiter.clear()
 ```
 
-:::warning
-When using Redis, the `clear` method flushes the entire database. Use a separate Redis database for the rate limiter to avoid clearing application data. Configure this in `config/redis.ts` by creating a dedicated connection.
-:::
+For a Redis store, `clear` deletes only the keys under the store's `keyPrefix`. Other keys in the Redis database stay in place. Limiters that share a `keyPrefix` are cleared together.
+
+The `clear` method throws for a Redis store without a `keyPrefix`. Set a non-empty `keyPrefix` in `config/limiter.ts` before calling `clear`.
 
 ## Creating a custom storage provider
 
@@ -917,7 +917,7 @@ export class MongoDbLimiterStore implements LimiterStoreContract {
   async delete(key: string | number): Promise<boolean> {}
 
   /**
-   * Flush all keys from storage.
+   * Clear all keys from storage.
    */
   async clear(): Promise<void> {}
 
