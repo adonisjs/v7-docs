@@ -284,7 +284,7 @@ After recording, replace the `record` call with `visit` and paste the generated 
 Protected pages require an authenticated user. The `browserContext.loginAs` method authenticates a user for all subsequent page visits within that test.
 
 :::warning
-For authentication to work during tests, set `SESSION_DRIVER=memory` in your `.env.test` file. The memory driver allows the test process to manage sessions without file or database overhead.
+The `sessionBrowserClient` plugin writes the test session to the store configured by `SESSION_DRIVER`. The cookie store is the exception: the plugin falls back to the memory store, so authentication fails unless you set `SESSION_DRIVER=memory` in your `.env.test` file. The memory driver is also the fastest option, since it has no file or database overhead.
 :::
 
 ```ts title="tests/browser/posts/create.spec.ts"

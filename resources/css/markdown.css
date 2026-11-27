@@ -9,6 +9,11 @@
   padding: calc(var(--spacing) * 0.5) calc(var(--spacing) * 1);
   border-radius: var(--radius-sm);
   white-space: nowrap;
+
+  @media (width < theme(--breakpoint-md)) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 .prose td code {
@@ -103,7 +108,8 @@
   font-size: 20px;
   background: transparent;
   color: inherit;
-  padding: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .prose h2 + .prose h3 {

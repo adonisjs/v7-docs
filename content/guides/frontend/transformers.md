@@ -116,6 +116,14 @@ export default class PostTransformer extends BaseTransformer<Post> {
 
 This transformer explicitly includes only these five fields. Any other fields on the Post model (like internal metadata or sensitive data) will be excluded from the output.
 
+When a resource has many fields and you only want to hide a few, use `this.omit()` instead. It returns a shallow copy of an object without the keys you list. Pass it the model's `toAttributes()` output rather than the model instance, since copying a model instance would copy its internal properties instead of its columns.
+
+```ts title="app/transformers/user_transformer.ts"
+toObject() {
+  return this.omit(this.resource.toAttributes(), ['password', 'rememberMeToken'])
+}
+```
+
 :::
 
 :::step{title="Use the transformer in your controller"}
@@ -186,7 +194,7 @@ This means your frontend automatically knows the exact shape of data coming from
 
 ## Resource items and collections
 
-Transformers handle both single resources and collections automatically. When you call `PostTransformer.transform()`, it returns either a `ResourceItem` or `ResourceCollection` depending on what you pass in.
+Transformers handle both single resources and collections automatically. When you call `PostTransformer.transform()`, it returns either an `Item` or a `Collection` depending on what you pass in.
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -196,20 +204,44 @@ export default class PostsController {
   async show({ serialize, params }: HttpContext) {
     const post = await Post.findOrFail(params.id)
     
-    // Returns a ResourceItem (single post)
+    // Returns an Item (single post)
     return serialize(PostTransformer.transform(post))
   }
 
   async index({ serialize }: HttpContext) {
     const posts = await Post.all()
 
-    // Returns a ResourceCollection (array of posts)
+    // Returns a Collection (array of posts)
     return serialize(PostTransformer.transform(posts))
   }
 }
 ```
 
-The serialized output structure differs slightly between items and collections. A single item returns your transformed object directly, while a collection wraps the items in a `data` array. Both go through the same `toObject()` method you defined in your transformer.
+Both go through the same `toObject()` method you defined in your transformer. The `serialize()` helper shipped with the starter kits wraps every response under a `data` key, so a single item becomes `{ "data": { ... } }` and a collection becomes `{ "data": [ ... ] }`. Plain objects passed to `serialize()`, such as `serialize({ post: PostTransformer.transform(post) })`, are wrapped the same way.
+
+The wrapping key is defined by the `ApiSerializer` class inside `providers/api_provider.ts`. Change its `wrap` property to use a different key, or set it to `undefined` to disable wrapping for every response.
+
+### Serializing without wrapping
+
+Use `serialize.withoutWrapping()` when the serialized value is not the response body itself. For example, when you embed the transformed posts inside a larger object, the inner value should not carry its own `data` key.
+
+```ts title="app/controllers/posts_controller.ts"
+import Post from '#models/post'
+import type { HttpContext } from '@adonisjs/core/http'
+import PostTransformer from '#transformers/post_transformer'
+
+export default class PostsController {
+  async index({ serialize }: HttpContext) {
+    const posts = await Post.all()
+
+    return {
+      // Resolves to an array of posts, not { data: [...] }
+      posts: await serialize.withoutWrapping(PostTransformer.transform(posts)),
+      generatedAt: new Date().toISOString(),
+    }
+  }
+}
+```
 
 ## Paginating data
 
@@ -260,9 +292,17 @@ The `PostTransformer.paginate()` method takes two arguments: the array of data t
 
 Your frontend can use the `metadata` object to build pagination controls while the `data` array contains the transformed posts.
 
+The object returned by `paginate()` accepts the same `.useVariant()` and `.depth()` methods as a transformed collection, so you can paginate with any [variant](#using-variants).
+
+```ts title="app/controllers/posts_controller.ts"
+return serialize(
+  PostTransformer.paginate(posts.all(), posts.getMeta()).useVariant('forDetailedView')
+)
+```
+
 ## Using transformers with Inertia
 
-When building Inertia applications, you can pass transformer resources directly to `inertia.render()` without using the `serialize()` helper. The Inertia adapter automatically handles serialization of `ResourceItem` and `ResourceCollection` objects.
+When building Inertia applications, you can pass transformer resources directly to `inertia.render()` without using the `serialize()` helper. The Inertia adapter automatically handles serialization of `Item`, `Collection`, and `Paginator` objects.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -407,6 +447,51 @@ With `.depth(2)`, if you eager-load nested relationships, they'll be included in
 - In the example above, when `UserTransformer` sets `.depth(2)` on posts, that depth applies to all nested relationships within posts — including comments
 - Even if `PostTransformer` has its own depth settings, they won't override the depth set by the parent transformer
 - Depth is determined at the starting point and cascades down through the entire tree
+
+### Relationship counts and aggregates
+
+Lucid stores the results of `withCount()` and `withAggregate()` queries in the model's `$extras` object. When Lucid is installed, transformers gain helper methods that read these values and convert them to numbers, so you don't have to reach into `$extras` manually.
+
+```ts title="app/controllers/users_controller.ts"
+import User from '#models/user'
+import type { HttpContext } from '@adonisjs/core/http'
+import UserTransformer from '#transformers/user_transformer'
+
+export default class UsersController {
+  async index({ serialize }: HttpContext) {
+    const users = await User.query()
+      .withCount('posts')
+      .withAggregate('posts', (query) => {
+        query.sum('views').as('totalViews')
+      })
+
+    return serialize(UserTransformer.transform(users))
+  }
+}
+```
+
+```ts title="app/transformers/user_transformer.ts"
+import { BaseTransformer } from '@adonisjs/core/transformers'
+import type User from '#models/user'
+
+export default class UserTransformer extends BaseTransformer<User> {
+  toObject() {
+    return {
+      ...this.pick(this.resource, ['id', 'fullName']),
+      /**
+       * Throws when the count was not loaded by the query
+       */
+      postsCount: this.withCount('posts'),
+      /**
+       * Returns undefined when the aggregate was not loaded
+       */
+      totalViews: this.whenAggregated('totalViews'),
+    }
+  }
+}
+```
+
+The `withCount` and `withAggregate` methods throw when the value was not loaded, which catches a forgotten `withCount()` call early. Use `whenCounted` and `whenAggregated` when the same transformer serves queries that don't always load the value.
 
 ## Using variants
 
@@ -554,7 +639,7 @@ The `@inject()` decorator tells AdonisJS to resolve dependencies for this method
 
 ### How dependency injection works
 
-When you call `PostTransformer.transform(post)`, it returns a `ResourceItem` or `ResourceCollection` object. These objects don't immediately execute your transformer methods. Instead, when you pass them to `serialize()`, that's when the IoC container resolves dependencies and calls your transformer methods with the injected values.
+When you call `PostTransformer.transform(post)`, it returns an `Item` or `Collection` object. These objects don't immediately execute your transformer methods. Instead, when you pass them to `serialize()`, that's when the IoC container resolves dependencies and calls your transformer methods with the injected values.
 
 This means dependency injection happens automatically during the serialization phase in your controller. You don't need to manually pass the `HttpContext` or other dependencies—the framework handles this for you.
 

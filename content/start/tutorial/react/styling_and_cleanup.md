@@ -138,6 +138,7 @@ Right now, the homepage doesn't tell users what DevShow is or how to get started
 Open the home page component and replace its content:
 ```tsx title="inertia/pages/home.tsx"
 import { Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 export default function Home() {
   return (
@@ -155,6 +156,8 @@ export default function Home() {
     </div>
   )
 }
+
+Home.layout = [MarketingLayout]
 ```
 
 We're using the `Link` component from `@adonisjs/inertia/react` with the `route` prop to reference the named route. The `className="button"` applies styling from the starter kit's CSS.
@@ -170,6 +173,7 @@ Update your posts index component to add the button in the header.
 import { InertiaProps } from '~/types'
 import { Data } from '@generated/data'
 import { Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   posts: Data.Post[]
@@ -212,6 +216,8 @@ export default function PostsIndex(props: PageProps) {
     </div>
   )
 }
+
+PostsIndex.layout = [MarketingLayout]
 ```
 
 The `posts-list-title` class uses flexbox (from the CSS we added earlier) to position the heading and button on opposite sides of the header.
@@ -227,6 +233,7 @@ Update your posts create component:
 import { Form } from '@adonisjs/inertia/react'
 // [!code ++]
 import { Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 export default function PostsCreate() {
   return (
@@ -252,6 +259,8 @@ export default function PostsCreate() {
     </div>
   )
 }
+
+PostsCreate.layout = [MarketingLayout]
 ```
 
 Visit [`/posts/create`](http://localhost:3333/posts/create) and you'll see the back link above the heading, making navigation intuitive.
@@ -267,6 +276,7 @@ import { Data } from '@generated/data'
 import { Form } from '@adonisjs/inertia/react'
 // [!code ++]
 import { Link } from '@adonisjs/inertia/react'
+import MarketingLayout from '~/layouts/marketing'
 
 type PageProps = InertiaProps<{
   post: Data.Post
@@ -291,6 +301,8 @@ export default function PostsShow(props: PageProps) {
     </div>
   )
 }
+
+PostsShow.layout = [MarketingLayout]
 ```
 
 Now visit any post detail page (click on a post from [`/posts`](http://localhost:3333/posts)) and you'll see the back link, completing the navigation flow throughout DevShow.

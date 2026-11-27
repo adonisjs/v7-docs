@@ -17,7 +17,7 @@ Here's what a freshly created AdonisJS project looks like.
 
 ::::tabs
 
-:::tab{title="Hypermedia / Inertia kits"}
+:::tab{title="Hypermedia / Inertia / API kits"}
 
 ```sh
 ├── app
@@ -36,11 +36,13 @@ Here's what a freshly created AdonisJS project looks like.
 └── vite.config.ts
 ```
 
+The API kit does not render HTML, so it omits the `resources` directory and the `vite.config.ts` file.
+
 :::
 
-:::tab{title="API kit"}
+:::tab{title="API monorepo kit"}
 
-The API starter kit is a monorepo with two workspaces managed by [Turborepo](https://turbo.build/repo):
+The API monorepo starter kit has two workspaces managed by [Turborepo](https://turbo.build/repo):
 
 ```sh
 ├── apps
@@ -171,7 +173,7 @@ The `providers` directory is used to store the [service providers](../guides/con
 The `public` directory contains raw static assets that are served directly to the browser without any compilation step. Files in this directory are publicly accessible over HTTP using the `http://localhost:3333/public/<file-name>` URL.
 
 :::note
-The API starter kit does not include a `public` directory, since the backend serves only JSON responses and does not serve static assets.
+The API starter kits do not include a `public` directory, since the backend serves only JSON responses and does not serve static assets.
 :::
 
 Typical examples of files stored in this folder include:
@@ -186,7 +188,7 @@ Typical examples of files stored in this folder include:
 The `resources` directory stores Edge templates and uncompiled frontend assets such as CSS and JavaScript files.
 
 :::note
-The API starter kit does not include a `resources` directory, since the backend serves only JSON responses and does not render HTML templates.
+The API starter kits do not include a `resources` directory, since the backend serves only JSON responses and does not render HTML templates.
 :::
 
 For applications using Inertia (alongside Vue or React), the frontend code is kept within the `inertia` directory, and the `resources` directory contains only the root Edge template. Think of this root template as the `index.html` file that contains the HTML shell for your frontend application.
@@ -199,7 +201,11 @@ For applications using Inertia (alongside Vue or React), the frontend code is ke
 │   ├── css
 │   ├── js
 │   └── views
-│       ├── home.edge
+│       ├── components
+│       │   └── layouts
+│       ├── pages
+│       │   └── home.edge
+│       └── partials
 ```
 
 :::
@@ -229,11 +235,13 @@ You are free to create additional subfolders, such as `components/`, `layouts/`,
 
 ```sh
 ├── inertia
+│   ├── components
 │   ├── css
 │   ├── layouts
 │   ├── pages
 │   │   └── home.tsx
 │   ├── app.tsx
+│   ├── client.ts
 │   ├── ssr.tsx
 │   ├── tsconfig.json
 │   └── types.ts

@@ -11,6 +11,7 @@ This guide covers health checks in AdonisJS applications. You will learn how to:
 - Expose endpoints for monitoring services and orchestrators
 - Use built-in checks for disk space, memory, database, and Redis
 - Cache health check results for performance optimization
+- Trace health check execution using diagnostic channels
 - Create custom health checks for application-specific needs
 
 ## Overview
@@ -180,12 +181,11 @@ Kubernetes and most monitoring tools support custom HTTP headers on probe reques
 
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
+import { controllers } from '#generated/controllers'
 
-const HealthChecksController = () => import('#controllers/health_checks_controller')
-
-router.get('/health/live', [HealthChecksController, 'live'])
+router.get('/health/live', [controllers.HealthChecks, 'live'])
 router
-  .get('/health/ready', [HealthChecksController, 'ready'])
+  .get('/health/ready', [controllers.HealthChecks, 'ready'])
   // [!code ++:6]
   .use(({ request, response }, next) => {
     if (request.header('x-monitoring-secret') === 'some_secret_value') {
@@ -255,6 +255,18 @@ export const healthChecks = new HealthChecks().register([
 ])
 ```
 
+Fixed byte values don't adapt when you run the same application on machines with different memory limits. In that case, define the thresholds as a percentage of the V8 heap size limit (configurable with the `--max-old-space-size` Node.js flag) instead.
+
+```ts title="start/health.ts"
+export const healthChecks = new HealthChecks().register([
+  new MemoryHeapCheck()
+    .warnWhenExceedsPercentage(80)
+    .failWhenExceedsPercentage(90),
+])
+```
+
+When percentage thresholds are set, the check reports `sizeInPercentage` and `heapInBytes` in its metadata instead of `memoryInBytes`.
+
 ### MemoryRSSCheck
 
 Monitors the Resident Set Size (total memory allocated for the process) reported by `process.memoryUsage()`.
@@ -276,6 +288,20 @@ export const healthChecks = new HealthChecks().register([
     .failWhenExceeds('800 mb'),
 ])
 ```
+
+You can also define the thresholds as a percentage of the total system memory reported by `os.totalmem()`.
+
+```ts title="start/health.ts"
+export const healthChecks = new HealthChecks().register([
+  new MemoryRSSCheck()
+    .warnWhenExceedsPercentage(70)
+    .failWhenExceedsPercentage(85),
+])
+```
+
+:::warning
+Inside a container, `os.totalmem()` returns the memory of the host machine, not the container's memory limit. Use byte thresholds matching your container limit when running in Kubernetes or Docker.
+:::
 
 ### DbCheck
 
@@ -431,6 +457,18 @@ In this example, the disk space check runs at most once per hour, returning the 
 
 When a result is served from cache, the `isCached` property in the check's report will be `true`.
 
+Cached results are stored by check name. If you register the same check more than once, for example to monitor two disks, give each instance a unique name using the `as` method so their results don't overwrite each other.
+
+```ts title="start/health.ts"
+const uploadsDisk = new DiskSpaceCheck().as('Uploads disk space check').cacheFor('1 hour')
+uploadsDisk.diskPath = '/mnt/uploads'
+
+export const healthChecks = new HealthChecks().register([
+  new DiskSpaceCheck().cacheFor('1 hour'),
+  uploadsDisk,
+])
+```
+
 ## Creating custom health checks
 
 You can create custom health checks to verify application-specific requirements like external API connectivity, message queue connections, or business-critical service availability.
@@ -507,3 +545,37 @@ export const healthChecks = new HealthChecks().register([
 ```
 
 Your custom check will now run alongside the built-in checks whenever the readiness endpoint is called.
+
+## Tracing health checks
+
+Every check executed by `healthChecks.run()` is wrapped in the `adonisjs.health.check` [diagnostic tracing channel](https://nodejs.org/api/diagnostics_channel.html#class-tracingchannel). You can subscribe to it to measure how long each check takes or to report checks that throw an exception to your monitoring tools. Cached results are not traced, since the check does not run.
+
+The context object passed to each event contains the `check` instance being executed. Use the `HealthCheckTracingData` type to get type-safety when subscribing to the channel.
+
+```ts title="start/health_tracing.ts"
+import diagnostics_channel from 'node:diagnostics_channel'
+import logger from '@adonisjs/core/services/logger'
+import type { HealthCheckTracingData } from '@adonisjs/core/types/health'
+
+const healthCheckChannel = diagnostics_channel.tracingChannel<HealthCheckTracingData>(
+  'adonisjs.health.check'
+)
+const startTimes = new WeakMap<HealthCheckTracingData, number>()
+
+healthCheckChannel.subscribe({
+  start(data) {
+    startTimes.set(data, performance.now())
+  },
+  end() {},
+  asyncStart() {},
+  asyncEnd(data) {
+    const duration = performance.now() - startTimes.get(data)!
+    logger.info({ duration }, `health check "${data.check.name}" finished`)
+  },
+  error(data) {
+    logger.error({ err: data.error }, `health check "${data.check.name}" threw an error`)
+  },
+})
+```
+
+You can create this file using the `node ace make:preload health_tracing` command, which also registers it as a [preload file](../../reference/adonisrc_file.md#preloads) inside the `adonisrc.ts` file. This ensures the subscription is active before any check runs.

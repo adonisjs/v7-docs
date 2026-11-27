@@ -420,5 +420,5 @@ Array of error codes that should not be reported via the `report` method.
 
 ## See also
 
-- [ExceptionHandler source code](https://github.com/adonisjs/http-server/blob/8.x/src/exception_handler.ts) - Complete implementation details of the base exception handler class
+- [ExceptionHandler source code](https://github.com/adonisjs/http-server/blob/9.x/src/exception_handler.ts) - Complete implementation details of the base exception handler class
 - [Make exception command](../../reference/exceptions.md#makeexception) - CLI reference for generating custom exception classes

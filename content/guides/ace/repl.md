@@ -97,7 +97,7 @@ Similarly, you can access any exception raised by the previous command using the
 
 ## Navigating command history
 
-The REPL maintains a history of all commands you've executed, saved in the `.adonisjs_v7_repl_history` file in your home directory. This allows you to recall and re-execute previous commands without retyping them.
+The REPL maintains a history of all commands you've executed, saved in the `.adonisjs_v6_repl_history` file in your home directory. This allows you to recall and re-execute previous commands without retyping them.
 
 You can navigate through command history in two ways:
 
@@ -112,11 +112,10 @@ You can navigate through command history in two ways:
 
 ## Exiting the REPL session
 
-You can exit the REPL session either by typing `.exit` or by pressing `Ctrl+C` twice in quick succession to exit.
+You can exit the REPL session by typing `.exit`, pressing `Ctrl+D`, or pressing `Ctrl+C` twice in quick succession.
 
 ```sh
 > (js) .exit
-# Goodbye!
 ```
 
 When you exit, AdonisJS performs a graceful shutdown, closing database connections and cleaning up resources before the process terminates.
@@ -158,13 +157,14 @@ This is particularly convenient when working with models, services, or any modul
 
 The REPL includes several built-in helper methods that provide shortcuts for common tasks like importing services, making class instances, and managing the REPL context.
 
-You can view all available helper methods by typing the `.ls` command.
+You can view all available helper methods by typing the `.ls` command. It also lists the properties currently stored in the REPL context under the `CONTEXT PROPERTIES/METHODS` heading.
 
 ```sh
 > (js) .ls
 
 # GLOBAL METHODS:
 importDefault         Returns the default export for a module
+importAll             Import all files from a directory and assign them to a variable
 make                  Make class instance using "container.make" method
 loadApp               Load "app" service in the REPL context
 loadEncryption        Load "encryption" service in the REPL context
@@ -173,9 +173,12 @@ loadRouter            Load "router" service in the REPL context
 loadConfig            Load "config" service in the REPL context
 loadTestUtils         Load "testUtils" service in the REPL context
 loadHelpers           Load "helpers" module in the REPL context
-clear                 Clear a property from the REPL context
-p                     Promisify a function. Similar to Node.js "util.promisify"
+loadUrlBuilder        Load "urlBuilder" service in the REPL context
+clear (propertyName)  Clear a property from the REPL context
+p (function)          Promisify a function. Similar to Node.js "util.promisify"
 ```
+
+Packages can register their own helper methods too. For example, when Lucid is installed, the list also includes `loadModels`, `loadDb`, and `loadFactories`.
 
 ### Loading services
 
@@ -183,13 +186,13 @@ Instead of manually importing services, you can use the `load*` helper methods t
 
 ```sh
 > (js) await loadRouter()
-# Imported router. You can access it using the "router" property
+# Loaded "router" service. You can access it using the "router" variable
 
 > (js) router.toJSON()
-# { routes: [...], ... }
+# { root: [...] }
 
 > (js) await loadHash()
-# Imported hash. You can access it using the "hash" property
+# Loaded "hash" service. You can access it using the "hash" variable
 
 > (js) await hash.make('secret')
 # '$argon2id$v=19$m=65536,t=3,p=4$...'
@@ -197,12 +200,27 @@ Instead of manually importing services, you can use the `load*` helper methods t
 
 Each `load*` method imports the corresponding service and makes it available as a property in the REPL context, eliminating the need for import statements.
 
-### Making class instances
+### Importing a directory
 
-The `make` method uses the [IoC container](../concepts/dependency_injection.md#constructing-a-tree-of-dependencies) to create class instances with automatic dependency injection.
+The `importAll` method imports every file inside a directory (recursively) and returns an object keyed by file name (without the extension). Files inside nested directories become nested objects. The path is resolved from the application root.
 
 ```sh
-> (js) const userService = await make('App/Services/UserService')
+> (js) const validators = await importAll('app/validators')
+# undefined
+
+> (js) Object.keys(validators)
+# ['post', 'user', ...]
+```
+
+### Making class instances
+
+The `make` method uses the [IoC container](../concepts/dependency_injection.md#constructing-a-tree-of-dependencies) to create class instances with automatic dependency injection. It accepts a class constructor or a container binding name, so you must import the class first.
+
+```sh
+> (js) const UserService = await importDefault('#services/user_service')
+# undefined
+
+> (js) const userService = await make(UserService)
 # undefined
 
 > (js) await userService.findById(1)
@@ -241,53 +259,43 @@ node ace make:preload repl -e=repl
 
 ### Defining a custom method
 
-In the preload file, use `repl.addMethod` to define custom methods. For example, let's create a method that imports all models from the `app/models` directory.
+In the preload file, use `repl.addMethod` to define custom methods. For example, let's create a method that imports all services from the `app/services` directory.
 
 ```ts title="start/repl.ts"
 import app from '@adonisjs/core/services/app'
 import repl from '@adonisjs/core/services/repl'
 import { fsImportAll } from '@adonisjs/core/helpers'
 
-/**
- * Add a method to load all models at once
- */
 repl.addMethod(
-  'loadModels',
-  async () => {
+  'loadServices',
+  async (replInstance) => {
     /**
-     * Import all files from the models directory
+     * Import all files from the services directory and
+     * make them available in the REPL context
      */
-    const models = await fsImportAll(app.makePath('app/models'))
-    
-    /**
-     * Make models available in the REPL context
-     */
-    repl.server!.context.models = models
-    
-    /**
-     * Notify the user that models are loaded
-     */
-    repl.notify(
-      'Imported models. You can access them using the "models" property'
+    replInstance.server!.context.services = await fsImportAll(
+      app.makePath('app/services')
     )
-    
+
     /**
-     * Display the prompt again
+     * Print a message and display the prompt again
      */
-    repl.server!.displayPrompt()
+    replInstance.notify(
+      'Imported services. You can access them using the "services" property'
+    )
   },
   {
-    description: 'Load all models from app/models directory',
-    usage: 'await loadModels()'
+    description: 'Load all services from app/services directory',
+    usage: 'await loadServices()',
   }
 )
 ```
 
 The `repl.addMethod` accepts three parameters:
 
-1. **Method name**: The name you'll use to call the method in the REPL
-2. **Implementation**: An async function that performs the action
-3. **Options** (optional): An object with `description` and `usage` properties that appear in help output
+1. **Method name**: The name you'll use to call the method in the REPL. Registering a method with an existing name (for example, Lucid's `loadModels`) replaces it.
+2. **Implementation**: A function that receives the `Repl` instance as the first argument, followed by the arguments passed when calling the method in the REPL.
+3. **Options** (optional): An object with `description` and `usage` properties displayed by the `.ls` command.
 
 ### Using your custom method
 
@@ -298,17 +306,14 @@ node ace repl
 
 > (js) .ls
 # GLOBAL METHODS:
-# loadModels            Load all models from app/models directory
+# await loadServices()  Load all services from app/services directory
 # ...
 
-> (js) await loadModels()
-# Imported models. You can access them using the "models" property
+> (js) await loadServices()
+# Imported services. You can access them using the "services" property
 
-> (js) Object.keys(models)
-# ['User', 'Post', 'Comment', ...]
-
-> (js) await models.User.all()
-# [User, User, User, ...]
+> (js) Object.keys(services)
+# ['post_service', 'user_service', ...]
 ```
 
 You can define multiple custom methods in the same preload file to create a comprehensive set of development shortcuts tailored to your application's needs.

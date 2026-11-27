@@ -494,7 +494,7 @@ HttpRequest.macro('isAjax', function (this: HttpRequest) {
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/request.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/request.ts)
 :::
 
 :::option{name="HttpResponse" import="@adonisjs/core/http"}
@@ -512,7 +512,7 @@ HttpResponse.macro('paginated', function (this: HttpResponse, data: any, meta: a
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/response.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/response.ts)
 :::
 
 :::option{name="HttpContext" import="@adonisjs/core/http"}
@@ -530,7 +530,25 @@ HttpContext.macro('getCurrentUser', async function (this: HttpContext) {
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/http_context/main.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/http_context/main.ts)
+:::
+
+:::option{name="Router" import="@adonisjs/core/http"}
+The router singleton you import from `@adonisjs/core/services/router`. Extend it to add methods that register a set of routes in one call.
+
+**Common use cases**: Register routes shared by multiple applications or packages, such as health checks or webhook endpoints.
+
+**Example**: Add a method that registers a health check route.
+
+```ts
+import { Router } from '@adonisjs/core/http'
+
+Router.macro('healthCheck', function (this: Router, pattern: string = '/health') {
+  return this.get(pattern, () => ({ status: 'ok' }))
+})
+```
+
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/main.ts)
 :::
 
 :::option{name="Route" import="@adonisjs/core/http"}
@@ -548,7 +566,7 @@ Route.macro('protected', function (this: Route) {
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/router/route.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/route.ts)
 :::
 
 :::option{name="RouteGroup" import="@adonisjs/core/http"}
@@ -566,7 +584,7 @@ RouteGroup.macro('apiVersion', function (this: RouteGroup, version: number) {
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/router/group.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/group.ts)
 :::
 
 :::option{name="RouteMatchers" import="@adonisjs/core/http"}
@@ -616,7 +634,7 @@ Resourceful route instances. Extend this to customize resource route behavior.
 
 **Common use cases**: Add methods for customizing which resource routes are created or adding resource-specific middleware.
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/router/resource.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/resource.ts)
 :::
 
 :::option{name="BriskRoute" import="@adonisjs/core/http"}
@@ -624,7 +642,7 @@ Brisk (quick) route instances used for simple route definitions. Extend this for
 
 **Common use cases**: Add convenience methods for quick route configurations.
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/router/brisk.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/router/brisk.ts)
 :::
 
 :::option{name="ExceptionHandler" import="@adonisjs/core/http"}
@@ -642,7 +660,7 @@ ExceptionHandler.macro('handleValidationError', function (error: any) {
 })
 ```
 
-[View source](https://github.com/adonisjs/http-server/blob/8.x/src/exception_handler.ts)
+[View source](https://github.com/adonisjs/http-server/blob/9.x/src/exception_handler.ts)
 :::
 
 :::option{name="MultipartFile" import="@adonisjs/core/bodyparser"}

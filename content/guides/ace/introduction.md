@@ -10,6 +10,7 @@ This guide introduces you to the Ace command line. You will learn about the foll
 - Viewing help documentation  
 - Creating command aliases
 - Running commands programmatically
+- Capturing the output of programmatic commands
 
 ## Overview
 
@@ -177,3 +178,29 @@ if (ace.hasCommand('make:controller')) {
 ```
 
 The `ace.boot()` method loads all commands if they haven't been loaded already. This ensures the `hasCommand` check works correctly by verifying against the complete command registry.
+
+### Capturing command output
+
+Commands executed with `ace.exec` write their logs, tables, and other UI output to the terminal, just like commands run from the shell. When you run a command as part of a larger workflow, this output can be noisy or you may want to inspect it yourself.
+
+You can pass a custom UI instance as the third argument to `ace.exec`. The following example creates a UI in `raw` mode, which keeps all output in memory instead of writing it to the terminal.
+
+```ts title="app/services/scaffolding_service.ts"
+import ace from '@adonisjs/core/services/ace'
+import { cliui } from '@adonisjs/core/ace'
+
+/**
+ * Raw mode stores the output in memory
+ */
+const ui = cliui({ mode: 'raw' })
+
+const command = await ace.exec('make:controller', ['users'], { ui })
+
+/**
+ * Read the captured log messages
+ */
+console.log(ui.logger.getLogs())
+// [{ message: '...', stream: 'stdout' }, ...]
+```
+
+The custom UI only applies to the executed command. Errors that the command does not handle are still rendered by Ace using its default UI.

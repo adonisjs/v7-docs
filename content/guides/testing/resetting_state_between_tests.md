@@ -88,7 +88,7 @@ test.group('Users', (group) => {
 
 The `wrapInGlobalTransaction()` method returns a cleanup function that Japa calls automatically after each test to roll back the transaction.
 
-**Truncation** clears all data from tables between tests. This approach actually deletes records rather than rolling back transactions.
+**Truncation** clears all data from tables between tests. This approach actually deletes records rather than rolling back transactions. The `truncate()` hook runs pending migrations before the test and returns a cleanup function that truncates every table once the test finishes.
 
 ```ts title="tests/functional/posts.spec.ts"
 import { test } from '@japa/runner'
@@ -98,7 +98,7 @@ test.group('Posts', (group) => {
   group.each.setup(() => testUtils.db().truncate())
 
   test('can create a post', async () => {
-    // Tables are truncated before each test
+    // Tables are truncated after each test
   })
 })
 ```

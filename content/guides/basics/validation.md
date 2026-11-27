@@ -144,6 +144,29 @@ This automatic handling means you write validation logic once, and it works corr
 You don't need to wrap `validateUsing()` in try/catch blocks. The global exception handler already converts validation exceptions into proper responses. Only use try/catch if you need custom error handling logic that differs from the default behavior.
 :::
 
+### Handling errors without exceptions
+
+When you need custom error handling for a single action, use the `request.tryValidateUsing()` method instead of a try/catch block. It never throws a validation exception. Instead, it returns a tuple containing either the validation error or the validated payload.
+
+```ts title="app/controllers/posts_controller.ts"
+import { createPostValidator } from '#validators/post'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class PostsController {
+  async store({ request, response }: HttpContext) {
+    const [error, payload] = await request.tryValidateUsing(createPostValidator)
+
+    if (error) {
+      return response.unprocessableEntity({ errors: error.messages })
+    }
+
+    // payload is fully typed once the error has been handled
+  }
+}
+```
+
+The method accepts the same options as `request.validateUsing()`.
+
 
 ## Customizing error messages
 

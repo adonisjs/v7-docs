@@ -54,7 +54,7 @@ export const plugins: Config['plugins'] = [
 ]
 ```
 
-When using sessions during tests, the session driver must be set to `memory` in your `.env.test` file. This is configured by default in the starter kit.
+The `sessionApiClient` plugin writes test sessions (from `withSession()` or `loginAs()`) to the store configured by `SESSION_DRIVER`, so the application reads them from the same place. The cookie store is the exception: it needs an HTTP request, so the plugin falls back to the memory store. If your application uses the cookie store, set the session driver to `memory` in your `.env.test` file. This is configured by default in the starter kit.
 
 ```dotenv title=".env.test"
 SESSION_DRIVER=memory
@@ -328,6 +328,35 @@ The `withSession()` method populates the session store before making a request. 
 const response = await client
   .visit('checkout.store')
   .withSession({ cartId: 1 })
+```
+
+## CSRF tokens
+
+When CSRF protection is enabled in `config/shield.ts`, `POST`, `PUT`, `PATCH`, and `DELETE` requests without a valid token fail with a redirect. Register the `shieldApiClient` plugin alongside `sessionApiClient`, which it relies on to store the CSRF secret in the test session.
+
+```ts title="tests/bootstrap.ts"
+import { shieldApiClient } from '@adonisjs/shield/plugins/api_client'
+
+export const plugins: Config['plugins'] = [
+  assert(),
+  pluginAdonisJS(app),
+  apiClient(),
+  sessionApiClient(app),
+  shieldApiClient(), // [!code ++]
+]
+```
+
+Then chain the `withCsrfToken()` method on requests that must pass CSRF validation. The plugin generates a token and sends it in the `X-CSRF-TOKEN` header.
+
+```ts title="tests/functional/posts.spec.ts"
+test('create a post', async ({ client }) => {
+  const response = await client
+    .visit('posts.store')
+    .withCsrfToken()
+    .form({ title: 'Hello world' })
+
+  response.assertStatus(302)
+})
 ```
 
 ## Authentication

@@ -10,6 +10,7 @@ This guide covers secure credential verification in AdonisJS. You will learn:
 - How to use the AuthFinder mixin for secure credential verification
 - How password hashing is handled automatically
 - How to handle verification errors
+- How to confirm the current password before sensitive changes
 
 ## Overview
 
@@ -61,46 +62,46 @@ This timing difference is enough for attackers to enumerate valid email addresse
 
 The AuthFinder mixin solves the timing attack problem by always performing a password hash comparison, even when the user doesn't exist. This ensures consistent response times regardless of whether the email is valid.
 
-To use the mixin, apply it to your User model:
+To use the mixin, apply it to your User model. The `add` command and the starter kits generate the following model, where `UserSchema` is the [schema class](../database/lucid.md#auto-generated-schema-classes) generated from your `users` table.
+
 ```ts title="app/models/user.ts"
-import { DateTime } from 'luxon'
-import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { UserSchema } from '#database/schema'
 import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
+import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
+
+export default class User extends compose(UserSchema, withAuthFinder(hash)) {}
+```
+
+The `withAuthFinder` method accepts the hash manager as its first argument and uses the default hasher from `config/hash.ts` to hash and verify passwords. To pin a specific hasher configured in `config/hash.ts`, pass a callback that returns it instead.
+
+The second argument is an optional configuration object. Pass it when users log in with something other than their email, or when the password is stored under a different property.
+
+```ts title="app/models/user.ts"
+import { UserSchema } from '#database/schema'
+import hash from '@adonisjs/core/services/hash'
+import { compose } from '@adonisjs/core/helpers'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email'],
+  uids: ['email', 'username'],
   passwordColumnName: 'password',
 })
 
-export default class User extends compose(BaseModel, AuthFinder) {
-  @column({ isPrimary: true })
-  declare id: number
-
-  @column()
-  declare fullName: string | null
-
-  @column()
-  declare email: string
-
-  @column()
-  declare password: string
-
-  @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
-
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
-}
+export default class User extends compose(UserSchema, AuthFinder) {}
 ```
 
-The `withAuthFinder` method accepts two arguments. The first is a callback that returns the hasher to use for password verification (scrypt in this example, but you can use any configured hasher). The second is a configuration object with the following properties:
+::::options
 
-| Property | Description |
-|----------|-------------|
-| `uids` | An array of model properties that can identify a user. If your application allows login by username or phone number, include those fields here. |
-| `passwordColumnName` | The model property that stores the hashed password. |
+:::option{name="uids"}
+An array of model properties that can identify a user. If your application allows login by username or phone number, include those fields here. Defaults to `['email']`.
+:::
+
+:::option{name="passwordColumnName"}
+The model property that stores the hashed password. Defaults to `password`.
+:::
+
+::::
 
 ### Verifying credentials
 
@@ -173,3 +174,52 @@ export default class UsersController {
 ```
 
 The hook only hashes the password when the `password` property has changed, so updating other user fields won't trigger unnecessary rehashing.
+
+## Confirming the current password
+
+Sensitive actions, such as changing the password or the email address, should ask the logged-in user to confirm their current password. Use the `user.validatePassword` method for this. It verifies the plain password against the stored hash and throws a validation error when they do not match.
+
+```ts title="app/validators/user.ts"
+import vine from '@vinejs/vine'
+
+export const updatePasswordValidator = vine.create({
+  currentPassword: vine.string(),
+  password: vine.string().minLength(8).confirmed(),
+})
+```
+
+```ts title="app/controllers/password_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import { updatePasswordValidator } from '#validators/user'
+
+export default class PasswordController {
+  async update({ request, auth, response }: HttpContext) {
+    const user = auth.getUserOrFail()
+    const { currentPassword, password } = await request.validateUsing(updatePasswordValidator)
+
+    /**
+     * Throws a validation error for the "currentPassword"
+     * field when the password is incorrect
+     */
+    await user.validatePassword(currentPassword)
+
+    /**
+     * The beforeSave hook hashes the new password
+     */
+    user.password = password
+    await user.save()
+
+    return response.redirect().back()
+  }
+}
+```
+
+The error has the same shape as a VineJS validation error (`E_VALIDATION_ERROR` with a `422` status), so the exception handler renders it like any other validation failure. Server-rendered forms receive the message in the flashed validation errors, Inertia forms receive it through the `errors` prop, and JSON clients receive it in the `errors` array.
+
+The error is reported for the `currentPassword` field by default. Pass the field name as the second argument when your form uses a different name.
+
+```ts title="app/controllers/password_controller.ts"
+await user.validatePassword(oldPassword, 'oldPassword')
+```
+
+If you only need a boolean, use `user.verifyPassword(plainPassword)` instead. It returns `true` or `false` without throwing.

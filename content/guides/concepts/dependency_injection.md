@@ -10,6 +10,7 @@ This guide covers dependency injection and the IoC container in AdonisJS. You wi
 - The difference between constructor and method injection
 - When and how to use the IoC container manually
 - How to register bindings and singletons for complex dependencies
+- How to select bindings at resolution time using conditional bindings
 - How to implement the adapter pattern using abstract classes
 - How to swap dependencies during testing
 
@@ -753,6 +754,87 @@ Now `SubscriptionService` automatically receives `StripeProvider` when it's cons
 
 The contextual binding pattern is particularly powerful when combined with the adapter pattern from the previous section. Each service remains completely agnostic about which payment provider it's using, yet each gets exactly the implementation it needs for its specific use case.
 
+## Conditional bindings
+
+Conditional bindings select an implementation at resolution time based on a condition you define. Unlike contextual bindings, which depend on the class asking for a dependency, conditional bindings apply to every resolution of a binding key. This makes them a good fit for feature flags, per-tenant implementations, or environment-specific services.
+
+Register a conditional binding using the `container.if()` method, followed by `bind` or `singleton`. The condition can be synchronous or asynchronous, and it runs every time the binding is resolved. In the following example, users with the `new-payment` feature flag receive the `BetaPaymentProvider`, while everyone else falls back to the regular `StripeProvider` binding.
+
+```ts title="providers/app_provider.ts"
+import type { ApplicationService } from '@adonisjs/core/types'
+import { HttpContext } from '@adonisjs/core/http'
+import PaymentService from '#services/payment_service'
+import StripeProvider from '#services/stripe_provider'
+import BetaPaymentProvider from '#services/beta_payment_provider'
+
+export default class AppProvider {
+  constructor(protected app: ApplicationService) {}
+
+  register() {
+    /**
+     * The fallback binding, used when no condition matches
+     */
+    this.app.container.bind(PaymentService, () => {
+      return new StripeProvider()
+    })
+
+    this.app.container
+      .if(async (resolver) => {
+        /**
+         * HttpContext only exists during HTTP requests. Return
+         * false in Ace commands, queue jobs, and at boot time.
+         */
+        if (!resolver.hasBinding(HttpContext)) {
+          return false
+        }
+
+        const ctx = await resolver.make(HttpContext)
+        return ctx.auth.user?.featureFlags.includes('new-payment') === true
+      })
+      .bind(PaymentService, () => {
+        return new BetaPaymentProvider()
+      })
+  }
+}
+```
+
+The condition receives the resolver performing the resolution, so it can read request-scoped values like `HttpContext`. It also receives the runtime values passed to `container.make` and the parent class the binding is being injected into (or `null` when resolved directly using `container.make`).
+
+```ts title="providers/app_provider.ts"
+this.app.container
+  .if((resolver, runtimeValues, parent) => parent === CheckoutController)
+  .bind(PaymentService, () => new BetaPaymentProvider())
+```
+
+You can register multiple conditional bindings for the same key. The container evaluates them in registration order and uses the first one whose condition returns `true`. When none match, it falls back to the regular binding, or to auto-construction for classes.
+
+### Conditional singletons
+
+Use the `singleton` method to cache the factory result of a conditional binding. The condition is still evaluated on every resolution, but the factory function runs only once.
+
+```ts title="providers/app_provider.ts"
+import env from '#start/env'
+import SearchService from '#services/search_service'
+import TypesenseSearchService from '#services/typesense_search_service'
+
+this.app.container
+  .if(() => env.get('SEARCH_DRIVER') === 'typesense')
+  .singleton(SearchService, (resolver) => {
+    return resolver.make(TypesenseSearchService)
+  })
+```
+
+:::warning
+`container.hasBinding()` returns `true` for a key that only has conditional bindings, yet resolving it throws when none of the conditions match. Register a fallback using `container.bind()` when the key must always resolve.
+
+```ts title="providers/app_provider.ts"
+this.app.container.bind(PaymentService, () => new StripeProvider())
+this.app.container
+  .if(() => isBetaEnabled())
+  .bind(PaymentService, () => new BetaPaymentProvider())
+```
+:::
+
 ## Resolution priority
 
 When the container resolves a dependency, it checks multiple sources in a specific order. Understanding this priority helps you predict which implementation will be injected and debug unexpected behavior.
@@ -765,8 +847,9 @@ The container resolves dependencies in this order, stopping at the first match:
 | 2 | Contextual bindings | Bindings registered with `when().asksFor().provide()` |
 | 3 | Resolver values | Values bound to a scoped resolver (e.g., request-scoped bindings) |
 | 4 | Container values | Values registered with `container.bindValue()` |
-| 5 | Container bindings | Factory functions registered with `container.bind()` or `container.singleton()` |
-| 6 | Auto-construction | The container constructs the class itself using `@inject()` |
+| 5 | Conditional bindings | Bindings registered with `container.if().bind()` or `container.if().singleton()` |
+| 6 | Container bindings | Factory functions registered with `container.bind()` or `container.singleton()` |
+| 7 | Auto-construction | The container constructs the class itself using `@inject()` |
 
 Swaps have the highest priority because they're designed for testing. When you swap a dependency, you want the fake implementation to be used regardless of any other bindings. This ensures your tests remain isolated and predictable.
 
@@ -774,7 +857,7 @@ Contextual bindings come next because they represent intentional, context-specif
 
 If no swap or contextual binding matches, the container checks for values bound to the current resolver scope. During HTTP requests, the `HttpContext` and request-scoped `Logger` are bound this way, ensuring each request gets its own instances.
 
-Container-level values and bindings are checked next. These are your application-wide singletons and factories registered in service providers.
+Container-level values are checked next, followed by conditional bindings and then regular bindings. These are your application-wide values, singletons, and factories registered in service providers. Since swaps and values come first, a conditional binding never overrides a swapped class in tests or a value registered with `bindValue`.
 
 Finally, if no binding exists at all, the container attempts auto-construction. It uses TypeScript's reflection metadata to identify constructor dependencies marked with `@inject()` and recursively resolves them.
 
@@ -872,7 +955,7 @@ This event is fired for every resolution, including nested dependencies. For exa
 ## See also
 
 - [Service Providers](./service_providers.md) - Learn how to register bindings and organize application bootstrapping
-- [The IoC Container README](https://github.com/adonisjs/fold/blob/develop/README.md) - Comprehensive API documentation in a framework-agnostic context
+- [The IoC Container README](https://github.com/adonisjs/fold/blob/11.x/README.md) - Comprehensive API documentation in a framework-agnostic context
 - [Why Do You Need an IoC Container?](https://github.com/thetutlage/meta/discussions/4) - The framework creator's reasoning for using dependency injection
 - [TypeScript Decorators](https://www.typescriptlang.org/docs/handbook/decorators.html) - Understanding the decorator syntax used by `@inject()`
 - [Container API docs](https://api.adonisjs.com/modules/_adonisjs_fold.index) - To get a full view of available classes, methods and properties.

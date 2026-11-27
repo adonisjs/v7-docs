@@ -30,7 +30,7 @@ Companies using AdonisJS in production include [Marie Claire](https://www.mariec
 
 While production-ready, consider that the AdonisJS community is smaller than Express or Next.js communities, which means fewer Stack Overflow answers and potentially more challenging hiring. However, developers familiar with TypeScript and modern frameworks become productive quickly, and the official documentation is comprehensive.
 
-The framework deploys successfully to all major hosting platforms including traditional VPS providers, Docker containers, and modern platforms like Railway, Render, and Fly.io.
+The framework deploys successfully to all major hosting platforms including traditional VPS providers, Docker containers, and modern platforms like Railway, Render, and Fly.io. You can also turn your own servers into a deployment platform with [Tenkai](./deployment.md#deploying-to-your-own-servers).
 
 ## Does AdonisJS support TypeScript natively?
 

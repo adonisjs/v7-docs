@@ -28,21 +28,21 @@ string.excerpt(html, 70, {
 })
 ```
 
-<dl>
-  <dt>completeWords</dt>
-  <dd>
+::::options
+
+:::option{name="completeWords"}
 
 When set to `true`, the truncation will occur only after complete words. This option might exceed the defined character limit.
 
-  </dd>
+:::
 
-  <dt>suffix</dt>
-  <dd>
+:::option{name="suffix"}
 
 Value to append after the truncated string. Defaults to three dots `...`.
 
-  </dd>
-</dl>
+:::
+
+::::
 
 ## truncate
 
@@ -68,21 +68,21 @@ string.truncate(text, 70, {
 })
 ```
 
-<dl>
-  <dt>completeWords</dt>
-  <dd>
+::::options
+
+:::option{name="completeWords"}
 
 When set to `true`, the truncation will occur only after complete words. This option might exceed the defined character limit.
 
-  </dd>
+:::
 
-  <dt>suffix</dt>
-  <dd>
+:::option{name="suffix"}
 
 Value to append after the truncated string. Defaults to three dots `...`.
 
-  </dd>
-</dl>
+:::
+
+::::
 
 ## slug
 
@@ -526,35 +526,33 @@ Lorem Ipsum is simply dummy text of the
 
 The following options can be specified as the 2nd parameter.
 
-<dl>
-  <dt>indent</dt>
-  <dd>
+::::options
+
+:::option{name="indent"}
 
 Character(s) to use for indenting text after the first line
 
-  </dd>
+:::
 
-  <dt>width</dt>
-  <dd>
+:::option{name="width"}
 
 Number of characters after which to split the line
 
-  </dd>
+:::
 
-  <dt>newLine</dt>
-  <dd>
+:::option{name="newLine"}
 
 Specify the new line character to use for splitting lines. `default=\n`
 
-  </dd>
+:::
 
-  <dt>escape</dt>
-  <dd>
+:::option{name="escape"}
 
 Specify a function to escape the contents. The method will be once for each line.
 
-  </dd>
-</dl>
+:::
+
+::::
 
 ## htmlEscape
 
@@ -862,42 +860,39 @@ string.bytes.format(1048576, { unit: 'KB' }) // 1024KB
 
 #### OPTIONS
 
-<dl>
-  <dt>decimalPlaces</dt>
-  <dd>
+::::options
+
+:::option{name="decimalPlaces"}
 
 A maximum number of decimal places to include in the output. `default=2`.
 
-  </dd>
+:::
 
-  <dt>fixedDecimals</dt>
-  <dd>
+:::option{name="fixedDecimals"}
 
 Whether to always display the maximum number of decimal places. `default=false`.
 
-  </dd>
+:::
 
-  <dt>thousandsSeparator</dt>
-  <dd>
-  
-  Specify the separator for thousands. `default=''`.
-  
-  </dd>
+:::option{name="thousandsSeparator"}
 
-  <dt>unit</dt>
-  <dd>
-  
-  The unit in which the result will be returned. It could be `B/KB/MB/GB/TB`. The default behavior is to auto-detect based on the input.
+Specify the separator for thousands. `default=''`.
 
-  </dd>
+:::
 
-  <dt>unitSeparator</dt>
-  <dd>
+:::option{name="unit"}
+
+The unit in which the result will be returned. It could be `B/KB/MB/GB/TB`. The default behavior is to auto-detect based on the input.
+
+:::
+
+:::option{name="unitSeparator"}
 
 The separator between the value and the `unit`. `default=''`.
 
-  </dd>
-</dl>
+:::
+
+::::
 
 ## String builder
 

@@ -227,7 +227,7 @@ Enables server-side rendering. See [Server-side rendering](#server-side-renderin
 :::
 
 :::option{name="ssr.entrypoint" type="string"}
-Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`.
+Path to the SSR entrypoint file relative to the project root. Defaults to `inertia/ssr.tsx`. The same path must be listed under `serverEntryPoints` in `vite.config.ts` so it gets bundled for production.
 :::
 
 :::option{name="ssr.pages" type="string[] | (ctx, page) => boolean"}
@@ -309,7 +309,7 @@ The Inertia starter kit configures type generation for you. If you are adding In
 
 ```ts title="adonisrc.ts"
 import { indexPages } from '@adonisjs/inertia'
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 import { generateRegistry } from '@tuyau/core/hooks'
 
@@ -684,6 +684,54 @@ import { Form, Link } from '@adonisjs/inertia/vue'
 
 ::::
 
+These components resolve route names using the [Tuyau client](./api_client.md) defined in `inertia/client.ts`, which they read from a `TuyauProvider` wrapping your application. The starter kits register the provider in the frontend entrypoint. If you are adding Inertia to an existing application, wrap the app yourself.
+
+::::tabs
+
+:::tab{title="React"}
+```tsx title="inertia/app.tsx"
+import { client } from './client'
+import { createRoot } from 'react-dom/client'
+import { createInertiaApp } from '@inertiajs/react'
+import { TuyauProvider } from '@adonisjs/inertia/react'
+
+createInertiaApp({
+  // ...other options
+  setup({ el, App, props }) {
+    createRoot(el).render(
+      // [!code highlight:3]
+      <TuyauProvider client={client}>
+        <App {...props} />
+      </TuyauProvider>
+    )
+  },
+})
+```
+:::
+
+:::tab{title="Vue"}
+```ts title="inertia/app.ts"
+import { client } from '~/client'
+import { createApp, h } from 'vue'
+import { createInertiaApp } from '@inertiajs/vue3'
+import { TuyauProvider } from '@adonisjs/inertia/vue'
+
+createInertiaApp({
+  // ...other options
+  setup({ el, App, props, plugin }) {
+    createApp({
+      // [!code highlight]
+      render: () => h(TuyauProvider, { client }, { default: () => h(App, props) }),
+    })
+      .use(plugin)
+      .mount(el)
+  },
+})
+```
+:::
+
+::::
+
 ### Creating links
 
 The `Link` component creates navigation links using route names defined in your AdonisJS routes.
@@ -1047,7 +1095,7 @@ router.post('/api/posts/lookup', [controllers.Posts, 'lookup']).as('posts.lookup
 
 :::step{title="Return a serialized response"}
 
-Validate the request and return transformed values with `HttpContext.serialize`. The generated route response type will match the values received by the browser after serialization.
+Validate the request and return transformed values with `HttpContext.serialize`. The generated route response type will match the values received by the browser after serialization. The `serialize` helper wraps the payload under a `data` key, so the browser receives `{ data: { post } }`.
 
 ```ts title="app/controllers/posts_controller.ts"
 import Post from '#models/post'
@@ -1090,7 +1138,7 @@ export default function PostLookup() {
       </button>
 
       {request.errors.id && <p>{request.errors.id}</p>}
-      {request.response && <p>{request.response.post.title}</p>}
+      {request.response && <p>{request.response.data.post.title}</p>}
     </div>
   )
 }
@@ -1234,44 +1282,35 @@ async store({ request, response, session }: HttpContext) {
 }
 ```
 
-On the frontend, flash data is available on `page.flash`, a sibling of `props`. The starter kit's default layout reads it through `usePage()` and forwards messages to toast notifications, dismissing stale toasts when the URL changes.
+On the frontend, flash data is available on `page.flash`, a sibling of `props`. The starter kit's `FlashToasts` component reads it through `usePage()` and forwards messages to toast notifications, dismissing stale toasts when you navigate away. Every layout in `inertia/layouts` renders this component, so flash messages work on any page that uses a layout.
 
 ::::tabs
 
 :::tab{title="React"}
-```tsx title="inertia/layouts/default.tsx"
+```tsx title="inertia/components/flash_toasts.tsx"
+import { useEffect } from 'react'
 import { toast, Toaster } from 'sonner'
-import { usePage } from '@inertiajs/react'
-import { ReactElement, useEffect } from 'react'
+import { router, usePage } from '@inertiajs/react'
 
-export default function Layout({ children }: { children: ReactElement }) {
-  const { url, flash } = usePage()
-
-  useEffect(() => {
-    toast.dismiss()
-  }, [url])
+export default function FlashToasts() {
+  const { flash } = usePage()
 
   useEffect(() => {
-    if (flash.error) {
-      toast.error(flash.error)
-    }
-    if (flash.success) {
-      toast.success(flash.success)
-    }
-  })
+    return router.on('start', () => toast.dismiss('flash'))
+  }, [])
 
-  return (
-    <>
-      <main>{children}</main>
-      <Toaster position="top-center" richColors />
-    </>
-  )
+  useEffect(() => {
+    if (flash.error) toast.error(flash.error, { id: 'flash' })
+    if (flash.success) toast.success(flash.success, { id: 'flash' })
+  }, [flash])
+
+  return <Toaster position="top-center" />
 }
 ```
 :::
 
 :::tab{title="Vue"}
-```vue title="inertia/layouts/default.vue"
+```vue title="inertia/components/flash_toasts.vue"
 <script setup lang="ts">
 import { watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
@@ -1279,25 +1318,23 @@ import { toast, Toaster } from 'vue-sonner'
 
 const page = usePage()
 
-watch(() => page.url, () => toast.dismiss())
+watch(
+  () => page.url,
+  () => toast.dismiss()
+)
 
 watch(
   () => page.flash,
   (flash) => {
-    if (flash.error) {
-      toast.error(flash.error)
-    }
-    if (flash.success) {
-      toast.success(flash.success)
-    }
+    if (flash.error) toast.error(flash.error, { id: 'flash' })
+    if (flash.success) toast.success(flash.success, { id: 'flash' })
   },
   { immediate: true }
 )
 </script>
 
 <template>
-  <main><slot /></main>
-  <Toaster position="top-center" richColors />
+  <Toaster position="top-center" />
 </template>
 ```
 :::
@@ -1312,15 +1349,14 @@ Flash data follows the session's flash semantics: a message survives exactly one
 
 ### Typing flash data
 
-Add the following augmentation to `inertia/types.ts` to infer `usePage().flash` and flash event payloads from the middleware's `flash()` method. The starter kit includes this setup by default.
+When `withSharedProps` is enabled on the `indexEntities` hook, codegen infers the return type of the middleware's `flash()` method and writes it to the `Data.FlashMessages` type. Add the following augmentation to `inertia/types.ts` to type `usePage().flash` and flash event payloads. The starter kit includes this setup by default.
 
 ```ts title="inertia/types.ts"
-import type { InferFlashData } from '@adonisjs/inertia/types'
-import type InertiaMiddleware from '#middleware/inertia_middleware'
+import type { Data } from '@generated/data'
 
 declare module '@inertiajs/core' {
   interface InertiaConfig {
-    flashDataType: InferFlashData<InertiaMiddleware>
+    flashDataType: Data.FlashMessages
   }
 }
 ```
@@ -1532,7 +1568,7 @@ See also: [Shield](../security/securing_ssr_applications.md#csrf-configuration-r
 
 Asset versioning tells the frontend when your JavaScript or CSS bundles have changed, triggering a full page reload instead of a partial update. This ensures users always run the latest version of your frontend code after a deployment.
 
-By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier. To pin the version to a custom value, set `assetsVersion` in `config/inertia.ts` to a git commit hash, build timestamp, or any other identifier you control.
+By default, AdonisJS computes a hash of the `.vite/manifest.json` file (created when you build your frontend assets) and uses it as the version identifier. The hash is computed once and reused for the lifetime of the process. In development, the Vite dev server serves assets directly and the version stays constant. To pin the version to a custom value, set `assetsVersion` in `config/inertia.ts` to a git commit hash, build timestamp, or any other identifier you control.
 
 ```ts title="config/inertia.ts"
 const inertiaConfig = defineConfig({
@@ -1570,7 +1606,7 @@ async checkout({ inertia }: HttpContext) {
 
 ### Clearing browser history
 
-Call `inertia.clearHistory()` before rendering to clear the client-side history stack. This is useful after sign-out, where you don't want the user to navigate back to authenticated pages.
+Call `inertia.clearHistory()` to clear the client-side history stack on the next Inertia page response. This is useful after sign-out, where you don't want the user to navigate back to authenticated pages. When the session middleware is in use, the instruction is stored in the session, so it survives redirects and applies to the page rendered after the redirect.
 
 ```ts
 async destroy({ inertia, auth }: HttpContext) {
@@ -1603,7 +1639,7 @@ See [history encryption](https://inertiajs.com/history-encryption) on the Inerti
 
 Server-side rendering (SSR) generates the initial HTML on the server, improving perceived performance and SEO.
 
-The starter kit pre-wires everything SSR needs: the `inertia/ssr.tsx` entrypoint exists, `vite.config.ts` declares it under `serverEntrypoints`, and `config/inertia.ts` points at it. Enabling SSR is a single switch.
+The starter kit ships with the `inertia/ssr.tsx` entrypoint, and `config/inertia.ts` already points at it. Enabling SSR takes two changes. First, turn on the `ssr.enabled` flag.
 
 ```ts title="config/inertia.ts"
 import { defineConfig } from '@adonisjs/inertia'
@@ -1618,21 +1654,34 @@ const inertiaConfig = defineConfig({
 export default inertiaConfig
 ```
 
-If you are adding SSR to an existing application, add the same entrypoint to `serverEntrypoints` in `vite.config.ts`.
+Then declare the same entrypoint under `serverEntryPoints` in `vite.config.ts`. AdonisJS loads the SSR entrypoint through Vite during development and imports the bundled file in production, so the build must know about it. Without this entry, production builds will not contain the SSR bundle and rendering will fail.
 
 ```ts title="vite.config.ts"
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 import adonisjs from '@adonisjs/vite/client'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [
+    react(),
     adonisjs({
-      entrypoints: ['inertia/app.tsx'],
-      serverEntrypoints: ['inertia/ssr.tsx'], // [!code highlight]
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'], // [!code ++]
+      reload: ['resources/views/**/*.edge'],
     }),
+    react(),
   ],
 })
 ```
+
+### Deploying client assets to a CDN
+
+SSR does not require the client bundles to exist on the application server. The server renders pages from the local SSR bundle and uses the local manifests to resolve client asset URLs. You can upload the hashed client assets to a CDN and omit them from the running application's filesystem.
+
+With the default output directories, keep `public/assets/.vite/manifest.json` and the entire `public/assets/server/` directory in the application artifact. The server directory contains the SSR manifest and bundles. Never upload the manifests or anything under `public/assets/server` to the CDN. The [Vite CDN deployment guide](./vite.md#deploying-assets-to-a-cdn) shows how to configure one URL for both builds and runtime, and how to exclude these files without selecting client filenames manually.
+
+The Inertia SSR renderer loads its local server bundle directly, so it does not need the AdonisJS static middleware to serve `public/assets`. This only applies to Vite assets. Continue to serve other public files, such as `favicon.ico`, uploaded images, or `robots.txt`, with the static middleware, a web server, or separate object storage.
 
 ## Understanding the Inertia request lifecycle
 

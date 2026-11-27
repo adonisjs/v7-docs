@@ -37,7 +37,7 @@ if (error instanceof lucidErrors.E_ROW_NOT_FOUND) {
 
 ## E_AUTHORIZATION_FAILURE
 
-The exception is raised when a bouncer authorization check fails. The exception is self-handled and [uses content-negotiation](../guides/auth/authorization.md#throwing-authorizationexception) to return an appropriate error response to the client.
+The exception is raised when a bouncer authorization check fails. The exception is self-handled and [uses content-negotiation](../guides/auth/authorization.md#using-authorize) to return an appropriate error response to the client.
 
 - **Status code**: 403
 - **Self handled**: Yes
@@ -51,7 +51,7 @@ if (error instanceof bouncerErrors.E_AUTHORIZATION_FAILURE) {
 
 ## E_TOO_MANY_REQUESTS
 
-The exception is raised by the [@adonisjs/rate-limiter](../guides/security/rate_limiting.md) package when a request exhausts all the requests allowed during a given duration. The exception is self-handled and [uses content-negotiation](../guides/security/rate_limiting.md#handling-throttleexception) to return an appropriate error response to the client.
+The exception is raised by the [@adonisjs/limiter](../guides/security/rate_limiting.md) package when a request exhausts all the requests allowed during a given duration. The exception is self-handled and [uses content-negotiation](../guides/security/rate_limiting.md#handling-throttleexception) to return an appropriate error response to the client.
 
 - **Status code**: 429
 - **Self handled**: Yes
@@ -77,13 +77,11 @@ if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
 }
 ```
 
-The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/shield/blob/9.x/src/errors.ts#L23-L66), and the user will be redirected back to the form, and you can access the error using the flash messages.
+The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/shield/blob/9.x/src/errors.ts). The user is redirected back to the form, and the error message is flashed under the `error` key.
 
 ```edge
-@error('E_BAD_CSRF_TOKEN')
-  <p>
-    {{ message }}
-  </p>
+@if(flashMessages.has('error'))
+  <p>{{ flashMessages.get('error') }}</p>
 @end
 ```
 
@@ -91,10 +89,10 @@ The `E_BAD_CSRF_TOKEN` exception is [self-handled](https://github.com/adonisjs/s
 
 The `@adonisjs/ally` package raises the exception when the OAuth service does not provide the OAuth code during the redirect.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods. The exception is self-handled and uses content negotiation to flash the error message and redirect back, or return a JSON/JSONAPI error response. The message is translated using the `errors.E_OAUTH_MISSING_CODE` key when i18n is configured.
 
 - **Status code**: 500
-- **Self handled**: No
+- **Self handled**: Yes
 
 ```ts
 import { errors as allyErrors } from '@adonisjs/ally'
@@ -104,16 +102,42 @@ if (error instanceof allyErrors.E_OAUTH_MISSING_CODE) {
 
 ## E_OAUTH_STATE_MISMATCH
 
-The `@adonisjs/ally` package raises the exception when the CSRF state defined during the redirect is missing.
+The `@adonisjs/ally` package raises the exception when the CSRF state defined during the redirect does not match the state sent back by the OAuth service. A missing state cookie (or a missing `state` param) also counts as a mismatch.
 
-You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods.
+You can avoid this exception if you [handle the errors](../guides/auth/social_authentication.md#handling-the-callback) before calling the `.accessToken` or `.user` methods. The exception is self-handled the same way as `E_OAUTH_MISSING_CODE`, and the message is translated using the `errors.E_OAUTH_STATE_MISMATCH` key.
 
 - **Status code**: 400
-- **Self handled**: No
+- **Self handled**: Yes
 
 ```ts
 import { errors as allyErrors } from '@adonisjs/ally'
 if (error instanceof allyErrors.E_OAUTH_STATE_MISMATCH) {
+}
+```
+
+## E_UNKNOWN_ALLY_PROVIDER
+
+The `@adonisjs/ally` package raises the exception when `ally.use()` or `ally.allowsLocalSignup()` receives a provider name that is not defined inside the `config/ally.ts` file. You can avoid it by checking the provider name with `ally.has()` first. The message is translated using the `errors.E_UNKNOWN_ALLY_PROVIDER` key.
+
+- **Status code**: 404
+- **Self handled**: Yes
+
+```ts
+import { errors as allyErrors } from '@adonisjs/ally'
+if (error instanceof allyErrors.E_UNKNOWN_ALLY_PROVIDER) {
+}
+```
+
+## E_LOCAL_SIGNUP_DISALLOWED
+
+The `@adonisjs/ally` package raises the exception when you call `ally.use(provider, { intent: 'signup' })` for a provider configured with [`disallowLocalSignup: true`](../guides/auth/social_authentication.md#disallow-signups-for-a-provider). The message is translated using the `errors.E_LOCAL_SIGNUP_DISALLOWED` key.
+
+- **Status code**: 403
+- **Self handled**: Yes
+
+```ts
+import { errors as allyErrors } from '@adonisjs/ally'
+if (error instanceof allyErrors.E_LOCAL_SIGNUP_DISALLOWED) {
 }
 ```
 
@@ -133,7 +157,7 @@ if (error instanceof authErrors.E_UNAUTHORIZED_ACCESS) {
 
 ## E_INVALID_CREDENTIALS
 
-The exception is raised when the auth finder is not able to verify the user credentials. The exception is handled and use [content-negotiation](../guides/auth/verifying_user_credentials.md#handling-exceptions) to return an appropriate error response to the client.
+The exception is raised when the auth finder is not able to verify the user credentials. The exception is handled and use [content-negotiation](../guides/auth/verifying_user_credentials.md#handling-verification-errors) to return an appropriate error response to the client.
 
 - **Status code**: 400
 - **Self handled**: Yes
@@ -381,9 +405,9 @@ if (error instanceof redisErrors.E_MULTIPLE_REDIS_PSUBSCRIPTIONS) {
 
 The exception is raised by the `@adonisjs/mail` package when unable to send the email using a given transport. Usually, this will happen when the HTTP API of the email service returns a non-200 HTTP response.
 
-You may access the network request error using the `error.cause` property. The `cause` property is the [error object](https://github.com/sindresorhus/got/blob/main/documentation/8-errors.md) returned by `got` (npm package).
+You may access the network request error using the `error.cause` property. The `cause` property is the [error object](https://github.com/sindresorhus/ky#httperror) thrown by `ky` (npm package).
 
-- **Status code**: 400
+- **Status code**: 500
 - **Self handled**: No
 
 ```ts

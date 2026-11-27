@@ -8,6 +8,7 @@ This guide covers rate limiting in AdonisJS applications. You will learn how to:
 
 - Install and configure the limiter package with Redis, database, or memory stores
 - Create throttle middleware for HTTP requests
+- Measure a new limit on real traffic using the dry run mode
 - Apply dynamic rate limits based on user authentication
 - Use rate limiting directly for login protection and job queues
 - Enforce several limits at once using multi limiters
@@ -35,7 +36,9 @@ node ace add @adonisjs/limiter
 
 1. Installs the `@adonisjs/limiter` package using the detected package manager.
 
-2. Registers the following service provider inside the `adonisrc.ts` file.
+2. Prompts you to select the `redis` or `database` store. You can skip the prompt using the `--store` flag, for example `node ace add @adonisjs/limiter --store=redis`.
+
+3. Registers the following service provider inside the `adonisrc.ts` file.
     ```ts
     {
       providers: [
@@ -45,16 +48,16 @@ node ace add @adonisjs/limiter
     }
     ```
 
-3. Creates the `config/limiter.ts` file.
+4. Creates the `config/limiter.ts` file with the selected store and the `memory` store.
 
-4. Creates the `start/limiter.ts` file for defining HTTP throttle middleware.
+5. Creates the `start/limiter.ts` file for defining HTTP throttle middleware.
 
-5. Defines the following environment variable and its validation inside the `start/env.ts` file.
+6. Defines the following environment variable and its validation inside the `start/env.ts` file.
    ```ts
    LIMITER_STORE=redis
    ```
 
-6. Optionally creates the database migration for the `rate_limits` table if using the `database` store.
+7. Creates the database migration for the `rate_limits` table when you select the `database` store.
 
 :::
 
@@ -93,7 +96,7 @@ declare module '@adonisjs/limiter/types' {
 
 The `default` property specifies which store to use for rate limiting. The `stores` object defines all available storage backends. We recommend always configuring the `memory` store so you can use it during testing.
 
-See also: [Rate limiter config stub](https://github.com/adonisjs/limiter/blob/2.x/stubs/config/limiter.stub)
+See also: [Rate limiter config stub](https://github.com/adonisjs/limiter/blob/3.x/stubs/config/limiter.stub)
 
 ### Environment variables
 
@@ -306,6 +309,64 @@ limiter
   .blockFor('30 mins')
 ```
 
+### Trying a limit with a dry run
+
+A new limit that is too strict will reject your legitimate users. The dry run mode lets you measure a limit on real traffic before you enforce it. Call the `dryRun` method, and the throttle middleware counts each request, but never rejects one:
+
+```ts title="start/limiter.ts"
+import limiter from '@adonisjs/limiter/services/main'
+
+export const apiThrottle = limiter.define('api', () => {
+  return limiter.allowRequests(100).every('1 hour').dryRun()
+})
+```
+
+When a request exceeds the limit, the request goes through, and the [limit:exceeded](#monitoring-rejected-requests) event is emitted with `dryRun: true`. Listen for the event to learn which clients the limit would have rejected:
+
+```ts title="start/events.ts"
+import emitter from '@adonisjs/core/services/emitter'
+import logger from '@adonisjs/core/services/logger'
+
+emitter.on('limit:exceeded', ({ key, response, dryRun }) => {
+  if (dryRun) {
+    logger.warn(
+      { key, consumed: response.consumed, limit: response.limit },
+      'request would have been throttled'
+    )
+  }
+})
+```
+
+In dry run mode, the throttle middleware behaves differently in the following ways:
+
+- The `limitExceeded` callback is not called, because no exception is thrown.
+- The `X-RateLimit-Limit` and `X-RateLimit-Remaining` headers are not set, so clients cannot tell that the limit exists.
+- The counters use their own keys, with a `_dry` suffix on the limiter name (for example, `api_dry_ip_127.0.0.1`). When you enforce the limit later, it starts from fresh counters. A client that `blockFor` blocked during the dry run is not rejected when you enforce the limit.
+
+The `dryRun` method accepts a boolean, and `dryRun(false)` turns the dry run mode off. Use an environment variable to switch between a dry run and an enforced limit with no code change:
+
+```ts title="start/limiter.ts"
+import env from '#start/env'
+import limiter from '@adonisjs/limiter/services/main'
+
+export const apiThrottle = limiter.define('api', () => {
+  return limiter
+    .allowRequests(100)
+    .every('1 hour')
+    /**
+     * Give a default of "false". Calling "dryRun()" with
+     * "undefined" enables the dry run mode.
+     */
+    .dryRun(env.get('LIMITER_DRY_RUN', false))
+})
+```
+
+```ts title="start/env.ts"
+{
+  LIMITER_DRY_RUN: Env.schema.boolean.optional(),
+}
+```
+
 ## Dynamic rate limiting
 
 Different users often need different rate limits. Authenticated users might get higher limits than guests, or premium subscribers might get unlimited access while free users are restricted.
@@ -463,7 +524,7 @@ const reportsLimiter = limiter.use({
 
 ### Limiting expensive operations
 
-The `attempt` method executes a callback only if the rate limit hasn't been exceeded. It returns the callback's result, or `undefined` if the limit was reached:
+The `attempt` method executes a callback only if the rate limit hasn't been exceeded. It returns the callback's result, or `undefined` if the limit was reached. Pass an amount as the third argument to consume more than one request per attempt:
 
 ```ts title="app/services/reports_service.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -492,7 +553,7 @@ export async function generateUserReport(userId: number) {
 
 ### Preventing brute-force login attacks
 
-The `penalize` method is designed for scenarios where you want to consume a request only when an operation fails. This is perfect for login protection where you want to track failed attempts, not successful ones.
+The `penalize` method is designed for scenarios where you want to consume a request only when an operation fails. This is perfect for login protection where you want to track failed attempts, not successful ones. Like `attempt`, it accepts an amount as the third argument when a failure should consume more than one request.
 
 ```ts title="app/controllers/session_controller.ts"
 import User from '#models/user'
@@ -623,7 +684,7 @@ export async function handleApiRequest(userId: number) {
 
 ## Incrementing without throwing
 
-The `increment` method works like `consume` but does not throw an exception when the limit is exceeded, it also accepts an optional amount. Instead of throwing an exception, it returns the limiter response object, allowing you to check the remaining requests and decide how to handle the situation:
+The `increment` method works like `consume`, including the optional amount, but it does not throw an exception when the limit is exceeded. Instead, it returns the limiter response object, allowing you to compare the consumed requests against the limit and decide how to handle the situation:
 
 ```ts title="app/services/api_service.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -637,7 +698,11 @@ export async function handleApiRequest(userId: number) {
   const key = `api_user_${userId}`
   const response = await requestsLimiter.increment(key, 5)
 
-  if (response.remainingPoints < 0) {
+  /**
+   * The remaining count never goes below zero, so compare
+   * the consumed requests with the limit instead.
+   */
+  if (response.consumed > response.limit) {
     throw new Error('Rate limit exceeded')
   }
 
@@ -684,7 +749,7 @@ await requestsLimiter.block('a_unique_key', '30 mins')
 
 Sometimes you need to restore requests to a user. For example, if a background job completes, you might want to let the user queue another one.
 
-The decrement method reduces the request count. By default, it decrements by 1, but you can specify a custom amount as the second argument.
+The `decrement` method reduces the request count. By default, it decrements by 1, but you can specify a custom amount as the second argument.
 
 ```ts title="app/jobs/process_report.ts"
 import limiter from '@adonisjs/limiter/services/main'
@@ -704,13 +769,13 @@ export async function processReportJob(userId: number) {
      * Job completed - give the slot back so
      * another job can be queued.
      */
-    await jobsLimiter.decrement(key, 5)
+    await jobsLimiter.decrement(key)
   })
 }
 ```
 
 :::info
-Just like increment and consume, providing an amount `<= 0` will cause the method to fallback to `1`.
+Just like `increment` and `consume`, providing an amount `<= 0` will cause the method to fallback to `1`.
 :::
 
 :::tip
@@ -747,7 +812,9 @@ emitter.on('limit:exceeded', (event) => {
 
 Keys created by the throttle middleware are prefixed with the limiter name, which tells you which limiter rejected the request. For example, a limiter defined using `limiter.define('api', ...)` creates keys like `api_ip_127.0.0.1`, or `api_42` when you call `usingKey(42)`.
 
-The event is only emitted for rejected requests. Methods that update the counters without rejecting a request (`increment`, `set`, and `block`) do not emit it, and the next rejected request will. When using a multi limiter, the event is emitted once for the limiter that rejected the request first.
+The event also has a `dryRun` property. It is `true` when a throttle middleware in [dry run mode](#trying-a-limit-with-a-dry-run) lets through a request that exceeded the limit. It is `false` for each rejected request.
+
+The event is only emitted for rejected requests, and for the requests that a dry run lets through. Methods that update the counters without rejecting a request (`increment`, `set`, and `block`) do not emit it, and the next rejected request will. When using a multi limiter, the event is emitted once for the limiter that rejected the request first.
 
 :::tip
 The event is emitted for every rejected request, including each request a blocked client keeps sending during the `blockDuration`. Keep the listener lightweight by writing a log line or incrementing a metric, and avoid performing database writes inside it.

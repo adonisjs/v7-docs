@@ -256,7 +256,7 @@ export default class PostsController {
 
 ### Redirecting back
 
-Use `response.redirect().back()` to redirect to the previous page. The method reads the `Referer` header and validates that the referrer's host matches the current request's `Host` header. If the referrer is missing, invalid, or from an unknown host, the redirect falls back to `/`.
+Use `response.redirect().back()` to redirect to the previous page. The method reads the `Referer` header and validates that the referrer's host matches the current request's host (the HTTP/2 `:authority` pseudo-header, or `request.host()`, which uses `X-Forwarded-Host` from a trusted proxy). If the referrer is missing, invalid, or from an unknown host, the redirect falls back to `/`.
 
 You can provide a custom fallback URL as an argument to `back()`.
 
@@ -785,7 +785,10 @@ Cookie path. Default is `/`.
 :::
 
 :::option{name="maxAge" dataType="string | number"}
-Cookie expiry time. Can be a duration string like `'2h'` or milliseconds.
+Cookie expiry time. A number is seconds. A string is a duration, for example `'2h'`.
+
+- `0` gives a session cookie, which the browser removes when it closes.
+- A negative value expires the cookie at once. `response.clearCookie()` uses it.
 :::
 
 :::option{name="httpOnly" dataType="boolean"}

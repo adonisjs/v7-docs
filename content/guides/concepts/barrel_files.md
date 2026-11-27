@@ -120,7 +120,7 @@ The `() => import()` function is only called when you actually use that controll
 If you prefer not to use barrel files, you can disable their generation through the `adonisrc.ts` configuration file. The generation is managed using the `init` assembler hook.
 
 ```ts title="adonisrc.ts"
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 
 export default defineConfig({

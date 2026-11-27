@@ -16,9 +16,26 @@ This guide covers the body parser configuration in AdonisJS. You will learn how 
 
 The body parser is responsible for parsing incoming request bodies before they reach your route handlers. It automatically detects the content type of each request and applies the appropriate parser to convert the raw request data into a usable format.
 
-AdonisJS includes three built-in parsers: the **JSON parser** handles JSON-encoded data, the **form parser** handles URL-encoded form submissions, and the **multipart parser** handles file uploads and multipart form data. Each parser can be configured independently through the `config/bodyparser.ts` file.
+AdonisJS includes four built-in parsers: the **JSON parser** handles JSON-encoded data, the **form parser** handles URL-encoded form submissions, the **multipart parser** handles file uploads and multipart form data, and the **raw parser** captures other content types as a string. Each parser can be configured independently through the `config/bodyparser.ts` file.
 
 You don't interact with the body parser directly in your application code. Instead, you access the parsed data through the Request class using methods like `request.all()`, `request.body()`, or `request.file()`. The body parser runs as middleware and processes request bodies automatically before your route handlers execute.
+
+The body parser records which parser handled the request on the `request.bodyType` property. Its value is one of `json`, `urlencoded`, `multipart`, `raw`, or `unknown` (when no parser matched the content type). The property stays `undefined` when the body parser skips the request, for example for methods missing from `allowedMethods` or requests without a body. This is useful in middleware that must behave differently for JSON APIs and HTML form submissions.
+
+```ts title="app/middleware/require_json_middleware.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+import type { NextFn } from '@adonisjs/core/types/http'
+
+export default class RequireJsonMiddleware {
+  async handle({ request, response }: HttpContext, next: NextFn) {
+    if (request.hasBody() && request.bodyType !== 'json') {
+      return response.unsupportedMediaType({ message: 'Only JSON payloads are accepted' })
+    }
+
+    await next()
+  }
+}
+```
 
 See also: [Request class documentation](./request.md) for accessing parsed request data.
 
@@ -247,6 +264,7 @@ multipart: {
 }
 ```
 
+:::
 
 :::option{name="processManually"}
 
@@ -266,21 +284,9 @@ multipart: {
 
 :::
 
-:::option{name="encoding"}
-
-The `encoding` option specifies the character encoding to use when converting text fields in the multipart request to strings. The default is `utf-8`, which handles most use cases. You can use any encoding supported by the [iconv-lite](https://www.npmjs.com/package/iconv-lite) package.
-
-```ts title="config/bodyparser.ts"
-multipart: {
-  encoding: 'utf-8',
-}
-```
-
-:::
-
 :::option{name="limit"}
 
-The `limit` option sets the maximum total size of all uploaded files in a single request. Requests that exceed this limit will receive a `413 Payload Too Large` error response.
+The `limit` option sets the maximum total size of a multipart request, including all uploaded files and form fields. Requests that exceed this limit will receive a `413 Payload Too Large` error response.
 
 ```ts title="config/bodyparser.ts"
 multipart: {
@@ -292,7 +298,7 @@ multipart: {
 
 :::option{name="fieldsLimit"}
 
-The `fieldsLimit` option sets the maximum total size of all form fields (not files) in the multipart request. This prevents abuse through extremely large text field submissions. Requests that exceed this limit will receive a `413 Payload Too Large` error response.
+The `fieldsLimit` option sets the maximum total size of all form fields (not files) in the multipart request. This prevents abuse through extremely large text field submissions. Requests that exceed this limit will receive a `413 Payload Too Large` error response. When you omit this option, a `2mb` limit applies.
 
 ```ts title="config/bodyparser.ts"
 multipart: {
@@ -302,9 +308,21 @@ multipart: {
 
 :::
 
+:::option{name="maxFields"}
+
+The `maxFields` option sets the maximum number of form fields (not files) accepted in a single multipart request. It defaults to `1000`. Requests that exceed this limit will receive a `413 Payload Too Large` error response.
+
+```ts title="config/bodyparser.ts"
+multipart: {
+  maxFields: 1000,
+}
+```
+
+:::
+
 :::option{name="tmpFileName"}
 
-The `tmpFileName` option accepts a function that generates custom names for temporary files. By default, the parser generates random file names.
+The `tmpFileName` option accepts a function that generates custom names for temporary files. By default, the parser uses a random UUID for each file.
 
 ```ts title="config/bodyparser.ts"
 multipart: {

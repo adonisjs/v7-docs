@@ -74,6 +74,8 @@ node ace add @adonisjs/static
     ])
 ```
 
+5. Registers the `public/**` meta file pattern inside the `adonisrc.ts` file, so the `public` directory is copied to the production build. See [Copying static files to production](#copying-static-files-to-production).
+
 :::
 
 ## Configuration
@@ -135,7 +137,9 @@ Browsers can use this header along with ETags for cache validation. Like ETags, 
 
 The `dotFiles` property defines how to handle requests for files starting with a dot (like `.env` or `.gitignore`). You can set one of three values: `'ignore'` (default), `'deny'`, or `'allow'`.
 
-The `'ignore'` option pretends dot files don't exist and returns a `404` status code. This is the recommended setting for security. The `'deny'` option explicitly denies access with a `403` status code. The `'allow'` option serves dot files like any other file.
+The `'ignore'` option pretends dot files don't exist. This is the recommended setting for security. The `'allow'` option serves dot files like any other file. The rule also applies to dot directories, so `'ignore'` hides files inside `.well-known` as well.
+
+The `'deny'` option refuses to serve dot files, but the middleware does not respond with a `403` status code. Like `'ignore'`, it passes the request to your route handlers, which results in a `404` response when no route matches the path.
 ```ts
 {
   dotFiles: 'ignore' // Recommended
@@ -143,7 +147,7 @@ The `'ignore'` option pretends dot files don't exist and returns a `404` status 
 ```
 
 :::warning
-Setting `dotFiles` to `'allow'` can expose sensitive files like `.env` or `.git` directories if they're accidentally placed in the public folder. The `'ignore'` setting (default) is recommended for security. It returns a `404` response as if the file doesn't exist, preventing information disclosure.
+Setting `dotFiles` to `'allow'` can expose sensitive files like `.env` or `.git` directories if they're accidentally placed in the public folder. The `'ignore'` setting (default) is recommended for security. The middleware skips dot files as if they don't exist, preventing information disclosure.
 
 If you need to serve specific files for domain verification (like `.well-known/acme-challenge` for SSL certificates), create a subdirectory without a leading dot and configure your verification tool to use that path instead.
 :::
@@ -163,7 +167,7 @@ The `acceptRanges` property allows browsers to resume interrupted downloads inst
 
 :::option{name="cacheControl"}
 
-The `cacheControl` property enables the [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header. This header tells browsers and CDNs how long to cache files before checking for updates. When enabled, you can use the `maxAge` and `immutable` properties to fine-tune caching behavior.
+The `cacheControl` property enables the [Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) header. This header tells browsers and CDNs how long to cache files before checking for updates. The property defaults to `true`, and without a `maxAge` the header value is `public, max-age=0`. When enabled, you can use the `maxAge` and `immutable` properties to fine-tune caching behavior.
 ```ts
 {
   cacheControl: true
@@ -207,7 +211,7 @@ The `immutable` directive only works when `maxAge` is also set. If you enable `i
 
 The `headers` property accepts a function that returns custom HTTP headers for specific files. The function receives the file path as the first argument and the [file stats](https://nodejs.org/api/fs.html#class-fsstats) object as the second argument. This allows you to set different headers based on file type, size, or other attributes.
 
-The function should return an object where keys are header names and values are header values. If the function returns `undefined` or doesn't return anything, no additional headers are added for that file.
+The function must return an object where keys are header names and values are header values. Return an empty object for files that don't need additional headers. Returning `undefined` throws an error while serving the file.
 ```ts
 {
   headers: (path, stats) => {
@@ -231,9 +235,33 @@ The function should return an object where keys are header names and values are 
         'X-Frame-Options': 'DENY'
       }
     }
+
+    return {}
   }
 }
 ```
+
+:::
+
+:::option{name="prefixes"}
+
+The `prefixes` property limits static file serving to a list of URL paths. By default, the middleware looks for a file in `public/` on every request, including the requests your routes handle. When you define `prefixes`, a request with no matching prefix continues to your routes without a filesystem lookup.
+
+```ts title="config/static.ts"
+export default defineConfig({
+  prefixes: ['/assets', '/favicon.ico', '/robots.txt'],
+})
+```
+
+A request matches when its path equals a prefix or is nested under it. In the example above, `/assets/app.js` matches `/assets`, and `/assets-old/app.js` does not. The prefixes do not change the file path, so `/assets/app.js` still serves `public/assets/app.js`.
+
+The property is not defined by default, and every request is looked up in the `public` directory.
+
+:::warning
+A file in `public/` with no matching prefix is not served, even when it exists. Add an entry for each file or directory you keep outside the listed prefixes, such as `/uploads`.
+
+The middleware compares the prefixes with the decoded URL path, so write a prefix as its folder is named, for example `/my files`. The comparison is case-sensitive, so `/Assets/app.js` does not match `/assets`.
+:::
 
 :::
 
@@ -317,7 +345,7 @@ The rule for copying public files is defined in the `adonisrc.ts` file:
 
 The `pattern` property uses glob syntax to match all files inside the `public` directory. The `reloadServer: false` setting indicates that changes to these files during development don't require restarting the development server.
 
-If you add files to the `public` directory while your development server is running, you don't need to restart. The static middleware will serve them immediately. However, if you modify the `config/static.ts` file, you will need to restart the server for the configuration changes to take effect.
+If you add files to the `public` directory while your development server is running, you don't need to restart. The static middleware will serve them immediately, provided their URL matches the `prefixes` option when you have defined it. However, if you modify the `config/static.ts` file, you will need to restart the server for the configuration changes to take effect.
 
 ## See also
 

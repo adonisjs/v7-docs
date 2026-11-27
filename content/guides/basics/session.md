@@ -8,6 +8,7 @@ This guide covers working with HTTP sessions in AdonisJS applications. You will 
 - Installing and configuring the session package
 - Storing and retrieving session data
 - Working with flash messages
+- Handling concurrent requests safely
 - Choosing the right storage driver
 - Implementing custom session stores
 
@@ -24,18 +25,27 @@ If you're new to the concept of sessions, we recommend reading this [introductio
 
 ## Installation
 
-Install and configure the sessions package by running the following Ace command:
+Install and configure the sessions package by running the following Ace command. You will be prompted to select the storage driver, or you may pass it using the `--store` flag. The `cookie`, `file`, `redis`, and `database` drivers can be selected this way.
 ```sh
 node ace add @adonisjs/session
+
+# Skip the prompt
+node ace add @adonisjs/session --store=redis
 ```
 
 :::disclosure{title="See steps performed by the add command"}
 
 1. Installs the `@adonisjs/session` package using the detected package manager.
 2. Registers the `@adonisjs/session/session_provider` service provider inside the `adonisrc.ts` file.
-3. Creates the `config/session.ts` configuration file.
-4. Defines the `SESSION_DRIVER` environment variable.
+3. Creates the `config/session.ts` configuration file with the selected driver.
+4. Defines the `SESSION_DRIVER` environment variable and its validation inside the `start/env.ts` file.
 5. Registers the `@adonisjs/session/session_middleware` middleware inside the `start/kernel.ts` file.
+6. Registers the `@adonisjs/session/commands` commands inside the `adonisrc.ts` file.
+7. Creates the migration for the sessions table when the `database` driver is selected.
+:::
+
+:::note
+The `redis` and `database` drivers require the [`@adonisjs/redis`](../database/redis.md) and [`@adonisjs/lucid`](../database/lucid.md) packages to be configured. The `dynamodb` driver must be configured manually, as explained in the [DynamoDB driver](#dynamodb-driver) section.
 :::
 
 ## Choosing a storage driver
@@ -54,6 +64,8 @@ Cookie-based sessions silently truncate data exceeding 4KB. Switch to Redis for 
 | `dynamodb` | Stores data in AWS DynamoDB | AWS infrastructure, serverless apps |
 | `database` | Stores data in SQL databases | Production apps using SQL, existing database infrastructure |
 | `memory` | Stores data in memory (lost on restart) | Testing only
+
+The `memory`, `redis`, and `database` drivers also support [session tagging](./session_tagging.md), which lets you list the active sessions of a user and log them out from other devices.
 
 ## Configuration
 
@@ -96,8 +108,10 @@ export default defineConfig({
     }),
 
     dynamodb: stores.dynamodb({
-      region: env.get('AWS_REGION'),
-      endpoint: env.get('AWS_ENDPOINT'),
+      clientConfig: {
+        region: env.get('AWS_REGION'),
+        endpoint: env.get('AWS_ENDPOINT'),
+      },
       tableName: 'sessions',
     }),
   }
@@ -108,11 +122,29 @@ export default defineConfig({
 
 :::option{name="age" type="string | number"}
 
-Session lifetime before expiration. Accepts a string duration like `'2 hours'` or `'7 days'`, or a number in milliseconds. After this period, the session expires and data is deleted.
+Session lifetime before expiration. Accepts a string duration like `'2 hours'` or `'7 days'`, or a number in seconds. After this period of inactivity, the session expires and data is deleted. Defaults to `'2h'`.
 ```ts
 age: '2 hours'
 // or
-age: 7200000 // 2 hours in milliseconds
+age: 7200 // 2 hours in seconds
+```
+
+:::
+
+:::option{name="enabled" dataType="boolean"}
+
+Turns session management on or off. When `false`, the session middleware skips reading and writing sessions. Defaults to `true`.
+```ts
+enabled: true
+```
+
+:::
+
+:::option{name="cookieName" dataType="string"}
+
+The name of the cookie that stores the session ID. Defaults to `'adonis_session'`, and the generated config file sets it to `'adonis-session'`. Only change this if it conflicts with other cookies in your application.
+```ts
+cookieName: 'adonis-session'
 ```
 
 :::
@@ -122,6 +154,28 @@ age: 7200000 // 2 hours in milliseconds
 When `true`, the session cookie is deleted when the user closes the browser, regardless of the configured `age`. When `false` (the default), the session persists for the configured `age` duration even after the browser is closed.
 ```ts
 clearWithBrowser: false
+```
+
+:::
+
+:::option{name="refreshCookie" dataType="boolean"}
+
+When `true` (the default), the session ID cookie is sent on every response, which refreshes its `Max-Age`. When `false`, the cookie is sent only when the session ID changes (a new session or `regenerate()`) or when the browser did not send one. A slow response that kept its incoming session ID then cannot put that ID back in the browser, for example the guest session ID after a login regenerated the session. Responses that create a new ID still send the cookie. See the `renewMissingSessionId` option for a case where this matters.
+
+The cookie `Max-Age` is no longer refreshed, so the browser drops the cookie `age` after the session started, even if the user stays active. Combine this option with `clearWithBrowser: true` and let the store expire inactive sessions. See [Handling concurrent requests](#handling-concurrent-requests).
+```ts
+refreshCookie: false
+```
+
+:::
+
+:::option{name="renewMissingSessionId" dataType="boolean"}
+
+When `true`, a request whose cookie names a session the store does not have (expired or destroyed) gets a new session ID, and `session.fresh` is `true`. The ID of an ended session is never used again. When `false` (the default), the session keeps the ID from the cookie and writes the new session under it.
+
+A session without data is never written to the store, so with this option it gets a new ID on every request. Do not use `session.sessionId` as a stable key until you store something in the session. Combined with `refreshCookie: false`, each response for an empty session also sends its new ID cookie, so a slow guest request can still overwrite the cookie set by a login that ran at the same time.
+```ts
+renewMissingSessionId: true
 ```
 
 :::
@@ -137,7 +191,7 @@ SESSION_DRIVER=cookie
 
 :::option{name="cookie" type="object"}
 
-Cookie configuration object that controls how the session cookie behaves. This includes settings for cookie name, domain, path, and security options. See the [Cookie configuration](#cookie-configuration) section for detailed options.
+Cookie configuration object that controls how the session cookie behaves. This includes settings for domain, path, and security options. The cookie lifetime is computed from `age` and `clearWithBrowser`, so `maxAge` and `expires` are not accepted here. See the [Cookie configuration](#cookie-configuration) section for detailed options.
 
 :::
 
@@ -154,17 +208,6 @@ An object defining all available session stores. Each key represents a driver na
 Sessions use cookies to store the session ID (or the entire session data for the cookie driver). Configure cookie behavior with these options:
 
 ::::options
-
-:::option{name="cookie.name" dataType="string"}
-
-The name of the cookie that stores the session ID. Only change this if it conflicts with other cookies in your application.
-```ts
-cookie: {
-  name: 'adonis-session'
-}
-```
-
-:::
 
 :::option{name="cookie.domain" dataType="string"}
 
@@ -253,6 +296,22 @@ stores: {
 
 :::
 
+:::option{name="stores.redis.encrypt" dataType="boolean"}
+
+When `true`, session data is encrypted with the [encryption service](../security/encryption.md) instead of being stored as readable JSON, so anyone with read access to Redis cannot read it. Defaults to `false`.
+
+Sessions written before you enable `encrypt` cannot be read anymore, so each user starts a new session once (and must log in again).
+```ts
+stores: {
+  redis: stores.redis({
+    connection: 'main',
+    encrypt: true
+  })
+}
+```
+
+:::
+
 ::::
 
 ### Database driver
@@ -263,7 +322,7 @@ The Database driver stores session data in SQL databases, ideal for production a
 
 :::option{name="stores.database.connectionName" dataType="string"}
 
-The name of the database connection to use for session storage. This connection must be configured in your `config/database.ts` file.
+The name of the database connection to use for session storage. This connection must be configured in your `config/database.ts` file. Defaults to the primary connection.
 ```ts
 stores: {
   database: stores.database({
@@ -276,11 +335,40 @@ stores: {
 
 :::option{name="stores.database.tableName" dataType="string"}
 
-The name of the database table where session data will be stored. Defaults to `'sessions'`. Make sure to create the migration for the session table using the `node ace make:session-table` command.
+The name of the database table where session data will be stored. Defaults to `'sessions'`. Make sure to create the migration for the session table using the `node ace make:session-table` command, unless it was created when configuring the package with the `database` driver.
 ```ts
 stores: {
   database: stores.database({
     tableName: 'sessions'
+  })
+}
+```
+
+:::
+
+:::option{name="stores.database.gcProbability" dataType="number"}
+
+The probability (in percent) that a request deletes the expired sessions from the table. Defaults to `2`, meaning 2% of the requests run the cleanup. Set it to `0` to disable the cleanup and delete expired rows with your own scheduled job instead.
+```ts
+stores: {
+  database: stores.database({
+    gcProbability: 2
+  })
+}
+```
+
+:::
+
+:::option{name="stores.database.encrypt" dataType="boolean"}
+
+When `true`, session data is encrypted with the [encryption service](../security/encryption.md) instead of being stored as readable JSON, so anyone with read access to the sessions table cannot read it. Defaults to `false`.
+
+Sessions written before you enable `encrypt` cannot be read anymore, so each user starts a new session once (and must log in again).
+```ts
+stores: {
+  database: stores.database({
+    connectionName: 'pg',
+    encrypt: true
   })
 }
 ```
@@ -300,26 +388,33 @@ npm install @aws-sdk/client-dynamodb
 
 ::::options
 
-:::option{name="stores.dynamodb.region" dataType="string"}
+:::option{name="stores.dynamodb.clientConfig" dataType="DynamoDBClientConfig"}
 
-The AWS region where your DynamoDB table is located.
+The configuration used to create a new `DynamoDBClient`. It accepts every option of the AWS SDK client, such as `region`, `endpoint` (useful with DynamoDB Local), and `credentials`.
 ```ts
 stores: {
   dynamodb: stores.dynamodb({
-    region: env.get('AWS_REGION')
+    clientConfig: {
+      region: env.get('AWS_REGION'),
+      endpoint: env.get('AWS_ENDPOINT'),
+    }
   })
 }
 ```
 
 :::
 
-:::option{name="stores.dynamodb.endpoint" dataType="string"}
+:::option{name="stores.dynamodb.client" dataType="DynamoDBClient"}
 
-Optional custom endpoint URL for DynamoDB. Useful for local development with DynamoDB Local or when using custom endpoints.
+An existing `DynamoDBClient` instance to reuse, instead of `clientConfig`. Define one of the two options.
 ```ts
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
+
+const client = new DynamoDBClient({ region: env.get('AWS_REGION') })
+
 stores: {
   dynamodb: stores.dynamodb({
-    endpoint: env.get('AWS_ENDPOINT')
+    client
   })
 }
 ```
@@ -328,11 +423,24 @@ stores: {
 
 :::option{name="stores.dynamodb.tableName" dataType="string"}
 
-The name of the DynamoDB table where session data will be stored.
+The name of the DynamoDB table where session data will be stored. Defaults to `'Session'`.
 ```ts
 stores: {
   dynamodb: stores.dynamodb({
     tableName: 'sessions'
+  })
+}
+```
+
+:::
+
+:::option{name="stores.dynamodb.keyAttribute" dataType="string"}
+
+The name of the table attribute that holds the session ID. Defaults to `'key'`.
+```ts
+stores: {
+  dynamodb: stores.dynamodb({
+    keyAttribute: 'key'
   })
 }
 ```
@@ -349,7 +457,7 @@ The File driver stores session data in the local filesystem, suitable for develo
 
 :::option{name="stores.file.location" dataType="string"}
 
-The directory path where session files will be stored. Defaults to `tmp/sessions` within your application root.
+The directory path where session files will be stored. This option is required, and the generated config uses `app.tmpPath('sessions')`.
 ```ts
 stores: {
   file: stores.file({
@@ -624,6 +732,8 @@ session.flashOnly(['title', 'content', 'category'])
 session.flashExcept(['password', 'credit_card'])
 ```
 
+Uploaded files are never flashed, since a file cannot be restored in a form field and would only grow the session. If the next request needs details about an uploaded file, flash them explicitly, such as the file `clientName`.
+
 Access flashed form data in templates using the `old()` helper.
 ```edge title="resources/views/posts/create.edge"
 <input type="text" name="title" value="{{ old('title') }}" />
@@ -631,8 +741,54 @@ Access flashed form data in templates using the `old()` helper.
 ```
 
 :::note
-When using AdonisJS validators, validation errors and form data are automatically flashed on validation failure. You don't need to manually flash them.
+When using AdonisJS validators, validation errors and form data are automatically flashed on validation failure. You don't need to manually flash them. The `password`, `password_confirmation`, `_csrf`, and `_method` fields are left out. For Inertia requests, only the errors are flashed, since the Inertia form keeps its own input state.
 :::
+
+### Flashing field errors
+
+Sometimes a form field fails a check that your validator does not make, for example when your controller finds that an email is already registered. Use the `flashInputErrors()` method to flash an error for that field without a validation exception. The errors are stored under the `inputErrorsBag` key, the same key that validation failures fill. The [`@inputError`](../../reference/edge.md#inputerror) tag and the Inertia adapter read this key, so they display these errors exactly like validation errors.
+
+```ts title="app/controllers/new_account_controller.ts"
+import User from '#models/user'
+import { signupValidator } from '#validators/user'
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class NewAccountController {
+  async store({ request, session, response }: HttpContext) {
+    const payload = await request.validateUsing(signupValidator)
+
+    if (await User.findBy('email', payload.email)) {
+      /**
+       * Flash an error for the email field, and the form data
+       * without the password, then go back to the form.
+       */
+      session.flashInputErrors({
+        email: 'This email is already registered',
+      })
+      session.flashExcept(['password', 'password_confirmation'])
+
+      return response.redirect().back()
+    }
+
+    await User.create(payload)
+    return response.redirect().toRoute('dashboard')
+  }
+}
+```
+
+A message can be a string or an array of strings. The messages are added to the messages already flashed for the same field, so calling `flashInputErrors()` twice for `email` keeps both messages.
+
+```ts
+session.flashInputErrors({
+  email: [
+    'This email is already registered',
+    'Use your work email instead',
+  ],
+  username: 'This username is taken',
+})
+```
+
+The `flashInputErrors()` method does not write to the `errorsBag` key that the `@error` tag reads, and it does not flash the request input. Call `flashAll()`, `flashOnly()`, or `flashExcept()` yourself when the form fields must be pre-filled. Inertia requests can skip this step, since the Inertia form keeps its own input state.
 
 ### Re-flashing messages
 
@@ -760,6 +916,71 @@ export default class AuthController {
 }
 ```
 
+## Handling concurrent requests
+
+A browser can send several requests at once, so a logout or a `session.regenerate()` may happen while another request from the same browser is still running. The slow request read the old session at its start and writes it back at its end.
+
+The Redis, database, file and DynamoDB stores do not write back a session that another request destroyed in the meantime. They only update a session they read if it still exists in the store. The old session is destroyed when a request that called `session.regenerate()` commits at the end of the request, or when a session is left empty at commit. Keep this in mind if you [create a custom store](#creating-custom-session-stores): its `write()` method should not recreate a session that was destroyed after `read()`.
+
+This guard only covers destroyed sessions. Sessions are not locked, so when two requests modify a session that still exists, the last write wins. For example, `auth.use('web').logout()` only removes the authentication key from the session. If the session holds other data, such as a flash message, it is not destroyed, and a slow request that read it before the logout writes the authentication key back. Regenerate the session on logout so the old session is destroyed.
+
+```ts title="app/controllers/session_controller.ts"
+import type { HttpContext } from '@adonisjs/core/http'
+
+export default class SessionController {
+  async destroy({ auth, session, response }: HttpContext) {
+    await auth.use('web').logout()
+
+    /**
+     * Move the remaining data to a new session ID and destroy
+     * the old session, so a slow request cannot restore it
+     */
+    session.regenerate() // [!code ++]
+
+    session.flash('success', 'You have been logged out')
+    return response.redirect('/login')
+  }
+}
+```
+
+Two problems remain with the default configuration, and two opt-in options solve them.
+
+- A late response still sets the session ID cookie it read, which can put back the guest session ID after a login that regenerated the session. Set `refreshCookie: false` to send the cookie only when the ID changes.
+- A request whose cookie names a destroyed session keeps that ID and writes a new session under it. A slow request that read the old session then finds it again and updates it. Set `renewMissingSessionId: true` so the ID of a destroyed session is never used again.
+
+The following configuration combines both options for an application using Redis, and encrypts the session data at rest. Since the cookie `Max-Age` is no longer refreshed, the cookie lives until the browser closes and Redis expires sessions after 2 hours of inactivity.
+
+```ts title="config/session.ts"
+import env from '#start/env'
+import app from '@adonisjs/core/services/app'
+import { defineConfig, stores } from '@adonisjs/session'
+
+export default defineConfig({
+  enabled: true,
+  cookieName: 'adonis-session',
+  age: '2h',
+  clearWithBrowser: true, // [!code ++]
+  refreshCookie: false, // [!code ++]
+  renewMissingSessionId: true, // [!code ++]
+
+  cookie: {
+    path: '/',
+    httpOnly: true,
+    secure: app.inProduction,
+    sameSite: 'lax',
+  },
+
+  store: env.get('SESSION_DRIVER'),
+
+  stores: {
+    redis: stores.redis({
+      connection: 'main',
+      encrypt: true, // [!code ++]
+    }),
+  },
+})
+```
+
 ## Creating custom session stores
 
 If none of the built-in drivers meet your needs, you can create a custom session store by implementing the `SessionStoreContract` interface. This is useful for integrating databases like MongoDB or custom storage solutions.
@@ -777,7 +998,7 @@ import {
 /**
  * The config you want to accept
  */
-export type MongoDBConfig = {
+export type MongoDbConfig = {
   collection: string;
   database: string
 }
@@ -787,7 +1008,7 @@ export type MongoDBConfig = {
  * It implements the four required methods: read, write, destroy, and touch.
  */
 export class MongoDbStore implements SessionStoreContract {
-  constructor(protected config: MongoDBConfig) {}
+  constructor(protected config: MongoDbConfig) {}
 
   /**
    * Read session data for a given session ID.
@@ -800,11 +1021,7 @@ export class MongoDbStore implements SessionStoreContract {
   /**
    * Write session data for a given session ID.
    */
-  async write(
-    sessionId: string,
-    data: SessionData,
-    expiresAt: Date
-  ): Promise<void> {
+  async write(sessionId: string, data: SessionData): Promise<void> {
     // Save session data to your storage
   }
 
@@ -818,8 +1035,8 @@ export class MongoDbStore implements SessionStoreContract {
   /**
    * Update the session's expiration time without changing data.
    */
-  async touch(sessionId: string, expiresAt: Date): Promise<void> {
-    // Update expiration timestamp in your storage
+  async touch(sessionId: string): Promise<void> {
+    // Extend the expiration timestamp in your storage
   }
 }
 
@@ -830,7 +1047,7 @@ export class MongoDbStore implements SessionStoreContract {
  */
 export function mongoDbStore(config: MongoDbConfig): SessionStoreFactory {
   return (ctx, sessionConfig) => {
-    return new MongoDBStore(config)
+    return new MongoDbStore(config)
   }
 }
 ```

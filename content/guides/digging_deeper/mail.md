@@ -52,13 +52,13 @@ node ace add @adonisjs/mail --transports=resend --transports=smtp
     ```
 
 3. Creates the `config/mail.ts` file.
-4. Defines the environment variables and their validations for the selected mail services.
+4. Defines the `MAIL_MAILER`, `MAIL_FROM_ADDRESS`, and `MAIL_FROM_NAME` environment variables, along with the variables and validations for the selected mail services.
 
 :::
 
 ## Configuration
 
-The mail configuration lives in `config/mail.ts`. This file defines your mailers, default sender addresses, and transport settings.
+The mail configuration lives in `config/mail.ts`. This file defines your mailers, default sender addresses, template globals, and transport settings.
 
 See also: [Config stub](https://github.com/adonisjs/mail/blob/-/stubs/config/mail.stub)
 
@@ -70,14 +70,14 @@ const mailConfig = defineConfig({
   /**
    * The mailer to use when none is specified
    */
-  default: 'smtp',
+  default: env.get('MAIL_MAILER'),
 
   /**
    * Global "from" address used when not set on individual emails
    */
   from: {
-    address: 'hello@example.com',
-    name: 'My App',
+    address: env.get('MAIL_FROM_ADDRESS'),
+    name: env.get('MAIL_FROM_NAME'),
   },
 
   /**
@@ -86,6 +86,13 @@ const mailConfig = defineConfig({
   replyTo: {
     address: 'support@example.com',
     name: 'My App Support',
+  },
+
+  /**
+   * Data shared with every email template
+   */
+  globals: {
+    brandName: 'Acme',
   },
 
   /**
@@ -106,6 +113,10 @@ const mailConfig = defineConfig({
 })
 
 export default mailConfig
+
+declare module '@adonisjs/mail/types' {
+  export interface MailersList extends InferMailers<typeof mailConfig> {}
+}
 ```
 
 | Option | Description |
@@ -113,6 +124,7 @@ export default mailConfig
 | `default` | The mailer to use when you call `mail.send()` without specifying one. |
 | `from` | Global sender address. Used unless overridden on individual emails. |
 | `replyTo` | Global reply-to address. Used unless overridden on individual emails. |
+| `globals` | Data shared with every template rendered by the mailer, such as a brand name, a logo URL, or a base URL for links. Values passed to `htmlView` or `textView` take precedence. |
 | `mailers` | An object containing your configured mailers. Each key is a mailer name, each value is a transport configuration. |
 
 ## Transport configuration
@@ -203,7 +215,13 @@ Configuration options are sent to Resend's [`/emails`](https://resend.com/docs/a
 :::
 
 :::mail-provider{name="Postmark" logo="postmark" color="#ffde00" summary="Reliable transactional email delivery."}
-Postmark is not part of the `node ace add` scaffolding, so register the mailer and its environment variable manually.
+Install the package with the Postmark transport.
+
+```sh
+node ace add @adonisjs/mail --transports=postmark
+```
+
+Or register the mailer and environment variables in an existing setup.
 
 ```ts title="config/mail.ts"
 {
@@ -338,12 +356,6 @@ Or register the mailer and environment variables in an existing setup.
         accessKeyId: env.get('AWS_ACCESS_KEY_ID'),
         secretAccessKey: env.get('AWS_SECRET_ACCESS_KEY'),
       },
-
-      /**
-       * Nodemailer-specific options
-       */
-      sendingRate: 10,
-      maxConnections: 5,
     }),
   },
 }
@@ -355,7 +367,7 @@ AWS_SECRET_ACCESS_KEY=
 AWS_REGION=us-east-1
 ```
 
-SES options are forwarded to Nodemailer. See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
+SES options are passed to the `SESv2Client` constructor of the AWS SDK. Nodemailer v7 removed the `sendingRate` and `maxConnections` rate limiting options, so throttle sending through your queue instead. See also: [Nodemailer SES documentation](https://nodemailer.com/transports/ses)
 :::
 
 :::mail-provider{name="Brevo" logo="brevo" color="#0b996e" summary="Email and marketing platform (formerly Sendinblue)."}
@@ -1052,9 +1064,10 @@ test.group('Users | register', () => {
      * Assert the email was sent
      */
     fake.mails.assertSent(VerifyEmailNotification, ({ message }) => {
-      return message
-        .hasTo('user@example.com')
-        .hasSubject('Please verify your email address')
+      return (
+        message.hasTo('user@example.com') &&
+        message.hasSubject('Please verify your email address')
+      )
     })
   })
 
@@ -1230,17 +1243,17 @@ const mailConfig = defineConfig({
 
 ## Custom template engine
 
-By default, the mail package uses Edge for rendering email templates. To use a different template engine, override the static `templateEngine` property on the `Message` class.
+By default, the mail package uses Edge for rendering email templates. To use a different template engine, override the static `templateEngine` property on the `Message` class. The `render` method receives the template path, the shared state (the `globals` from the config merged with view helpers like `embedImage`), and the data passed to `htmlView` or `textView`.
 
 ```ts title="start/mail.ts"
 import { Message } from '@adonisjs/mail'
 
 Message.templateEngine = {
-  async render(templatePath, data) {
+  async render(templatePath, sharedState, data) {
     /**
      * Use your preferred template engine
      */
-    return myTemplateEngine.render(templatePath, data)
+    return myTemplateEngine.render(templatePath, { ...sharedState, ...data })
   }
 }
 ```

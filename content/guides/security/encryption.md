@@ -10,6 +10,7 @@ This guide covers encryption and decryption in AdonisJS applications. You will l
 - Choose and configure encryption algorithms
 - Use purpose-bound encryption for added security
 - Set expiration times on encrypted values
+- Search encrypted columns using blind indexes and deterministic encryption
 - Sign data without encrypting using the message verifier
 - Implement key rotation for seamless secret updates
 
@@ -18,6 +19,8 @@ This guide covers encryption and decryption in AdonisJS applications. You will l
 Encryption transforms readable data into ciphertext that can only be decrypted with the correct secret key. Unlike hashing, encryption is a reversible process. You encrypt data to protect it during storage or transmission, then decrypt it when you need to read the original value.
 
 AdonisJS provides an encryption service with built-in support for three industry-standard algorithms: ChaCha20-Poly1305, AES-256-GCM, and AES-256-CBC. All three are authenticated encryption algorithms, meaning they not only protect confidentiality but also detect tampering. If someone modifies the encrypted data, decryption will fail rather than return corrupted data.
+
+The service also ships with an AES-SIV driver for deterministic encryption, and a legacy driver for reading and writing values in the AdonisJS v6 format.
 
 The encryption service produces output in a structured format that includes the driver identifier, ciphertext, initialization vector, and authentication tag. This self-describing format allows you to switch algorithms or rotate keys while maintaining the ability to decrypt older values.
 
@@ -216,6 +219,45 @@ export default class User extends UserSchema {
 }
 ```
 
+## Searching encrypted columns
+
+The drivers above use a random initialization vector, so encrypting the same value twice produces different outputs. This is what you want for confidentiality, but it means you cannot find a row with a `WHERE ssn = ?` query.
+
+A **blind index** solves this problem. It is a keyed hash of the value, stored in a separate column and used only for equality lookups. The `purpose` argument is required and should identify the field, so the same value produces different indexes for different columns.
+
+```ts title="app/models/user.ts"
+import { UserSchema } from '#database/schema'
+import { beforeSave } from '@adonisjs/lucid/orm'
+import encryption from '@adonisjs/core/services/encryption'
+
+export default class User extends UserSchema {
+  @beforeSave()
+  static encryptEmail(user: User) {
+    if (user.$dirty.email) {
+      /**
+       * Normalize the value before hashing. Blind indexes match
+       * exact bytes, so "Foo@example.com" and "foo@example.com"
+       * produce different indexes.
+       */
+      const email = user.email.trim().toLowerCase()
+      user.emailIndex = encryption.blindIndex(email, 'users.email')
+      user.email = encryption.encrypt(email)
+    }
+  }
+}
+```
+
+When you rotate keys, existing rows still hold indexes computed with the old keys. The `blindIndexes` method returns the index for every configured key, so you can query all of them.
+
+```ts title="app/controllers/users_controller.ts"
+const indexes = encryption.blindIndexes(email.trim().toLowerCase(), 'users.email')
+const user = await User.query().whereIn('emailIndex', indexes).first()
+```
+
+:::note
+The legacy driver does not support blind indexes. Calling `blindIndex` or `blindIndexes` with it throws an `E_BLIND_INDEX_NOT_SUPPORTED` exception.
+:::
+
 ## Choosing an algorithm
 
 Each encryption algorithm offers different tradeoffs between security, performance, and compatibility. The right choice depends on your application's requirements.
@@ -236,9 +278,18 @@ AES-256-CBC is provided primarily for legacy compatibility, mainly to decrypt ex
 CBC mode has a history of implementation pitfalls, including padding oracle attacks. AdonisJS handles these concerns internally, but if you're implementing CBC elsewhere, ensure you use Encrypt-then-MAC and constant-time comparison for the authentication tag.
 :::
 
+### When to choose AES-SIV
+
+AES-SIV is a deterministic cipher. Encrypting the same value with the same key and purpose always produces the same output, which lets you query an encrypted column directly with an equality check. Use it only when you need those lookups, because identical values are visible as identical ciphertexts. In most cases, a [blind index](#searching-encrypted-columns) alongside a randomized driver is the safer choice.
+
+The AES-SIV driver has the following limitations.
+
+- It does not support `expiresIn`. Passing an expiration throws an exception.
+- It accepts a single `key` instead of a `keys` array. Key rotation is not automatic, since rows encrypted with the old key will no longer match equality queries. Re-encrypt existing rows when you change the key.
+
 ### When to choose Legacy
 
-The legacy driver is designed for migrating from AdonisJS v6 to v7. It can only decrypt data that was encrypted with the v6 encryption service. Use this driver when you have existing encrypted data in your database from a v6 application that needs to be migrated.
+The legacy driver is designed for migrating from AdonisJS v6 to v7. It uses the same format as the v6 encryption service, so it decrypts values encrypted by a v6 application, and the values it encrypts can be decrypted by a v6 application. Use this driver when you have existing encrypted data from a v6 application, or when a v6 and a v7 application must exchange encrypted values during a migration.
 
 The recommended migration strategy is:
 
@@ -307,6 +358,15 @@ export default defineConfig({
     // }),
 
     /**
+     * AES-SIV: Deterministic encryption for equality lookups.
+     * Accepts a single key.
+     */
+    // siv: drivers.aessiv({
+    //   id: 'siv',
+    //   key: env.get('APP_KEY'),
+    // }),
+
+    /**
      * Legacy: Decrypt data encrypted with AdonisJS v6.
      * Use this driver to migrate encrypted data from v6 to v7.
      */
@@ -319,7 +379,7 @@ export default defineConfig({
 
 ### Driver configuration options
 
-All drivers accept the same configuration options.
+The drivers accept the following configuration options. The `legacy` driver does not accept an `id`, and the `aessiv` driver accepts a single `key` instead of `keys`.
 
 ::::options
 :::option{name="id" dataType="string"}

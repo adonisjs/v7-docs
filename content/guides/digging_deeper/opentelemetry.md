@@ -11,7 +11,7 @@ This guide covers OpenTelemetry integration in AdonisJS applications. You will l
 - Use automatic instrumentation for HTTP, database, and Redis
 - Create custom spans with helpers and decorators
 - Propagate trace context across services
-- Test your setup locally with Jaeger
+- Test your setup locally with Monocle Studio or Jaeger
 
 ## Overview
 
@@ -24,6 +24,8 @@ Observability is essential for understanding what happens inside your applicatio
 :::
 
 This package handles the complexity of OpenTelemetry setup for you. Run a single command, and your application automatically traces HTTP requests, database queries, Redis operations, and more.
+
+OpenTelemetry only collects telemetry. You still need a backend to store and explore it. You can run your own (Jaeger, Grafana, and so on) or use a hosted platform such as [Monocle](#sending-telemetry-to-monocle), which is built on OpenTelemetry and ships an AdonisJS agent.
 
 ## OpenTelemetry concepts
 
@@ -62,21 +64,23 @@ node ace add @adonisjs/otel
 
    ```ts
    router.use([
-     () => import('@adonisjs/otel/otel_middleware')
+     () => import('@adonisjs/otel/otel_middleware'),
+     // ...other middleware
    ])
    ```
 
 4. Creates the `config/otel.ts` file.
 
-5. Creates the `bin/otel.ts` file with OpenTelemetry initialization.
+5. Creates the `otel.ts` file at the root of your project. This file initializes the OpenTelemetry SDK.
 
-6. Adds the import statement at the top of `bin/server.ts` file.
+6. Adds `import '../otel.js'` as the first import of the `bin/server.ts` file. The SDK must load before any other module, otherwise auto-instrumentation cannot patch libraries like `http` or `knex`.
 
 7. Defines the following environment variables and their validation rules.
 
    ```dotenv
-   OTEL_EXPORTER_OTLP_ENDPOINT=
-   OTEL_EXPORTER_OTLP_HEADERS=
+   APP_NAME=
+   APP_VERSION=0.0.1
+   APP_ENV=development
    ```
 :::
 
@@ -105,7 +109,7 @@ The package resolves service metadata from multiple sources.
 
 :::option{name="serviceName" dataType="string"}
 
-The name of your service. This value is resolved from `OTEL_SERVICE_NAME` or `APP_NAME` environment variables.
+The name of your service. When not defined, this value is resolved from the `OTEL_SERVICE_NAME` or `APP_NAME` environment variables and defaults to `unknown_service`.
 
 ```ts
 export default defineConfig({
@@ -143,12 +147,20 @@ export default defineConfig({
 
 ### Exporters
 
-By default, the package exports traces using OTLP over gRPC to `localhost:4317`. This is the standard OpenTelemetry Collector endpoint. If you're running an OpenTelemetry Collector locally or in your infrastructure, traces will be sent there automatically.
+By default, the package exports traces, metrics, and logs using OTLP over HTTP (`http/protobuf`) to `localhost:4318`. This is the standard OpenTelemetry Collector endpoint. If you're running an OpenTelemetry Collector locally or in your infrastructure, telemetry will be sent there automatically.
 
 You can configure the exporter endpoint using environment variables without changing any code.
 
 ```dotenv
 # title: .env
+OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.example.com:4318
+```
+
+To use gRPC instead, switch the protocol. The endpoint must then point to the gRPC port (usually `4317`).
+
+```dotenv
+# title: .env
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc
 OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.example.com:4317
 ```
 
@@ -194,7 +206,7 @@ export default defineConfig({
 })
 ```
 
-When you set `endpoint`, the package automatically derives per-signal endpoints by appending:
+Destinations always use OTLP over HTTP. When you set `endpoint`, the package automatically derives per-signal endpoints by appending:
 
 - `/v1/traces`
 - `/v1/metrics`
@@ -226,6 +238,12 @@ export default defineConfig({
 
 :::
 
+### Sending telemetry to Monocle
+
+:::tip
+[Monocle](https://monocle.sh) is an observability platform built on OpenTelemetry with a dedicated AdonisJS agent (`node ace add @monocle.sh/adonisjs-agent`). The agent wraps `@adonisjs/otel` with the same API and adds pre-built dashboards and error tracking. See the [Monocle AdonisJS docs](https://monocle.sh/docs/frameworks/adonisjs).
+:::
+
 ### Debug mode
 
 Enable debug mode to print spans to the console during development.
@@ -243,25 +261,33 @@ This adds a `ConsoleSpanExporter` that outputs spans to your terminal, helping y
 
 ### Enabling and disabling
 
-OpenTelemetry is automatically disabled when `NODE_ENV === 'test'` to avoid noise during tests. You can override this behavior.
+The SDK is disabled by default when `NODE_ENV === 'test'`. Set `enabled: true` to start it in tests, or `enabled: false` to prevent it from starting in any environment.
+
+Setting `enabled: false` leaves the ESM loader hook installed. The hook must load before `config/otel.ts` because the configuration can import dependencies that need instrumentation.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
 
 export default defineConfig({
-  serviceName: 'my-app',
-  
-  /**
-   * Force enable in tests
-   */
-  enabled: true,
-  
-  /**
-   * Or force disable in any environment
-   */
-  enabled: false,
+	enabled: false,
 })
 ```
+
+#### Skip initialization
+
+Set `OTEL_SDK_DISABLED=true` before starting your application to skip the hook as well as the SDK. With this flag, `init()` returns before it registers the hook, imports the SDK, or loads `config/otel.ts`, even if the configuration contains `enabled: true`. The provider and middleware can remain registered.
+
+For a built application, run this command from the build directory:
+
+```sh title="Terminal"
+OTEL_SDK_DISABLED=true node bin/server.js
+```
+
+:::warning
+Set the variable in your shell or deployment environment before `init()` runs. A value loaded later from `.env` by `#start/env` is too late.
+:::
+
+Only `true`, in any letter case, skips initialization. Other values leave the configuration in control, so `OTEL_SDK_DISABLED=false` does not force the SDK to start. Changing the flag after initialization does not remove an existing hook or stop a running SDK.
 
 ### Sampling
 
@@ -299,13 +325,17 @@ If you provide a custom `sampler` option, `samplingRatio` is ignored.
 
 The package automatically instruments common libraries without any code changes. Out of the box, you get tracing for HTTP requests (incoming and outgoing), Lucid database queries (via Knex), and Redis operations.
 
-To reduce noise, the following endpoints are excluded from tracing by default.
+The `pg`, `mysql`, `mysql2`, `net`, `dns`, and `socket.io` instrumentations are disabled by default. Lucid queries are already traced through Knex, so enabling the database driver instrumentations would produce duplicate spans.
 
-- `/health`, `/healthz`, `/ready`, `/readiness`
-- `/metrics`, `/internal/metrics`, `/internal/healthz`
-- `/favicon.ico`
+To reduce noise, the HTTP instrumentation ignores the following incoming requests by default.
 
-You can configure individual instrumentations or add custom ignored URLs.
+- `OPTIONS` requests (CORS preflight).
+- Static files, detected by their extension (`.css`, `.js`, `.png`, `.woff2`, `.svg`, `.map`, and so on).
+- Vite dev server requests (`/@vite/`, `/@id/`, `/@fs/`, `/__vite`, `/@react-refresh`).
+- Health and metrics endpoints: `/health`, `/healthz`, `/internal/healthz`, `/ready`, `/readiness`, `/metrics`, `/internal/metrics`.
+- Browser and crawler files: `/favicon.ico`, `/robots.txt`, `/sitemap.xml`, `/manifest.json`, `/site.webmanifest`, `/browserconfig.xml`, `/ads.txt`.
+
+Each URL matches the exact path and its sub-paths. You can configure individual instrumentations or add custom ignored URLs.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -325,10 +355,110 @@ export default defineConfig({
     /**
      * Disable a specific instrumentation
      */
-    '@opentelemetry/instrumentation-pg': { enabled: false },
+    '@opentelemetry/instrumentation-ioredis': { enabled: false },
   },
 })
 ```
+
+The HTTP instrumentation accepts the following options on top of the ones from [`@opentelemetry/instrumentation-http`](https://www.npmjs.com/package/@opentelemetry/instrumentation-http).
+
+::::options
+
+:::option{name="ignoredUrls" dataType="string[]"}
+
+URLs to exclude from tracing. Use a trailing `/*` to match a path prefix.
+
+:::
+
+:::option{name="mergeIgnoredUrls" dataType="boolean"}
+
+Merge `ignoredUrls` with the default list. Set it to `false` to replace the defaults entirely. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreStaticFiles" dataType="boolean"}
+
+Ignore static files and Vite dev server requests. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreOptionsRequests" dataType="boolean"}
+
+Ignore `OPTIONS` requests. Defaults to `true`.
+
+:::
+
+:::option{name="ignoreIncomingRequestHook" dataType="(request: { url?: string, method?: string }) => boolean"}
+
+A custom function to ignore requests. It runs after the built-in checks, and returning `true` skips tracing for the request.
+
+:::
+
+::::
+
+### AdonisJS instrumentations
+
+The package ships with two opt-in instrumentations for AdonisJS internals. The container instrumentation creates a `container.make {binding}` span every time the container resolves a dependency. The events instrumentation creates an `event.dispatch {event}` span every time an event is emitted, covering the execution of its listeners.
+
+Register them as custom instrumentations under any key. Spans are only created inside an existing trace (an HTTP request, for example), so the application boot does not produce orphan spans.
+
+```ts title="config/otel.ts"
+import { defineConfig } from '@adonisjs/otel'
+import { EventsInstrumentation } from '@adonisjs/otel/instrumentations/events'
+import { ContainerInstrumentation } from '@adonisjs/otel/instrumentations/container'
+
+export default defineConfig({
+  serviceName: 'my-app',
+
+  instrumentations: {
+    '@adonisjs/instrumentation-events': new EventsInstrumentation(),
+    '@adonisjs/instrumentation-container': new ContainerInstrumentation(),
+  },
+})
+```
+
+## Testing locally with Monocle Studio
+
+[Monocle Studio](https://monocle.sh/docs/studio/overview) is a free, open-source dashboard that runs on your machine and streams the requests, SQL queries, logs, and exceptions of your application as you develop. It needs no Docker or external services, and keeps its history between sessions.
+
+Studio works with the [Monocle agent](#sending-telemetry-to-monocle). The `config/monocle.ts` file it generates enables dev mode when `NODE_ENV` is `development`, so the agent sends telemetry to Studio instead of Monocle cloud, and you do not need a DSN locally.
+
+::::steps
+
+:::step{title="Install the agent and the Studio packages"}
+
+```sh
+node ace add @monocle.sh/adonisjs-agent
+npm install -D @monocle.sh/studio @monocle.sh/cli
+```
+
+:::
+
+:::step{title="Start Studio"}
+
+```sh
+npx monocle studio dev
+```
+
+This starts the dashboard at http://localhost:4200.
+
+:::
+
+:::step{title="Start your application"}
+
+```sh
+node ace serve --hmr
+```
+
+Make a few requests, then open http://localhost:4200 to see their traces, logs, and exceptions.
+
+:::
+
+::::
+
+:::tip
+Studio also exposes an MCP server, so coding agents such as Claude Code or Cursor can read your traces, logs, and errors while you develop.
+:::
 
 ## Testing locally with Jaeger
 
@@ -351,14 +481,14 @@ docker run -d --name jaeger \
 
 This command exposes:
 - Port `16686` for the Jaeger UI
-- Port `4317` for OTLP gRPC (the default endpoint)
-- Port `4318` for OTLP HTTP
+- Port `4317` for OTLP gRPC
+- Port `4318` for OTLP HTTP (the default endpoint)
 
 :::
 
 :::step{title="Start your application"}
 
-Your AdonisJS application is already configured to send traces to `localhost:4317` by default, so no additional configuration is needed.
+Your AdonisJS application is already configured to send traces to `localhost:4318` by default, so no additional configuration is needed.
 
 ```sh
 node ace serve --hmr
@@ -494,6 +624,31 @@ export default class PaymentService {
 }
 ```
 
+### Tracing async iteration
+
+When a callback or method returns a Promise, `record()`, `@span()`, and `@spanAll()` return a chained Promise to end the span and propagate errors. Custom properties and methods on the original Promise, including `Symbol.asyncIterator`, are not preserved. This affects APIs that return a Promise that also supports async iteration, such as paginated lists.
+
+To trace the full iteration, consume the iterator inside an async `record()` callback. The span stays open until the loop finishes and captures errors from subsequent pages and item processing.
+
+:::warning
+Leave methods that return the original iterable undecorated. If you use `@spanAll()` on their class, replace it with `@span()` on individual methods that consume the iterable.
+:::
+
+```ts title="app/services/process_items.ts"
+import { record } from '@adonisjs/otel/helpers'
+
+export async function processItems<T>(
+  items: AsyncIterable<T>,
+  processItem: (item: T) => Promise<void>
+) {
+  await record('items.process', async () => {
+    for await (const item of items) {
+      await processItem(item)
+    }
+  })
+}
+```
+
 ### Setting attributes on the current span
 
 Use `setAttributes` to add metadata to the currently active span without creating a new one.
@@ -610,11 +765,11 @@ export default class OrdersController {
 }
 ```
 
-In your queue worker, extract the context and continue the trace.
+In your queue worker, extract the context and continue the trace. The `context` API comes from the `@opentelemetry/api` package, which you must install in your application (`npm i @opentelemetry/api`).
 
 ```ts title="app/jobs/process_order_job.ts"
+import { context } from '@opentelemetry/api'
 import { extractTraceContext, record } from '@adonisjs/otel/helpers'
-import { context } from '@adonisjs/otel'
 
 export default class ProcessOrderJob {
   async handle(payload: { orderId: string; traceContext: Record<string, string> }) {
@@ -643,9 +798,9 @@ export default class ProcessOrderJob {
 
 ## User context
 
-When `@adonisjs/auth` is installed, the middleware automatically sets user attributes on spans if a user is authenticated. This includes `user.id`, `user.email` (if available), and `user.roles` (if available).
+When `@adonisjs/auth` is installed, the middleware automatically sets user attributes on spans if a user is authenticated. It reads the `id`, `email`, and `role` properties of `ctx.auth.user` and stores them as the `user.id`, `user.email`, and `user.roles` attributes.
 
-You can customize this behavior or add additional user attributes.
+You can disable this behavior or replace it with a resolver. Any extra property returned by the resolver is stored with a `user.` prefix, so `tenantId` becomes the `user.tenantId` attribute.
 
 ```ts title="config/otel.ts"
 import { defineConfig } from '@adonisjs/otel'
@@ -677,7 +832,7 @@ export default defineConfig({
 })
 ```
 
-You can also manually set user context anywhere in your code.
+You can also manually set user context anywhere in your code using the `setUser` helper. It follows the same rules as the resolver.
 
 ```ts title="app/middleware/auth_middleware.ts"
 import { setUser } from '@adonisjs/otel/helpers'
@@ -733,29 +888,24 @@ otelLoggingPreset({ keep: ['trace_id', 'span_id'] })
 The `defineConfig` function accepts all options from the [OpenTelemetry Node SDK](https://opentelemetry.io/docs/languages/js/getting-started/nodejs/), giving power users full control.
 
 ```ts title="config/otel.ts"
-import { defineConfig } from '@adonisjs/otel'
+import { defineConfig, OTLPTraceExporter } from '@adonisjs/otel'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
-import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
 
 export default defineConfig({
   serviceName: 'my-app',
   
   /**
-   * Use HTTP instead of gRPC
-   */
-  traceExporter: new OTLPTraceExporter({
-    url: 'https://otel-collector.example.com/v1/traces',
-    headers: { 'x-api-key': process.env.OTEL_API_KEY },
-  }),
-  
-  /**
-   * Custom span processor with batching configuration
+   * Custom span processor exporting over gRPC, with
+   * batching configuration
    */
   spanProcessors: [
-    new BatchSpanProcessor(new OTLPTraceExporter(), {
-      maxQueueSize: 2048,
-      scheduledDelayMillis: 5000,
-    }),
+    new BatchSpanProcessor(
+      new OTLPTraceExporter({ url: 'https://otel-collector.example.com:4317' }),
+      {
+        maxQueueSize: 2048,
+        scheduledDelayMillis: 5000,
+      }
+    ),
   ],
   
   /**
@@ -763,10 +913,12 @@ export default defineConfig({
    */
   resourceAttributes: {
     'deployment.region': 'eu-west-1',
-    'k8s.pod.name': process.env.POD_NAME,
+    'k8s.pod.name': process.env.POD_NAME ?? 'unknown',
   },
 })
 ```
+
+The main entrypoint re-exports `OTLPTraceExporter` and `OTLPMetricExporter` (both gRPC), `PeriodicExportingMetricReader`, and `ConsoleSpanExporter`, so you do not have to install those OpenTelemetry packages yourself. Other classes, like `BatchSpanProcessor`, require installing the matching `@opentelemetry/*` package.
 
 See the [OpenTelemetry JS documentation](https://opentelemetry.io/docs/languages/js/) for all available options.
 

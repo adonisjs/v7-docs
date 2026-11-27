@@ -68,6 +68,18 @@ When using the Hypermedia starter kit, you can also use the `@link` component, w
 @end
 ```
 
+### Generating form attributes
+
+HTML forms only support the `GET` and `POST` methods. The `formAttributes` helper looks up a named route and returns the `action` and `method` attributes for a form submitting to it. For routes using other methods, like `PUT` or `DELETE`, the method is set to `POST` and the original method is added to the action URL as the `_method` query string, so [method spoofing](./body_parser.md#form-method-spoofing) can route the request.
+
+```edge title="resources/views/posts/edit.edge"
+@let(form = formAttributes('posts.update', { id: post.id }))
+
+<form action="{{ form.action }}" method="{{ form.method }}">
+  {{-- action: /posts/1?_method=PUT, method: POST --}}
+</form>
+```
+
 ## Generating URLs during redirects
 
 When redirecting users to a different page, use the `response.redirect().toRoute()` method instead of hard-coding URLs. You can only redirect to `GET` routes.
@@ -92,15 +104,17 @@ export default class PostsController {
 For contexts outside of templates and HTTP responses, such as background jobs, email notifications, or service classes, import the `urlFor` function from the URL builder service.
 
 ```ts title="app/services/notification_service.ts"
+import mail from '@adonisjs/mail/services/main'
 import { urlFor } from '@adonisjs/core/services/url_builder'
 
 export default class NotificationService {
   async sendPostNotification(post: Post) {
     const postUrl = urlFor('posts.show', { id: post.id })
-    
-    await mail.send({
-      subject: 'New post published',
-      html: `<a href="${postUrl}">View post</a>`
+
+    await mail.send((message) => {
+      message
+        .subject('New post published')
+        .html(`<a href="${postUrl}">View post</a>`)
     })
   }
 }
@@ -132,6 +146,14 @@ urlFor('posts.show', { id: 1 })
 // Route: /users/:userId/posts/:postId
 urlFor('users.posts.show', { userId: 5, postId: 10 })
 // Output: /users/5/posts/10
+```
+
+Parameter values are URL-encoded as individual path segments. A value containing `/`, `?`, or `#` cannot change the structure of the generated URL, which makes it safe to pass request input as a route parameter.
+
+```ts
+// Route: /files/:name
+urlFor('files.show', { name: 'reports/2026 Q1' })
+// Output: /files/reports%2F2026%20Q1
 ```
 
 ## Adding query strings
@@ -315,30 +337,48 @@ urlFor('posts.index', [], {
 
 You can configure which routes are available in the frontend URL builder to reduce bundle size and prevent exposing internal routes. The URL builder is generated using an Assembler hook named `generateRegistry` registered in your `adonisrc.ts` file.
 
-Define routes to exclude using the `exclude` option.
+Use the `routes.except` option to list the routes to leave out of the generated registry.
 
 ```ts title="adonisrc.ts"
 import { defineConfig } from '@adonisjs/core/app'
-import { generateRegistry } from '@adonisjs/assembler/hooks'
+import { generateRegistry } from '@tuyau/core/hooks'
 
 export default defineConfig({
-  init: [
-    generateRegistry({
-      exclude: ['admin.*'],
-    })
-  ],
+  hooks: {
+    init: [
+      generateRegistry({
+        routes: {
+          except: ['admin.'],
+        },
+      }),
+    ],
+  },
 })
 ```
 
-The exclude pattern can use one of the following approaches, tested against the route name:
-
-:::option{name="Wildcard pattern"}
-
-Exclude all routes starting with the prefix before the wildcard.
+Alternatively, use the `routes.only` option to list the routes to keep. Every other route is left out. You cannot use `only` and `except` at the same time, and doing so raises an error when the registry is generated.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: ['admin.*', 'api.internal.*'],
+  routes: {
+    only: ['posts.', 'session.'],
+  },
+})
+```
+
+Each pattern is tested against the route name and can use one of the following approaches.
+
+::::options
+
+:::option{name="String"}
+
+Matches every route whose name contains the string. For example, `'admin.'` matches `admin.users.index` and `admin.posts.store`. Strings are not glob patterns, so a value like `'admin.*'` only matches route names that literally contain `admin.*`.
+
+```ts title="adonisrc.ts"
+generateRegistry({
+  routes: {
+    except: ['admin.', 'api.internal.'],
+  },
 })
 ```
 
@@ -346,45 +386,44 @@ generateRegistry({
 
 :::option{name="Regular expression"}
 
-Use a custom regular expression to exclude matching routes.
+Matches every route whose name passes the regular expression. Use it when you need to anchor the match, for example to target a prefix only.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [/^admin\./, /^api\.internal\./],
+  routes: {
+    except: [/^admin\./, /^api\.internal\./],
+  },
 })
 ```
 
 :::
 
-:::option{name="Custom function"}
+:::option{name="Function"}
 
-Write a custom function for advanced filtering logic. Return `false` to skip the route and `true` to include it.
+Receives the route name and returns `true` when the route matches the pattern. With `except`, returning `true` leaves the route out. With `only`, returning `true` keeps it.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [
-    (route) => {
-      // Exclude all routes on the admin domain
-      if (route.domain === 'admin.myapp.com') {
-        return false
-      }
-      // Include all other routes
-      return true
-    }
-  ],
+  routes: {
+    except: [(routeName) => routeName.startsWith('internal.')],
+  },
 })
 ```
 
 :::
 
-You can combine multiple patterns for complex filtering requirements.
+::::
+
+You can combine multiple patterns in the same list. A route matches the list when it matches at least one of the patterns.
 
 ```ts title="adonisrc.ts"
 generateRegistry({
-  exclude: [
-    'admin.*',
-    /^api\.internal\./,
-    (route) => route.domain !== 'admin.myapp.com'
-  ],
+  routes: {
+    except: [
+      'admin.',
+      /^api\.internal\./,
+      (routeName) => routeName.endsWith('.debug'),
+    ],
+  },
 })
 ```

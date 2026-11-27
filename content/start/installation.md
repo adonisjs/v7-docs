@@ -51,9 +51,51 @@ npm create adonisjs@latest [project-name] -- --kit=vue
 npm create adonisjs@latest [project-name] -- --kit=api
 ```
 
+```sh title="Create a new API monorepo"
+npm create adonisjs@latest [project-name] -- --kit=api-monorepo
+```
+
+The initializer downloads the starter kit, installs dependencies, creates the `.env` file, generates a fresh `APP_KEY`, and runs the database migrations. You can tweak this process with the following CLI options.
+
+::::options
+
+:::option{name="--kit" dataType="string"}
+The starter kit to use. Accepts the alias of an official kit (`hypermedia`, `react`, `vue`, `api`, or `api-monorepo`) or the location of a custom starter kit hosted on GitHub, GitLab, or Bitbucket. See [Custom starter kits](#custom-starter-kits).
+:::
+
+:::option{name="--pkg" dataType="string"}
+The package manager used to install dependencies. Accepts `npm`, `yarn`, or `pnpm`. Defaults to the package manager that ran the command.
+:::
+
+:::option{name="--git-init" dataType="boolean"}
+Initialize a git repository inside the project directory. A repository is not created unless you pass this flag.
+:::
+
+:::option{name="--skip-migrations" dataType="boolean"}
+Skip running the database migrations after the project has been created. Use it when you plan to switch to another database before running migrations.
+:::
+
+:::option{name="--token" dataType="string"}
+An authentication token used to download a custom starter kit from a private repository.
+:::
+
+:::option{name="--verbose" dataType="boolean"}
+Display the output of every step (package installation, migrations, and so on). Re-run the command with this flag when the project creation fails to see the underlying error.
+:::
+
+::::
+
+:::tip
+When the initializer runs inside an AI agent or another non-interactive environment, it cannot display prompts. In that case, you must pass both the destination directory and the `--kit` option.
+
+```sh
+npm create adonisjs@latest my-app -- --kit=react --pkg=npm
+```
+:::
+
 ### Official starter kits
 
-AdonisJS offers four official starter kits. Each kit sets up a different type of application, depending on how you want to build your user interface and manage interactivity.
+AdonisJS offers five official starter kits. Each kit sets up a different type of application, depending on how you want to build your user interface and manage interactivity.
 
 - [**Hypermedia Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/hypermedia). Uses Edge as the server-side templating engine and integrates Alpine.js to add lightweight, reactive behavior to your frontend. Ideal for applications that primarily render HTML on the server and only need minimal frontend logic.
 
@@ -61,7 +103,9 @@ AdonisJS offers four official starter kits. Each kit sets up a different type of
 
 - [**Vue Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/inertia-vue). Similar to the React setup, but with Vue as the frontend framework. It utilizes Inertia.js and provides the same full-stack capabilities, including backend-driven routing, shared state, and SPA support.
 
-- [**API Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/api). A monorepo setup with two apps: an AdonisJS backend and an empty frontend project where you can configure any frontend framework of your choice (TanStack Start, Nuxt, Next.js, or others). End-to-end type-safety and shared transformer types are already configured between the backend and frontend.
+- [**API Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/api). A JSON API backend with session and access token authentication. Use it when your frontend lives in a separate repository or when the API serves mobile or third-party clients.
+
+- [**API Monorepo Starter Kit**](https://github.com/adonisjs/starter-kits/tree/main/api-monorepo). A monorepo setup with two apps: an AdonisJS backend and an empty frontend project where you can configure any frontend framework of your choice (TanStack Start, Nuxt, Next.js, or others). End-to-end type-safety and shared transformer types are already configured between the backend and frontend.
 
 All starter kits come pre-configured with sensible defaults, streamlined development workflows, and ready-to-use authentication features. For a detailed comparison and usage guidance, see the [Pick your path](./pick_your_path.md) guide.
 
@@ -72,6 +116,34 @@ In addition to the official kits, the AdonisJS community also maintains starter 
 - [**Slim Starter Kit**](https://github.com/batosai/adonisjs-slim-starter-kit). A minimal AdonisJS v7 setup with the framework core and Japa test runner, designed for teams that want to start from a lightweight foundation.
 
 - [**MCP Starter Kit**](https://github.com/batosai/adonisjs-mcp-starter-kit). A minimal AdonisJS v7 setup with built-in MCP support, useful when you want to expose MCP tools, resources, and prompts in your application.
+
+### Custom starter kits
+
+You can scaffold a project from any starter kit hosted on GitHub, GitLab, or Bitbucket by passing its location to the `--kit` option. GitHub is the default provider, and you can pin a branch or tag using the `#` suffix.
+
+```sh
+# GitHub (default provider)
+npm create adonisjs@latest [project-name] -- --kit="github_user/repo"
+
+# GitLab or Bitbucket
+npm create adonisjs@latest [project-name] -- --kit="gitlab:user/repo"
+npm create adonisjs@latest [project-name] -- --kit="bitbucket:user/repo"
+
+# A specific branch or tag
+npm create adonisjs@latest [project-name] -- --kit="github:github_user/repo#v1.0.0"
+
+# A private repository
+npm create adonisjs@latest [project-name] -- --kit="github:github_user/repo" --token="github_token"
+```
+
+If your starter kit is a monorepo, add a `create-adonisjs.json` file at its root so the initializer installs dependencies from the root and runs `generate:key` and migrations inside the AdonisJS app. The initializer deletes this file after reading it.
+
+```json title="create-adonisjs.json"
+{
+  "workspaces": true,
+  "backendSource": "apps/backend"
+}
+```
 
 ## Project defaults
 
@@ -90,19 +162,23 @@ After creating your app, move into your project directory and start the developm
 
 ::::tabs
 
-:::tab{title="Hypermedia / Inertia kits"}
+:::tab{title="Hypermedia / Inertia / API kits"}
 
 ```bash
 node ace serve --hmr
 ```
 
-Once the server is running, open your browser and visit [http://localhost:3333](http://localhost:3333). You should see the AdonisJS welcome page confirming your installation was successful.
+Once the server is running, open your browser and visit [http://localhost:3333](http://localhost:3333). The Hypermedia and Inertia kits render the AdonisJS welcome page, and the API kit returns a JSON response.
+
+```json
+{ "hello": "world" }
+```
 
 :::
 
-:::tab{title="API kit"}
+:::tab{title="API monorepo kit"}
 
-The API starter kit is a monorepo managed by [Turborepo](https://turbo.build/repo). Start all apps from the project root:
+The API monorepo starter kit is managed by [Turborepo](https://turbo.build/repo). Start all apps from the project root:
 
 ```bash
 npm run dev
@@ -122,7 +198,7 @@ This starts both the backend (AdonisJS) and frontend dev servers. The backend ru
 
 Your starter kit includes:
 
-- **Pre-configured development environment**. TypeScript, ESLint, Prettier, and Vite are set up with sensible defaults.
+- **Pre-configured development environment**. TypeScript, ESLint, and Prettier are set up with sensible defaults. The Hypermedia and Inertia kits also configure Vite for frontend assets.
 
 - **Database setup**. Lucid ORM is configured with SQLite, ready for you to start building models and running migrations.
 
@@ -133,11 +209,11 @@ Your starter kit includes:
 ::::tabs
 
 :::tab{title="Hypermedia / Inertia kits"}
-Try creating an account at [http://localhost:3333/signup](http://localhost:3333/signup) and logging in at [http://localhost:3333/login](http://localhost:3333/login). The `users` table already exists in your SQLite database (`tmp/db.sqlite`).
+Try creating an account at [http://localhost:3333/signup](http://localhost:3333/signup) and logging in at [http://localhost:3333/login](http://localhost:3333/login). After signing up or logging in, you land on the protected `/dashboard` page. The `users` table already exists in your SQLite database (`tmp/db.sqlite3`).
 :::
 
-:::tab{title="API kit"}
-The authentication endpoints are available at `POST /api/v1/auth/signup` and `POST /api/v1/auth/login`. You can test them with any HTTP client (curl, Postman, or your frontend app). The `users` table already exists in your SQLite database (`apps/backend/tmp/db.sqlite`).
+:::tab{title="API kits"}
+The authentication endpoints are available at `POST /api/v1/auth/signup` and `POST /api/v1/auth/login`. You can test them with any HTTP client (curl, Postman, or your frontend app). The `users` table already exists in your SQLite database (`tmp/db.sqlite3`, or `apps/backend/tmp/db.sqlite3` in the monorepo kit).
 :::
 
 ::::

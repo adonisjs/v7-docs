@@ -12,8 +12,8 @@ The BodyParser middleware automatically parses incoming request bodies based on 
 
 The middleware is registered in `start/kernel.ts` and configured via the `config/bodyparser.ts` file. The configuration allows you to control which HTTP methods trigger parsing, enable data normalization features, set security limits on request body size, and customize behavior for each parser type (JSON, forms, multipart, raw).
 
-See also: [Reading request body](./request.md#request-body)  
-See also: [File uploads](./file_uploads.md)
+See also: [Reading request body](../../guides/basics/request.md#reading-request-body-and-files)  
+See also: [File uploads](../../guides/basics/file_uploads.md)
 
 ## Configuration structure
 
@@ -183,7 +183,7 @@ Use the JSON parser when your API accepts structured data from JavaScript client
 
 ### Adding custom content types
 
-You can extend the `types` array to handle custom JSON-based content types your application needs to support. For example, to support JSON API format:
+You can extend the `types` array to handle custom JSON-based content types your application needs to support. Parameters like `charset` are ignored during matching, so you only list the media type itself.
 ```ts
 {
   json: {
@@ -193,7 +193,7 @@ You can extend the `types` array to handle custom JSON-based content types your 
       'application/vnd.api+json',
       'application/csp-report',
       // insert-start
-      'application/vnd.api+json; charset=utf-8',
+      'application/custom+json',
       // insert-end
     ],
   }
@@ -250,7 +250,7 @@ See also: [qs package documentation](https://www.npmjs.com/package/qs) for all a
 
 Use the multipart parser for HTML forms that include file uploads. The parser handles requests with the `Content-type` header set to `multipart/form-data`, automatically processing uploaded files and form fields.
 
-See also: [File uploads guide](./file_uploads.md)
+See also: [File uploads guide](../../guides/basics/file_uploads.md)
 
 ### Configuration options
 
@@ -258,9 +258,10 @@ See also: [File uploads guide](./file_uploads.md)
 |--------|------|-------------|---------|
 | `autoProcess` | `boolean \| string[]` | Controls automatic file processing. When `true`, processes files for all routes. When an array, only processes files for matching route patterns. When `false`, requires manual stream processing. | `true` |
 | `processManually` | `string[]` | Array of route patterns where auto-processing should be disabled, even when `autoProcess` is `true`. | `[]` |
-| `encoding` | `string` | Character encoding for converting field data Buffer to string. Supports any encoding from [iconv-lite](https://www.npmjs.com/package/iconv-lite#readme). | `'utf-8'` |
-| `fieldsLimit` | `string \| number` | Maximum size allowed for form fields (non-file data). Returns a `413` error if exceeded. | `'2mb'` |
-| `limit` | `string \| number` | Maximum total size allowed for all uploaded files combined. Individual file limits can be set using `request.file()`. | `'20mb'` |
+| `fieldsLimit` | `string \| number` | Maximum combined size of all form fields (non-file data). Returns a `413` error if exceeded. When omitted, the underlying multipart parser applies a `2mb` limit. | `undefined` |
+| `maxFields` | `number` | Maximum number of form fields (non-file data) accepted in a single request. Returns a `413` error if exceeded. | `1000` |
+| `limit` | `string \| number` | Maximum total size of the multipart request, including all uploaded files. Returns a `413` error if exceeded. Individual file limits can be set using `request.file()`. | `'20mb'` |
+| `tmpFileName` | `() => string` | Function returning the name of the temporary file created for each upload in the `tmp` directory. | Random UUID |
 | `types` | `string[]` | Array of Content-Type header values that should be parsed using the multipart parser. | `['multipart/form-data']` |
 | `convertEmptyStringsToNull` | `boolean` | Converts empty strings to `null` at all nesting levels for form fields. | `true` |
 | `trimWhitespaces` | `boolean` | Removes leading and trailing whitespace from all string field values. | `true` |
@@ -271,8 +272,7 @@ See also: [File uploads guide](./file_uploads.md)
   multipart: {
     autoProcess: true,
     processManually: [],
-    encoding: 'utf-8',
-    fieldsLimit: '2mb',
+    maxFields: 1000,
     limit: '20mb',
     types: ['multipart/form-data'],
     convertEmptyStringsToNull: true,
@@ -330,7 +330,7 @@ autoProcess: ['/posts/*/upload']   // ❌ Won't match
 
 :::
 
-See also: [Self-processing multipart streams](./file_uploads.md#self-processing-multipart-stream)
+See also: [Self-processing multipart streams](../../guides/basics/file_uploads.md#self-processing-multipart-streams)
 
 ## Raw parser
 
@@ -394,4 +394,4 @@ export default class WebhooksController {
 }
 ```
 
-See also: [Reading raw request body](./request.md#raw-body)
+See also: [Raw parser for custom content types](../../guides/basics/body_parser.md#raw-parser-for-custom-content-types)

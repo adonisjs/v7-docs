@@ -384,7 +384,7 @@ See also: [Exception handling guide](./exception_handling.md)
 ```ts title="app/middleware/validate_api_key_middleware.ts"
 import type { HttpContext } from '@adonisjs/core/http'
 import type { NextFn } from '@adonisjs/core/types/http'
-import { errors } from '@adonisjs/core'
+import { Exception } from '@adonisjs/core/exceptions'
 
 export default class ValidateApiKeyMiddleware {
   async handle({ request }: HttpContext, next: NextFn) {
@@ -395,7 +395,10 @@ export default class ValidateApiKeyMiddleware {
        * Throwing an exception terminates the request.
        * The global exception handler will catch and handle this.
        */
-      throw new errors.E_UNAUTHORIZED_ACCESS('API key is required')
+      throw new Exception('API key is required', {
+        status: 401,
+        code: 'E_MISSING_API_KEY',
+      })
     }
     
     await next()

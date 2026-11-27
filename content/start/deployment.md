@@ -52,12 +52,15 @@ npm run build
 
 This executes `node ace build` under the hood. The build process performs the following steps in order:
 
-1. Removes the existing `./build` folder if one exists
-2. Rewrites the `ace.js` file to remove the TypeScript loader import
-3. Compiles frontend assets using Vite (if configured)
+1. Runs the `init` [Assembler hooks](../guides/concepts/assembler_hooks.md) and generates the index files inside the `.adonisjs` directory
+2. Removes the existing output directory (`./build` by default) if one exists
+3. Runs the `buildStarting` hooks, which compile frontend assets using Vite (if configured)
 4. Compiles TypeScript source code to JavaScript using `tsc`
-5. Copies non-TypeScript files registered in the `metaFiles` array to `./build`
-6. Copies `package.json` and your package manager lock file to `./build`
+5. Writes an `ace.js` file to the output directory that imports `bin/console.js` without the TypeScript loader
+6. Copies non-TypeScript files registered in the `metaFiles` array to the output directory
+7. Copies `package.json` and your package manager lock file to the output directory
+
+The output directory is read from the `compilerOptions.outDir` property of your `tsconfig.json` file and defaults to `./build`. The build refuses to run when `outDir` points to the project root or one of its parent directories, since cleaning it would delete your project files.
 
 If there are TypeScript errors in your code, the build will fail. You must fix these errors before creating a production build. If you need to bypass TypeScript errors temporarily, use the `--ignore-ts-errors` flag.
 
@@ -65,10 +68,16 @@ If there are TypeScript errors in your code, the build will fail. You must fix t
 npm run build -- --ignore-ts-errors
 ```
 
-The `--package-manager` flag controls which lock file is copied to the build output. If not specified, the build command detects your package manager based on how you invoked the command (for example, `npm run build` versus `pnpm build`).
+The `--package-manager` flag controls which lock file is copied to the build output. If not specified, the build command detects your package manager from the lock file in your project root (or the `packageManager` field of your `package.json` file) and falls back to `npm`.
 
 ```sh
 npm run build -- --package-manager=pnpm
+```
+
+Use the `--tsconfig` flag to compile with a different TypeScript config file, for example one that excludes test files from the production build. The path is relative to your project root, and its `outDir` determines the build output directory.
+
+```sh
+npm run build -- --tsconfig=tsconfig.build.json
 ```
 
 ## Build output contents
@@ -162,7 +171,7 @@ For the best performance, upload your compiled assets to a CDN. This requires up
 }
 ```
 
-After each build, deploy the contents of `build/public` to your CDN. Your CI/CD pipeline can automate this step.
+After each build, upload the client assets from `build/public/assets` to your CDN, and keep the Vite manifests and server bundles on the application server. The [Vite CDN deployment guide](../guides/frontend/vite.md#deploying-assets-to-a-cdn) covers the build-time configuration and an upload command your CI/CD pipeline can run.
 
 :::tip
 You can combine both approaches. Use a reverse proxy to serve files like `favicon.ico` and `robots.txt` from the `public` directory, and a CDN for Vite-compiled assets (JavaScript, CSS, images) that benefit from global distribution.
@@ -195,6 +204,8 @@ AdonisJS uses Pino for logging, which outputs structured logs in NDJSON format t
 Configure your hosting platform to capture stdout from your application process. Most platforms provide built-in integrations with logging services like Datadog, Logtail, or Papertrail. Alternatively, you can pipe your application's output to a log shipping agent.
 
 Pino's structured JSON output includes timestamps, log levels, and any additional context you attach to log messages, making it straightforward to search and filter logs in your logging service.
+
+Logs tell you what happened, but not where a slow request spent its time. To correlate logs with traces, database queries, and exceptions, instrument your application with [OpenTelemetry](../guides/digging_deeper/opentelemetry.md) and send its telemetry to an observability platform such as [Monocle](https://monocle.sh).
 
 ## Database migrations
 
@@ -323,3 +334,7 @@ CMD ["node", "docker-entrypoint.js"]
 ```
 
 With this setup, setting `MIGRATE=true` as an environment variable will run migrations before starting the server. For horizontal scaling where multiple containers start simultaneously, the migration locking ensures only one container runs migrations while others wait.
+
+## Deploying to your own servers
+
+If you prefer to keep your own hardware, [Tenkai](https://tenkai.cloud) turns any server (a VPS, a bare-metal machine, or a Raspberry Pi) into a deployment platform with Git deployments, managed databases, HTTPS, and rollbacks. It builds the Dockerfile above as is. See their [AdonisJS guide](https://tenkai.cloud/help/deploy-adonisjs) to get started.

@@ -31,6 +31,8 @@ node ace add @adonisjs/ally
 node ace add @adonisjs/ally --providers=github --providers=google
 ```
 
+The `--providers` flag accepts `discord`, `facebook`, `github`, `google`, `linkedin`, `linkedinOpenidConnect`, `spotify`, `twitter`, and `twitterX`.
+
 :::disclosure{title="See steps performed by the add command"}
 
 1. Installs the `@adonisjs/ally` package using the detected package manager.
@@ -45,32 +47,41 @@ node ace add @adonisjs/ally --providers=github --providers=google
     }
 ```
 
-3. Creates `config/ally.ts` with configuration for the selected providers.
+3. Creates `config/ally.ts` with configuration for the selected providers. Each provider is registered under a URL-friendly key (for example, `x` for `twitterX` and `linkedin` for `linkedinOpenidConnect`) and gets a default callback URL of `${APP_URL}/oauth/<key>/callback`.
 
-4. Defines environment variables for `CLIENT_ID` and `CLIENT_SECRET` for each provider.
+4. Defines the `CLIENT_ID` and `CLIENT_SECRET` environment variables for each provider with placeholder values, and adds validation rules for them inside the `start/env.ts` file.
 
 :::
 
 ## Configuration
 
-Configure your OAuth providers in `config/ally.ts`. Each provider requires a client ID, client secret, and callback URL:
+Configure your OAuth providers in `config/ally.ts`. Each provider requires a client ID, client secret, and callback URL. The `declare module` block at the end of the file infers the configured providers, so `ally.use()` only accepts known provider names and returns the correct driver type.
+
 ```ts title="config/ally.ts"
 import env from '#start/env'
 import { defineConfig, services } from '@adonisjs/ally'
 
-export default defineConfig({
+const allyConfig = defineConfig({
   github: services.github({
     clientId: env.get('GITHUB_CLIENT_ID'),
     clientSecret: env.get('GITHUB_CLIENT_SECRET'),
-    callbackUrl: 'http://localhost:3333/github/callback',
+    callbackUrl: `${env.get('APP_URL')}/oauth/github/callback`,
   }),
   google: services.google({
     clientId: env.get('GOOGLE_CLIENT_ID'),
     clientSecret: env.get('GOOGLE_CLIENT_SECRET'),
-    callbackUrl: 'http://localhost:3333/google/callback',
+    callbackUrl: `${env.get('APP_URL')}/oauth/google/callback`,
   }),
 })
+
+export default allyConfig
+
+declare module '@adonisjs/ally/types' {
+  interface SocialProviders extends InferSocialProviders<typeof allyConfig> {}
+}
 ```
+
+Replace the placeholder values of the `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` (and other providers') environment variables inside the `.env` file with the credentials from the provider's developer console.
 
 ### Registering callback URLs with providers
 
@@ -91,11 +102,13 @@ Before redirecting, store `redirect.previousUrl` in the session so that error ha
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
-router.get('/github/redirect', ({ ally, session }) => {
+router.get('/oauth/github/redirect', ({ ally, session }) => {
   session.put('redirect.previousUrl', '/login')
   return ally.use('github').redirect()
 })
 ```
+
+The `redirect()` method also works with [Inertia](../frontend/inertia.md) requests. When the redirect route is visited through an Inertia link or form, Ally performs an external redirect using `inertia.location()`, since a regular redirect to the provider's domain cannot be followed by the Inertia client.
 
 ### Requesting scopes
 
@@ -104,12 +117,12 @@ Scopes define what data your application can access. Each provider has different
 github: services.github({
   clientId: env.get('GITHUB_CLIENT_ID'),
   clientSecret: env.get('GITHUB_CLIENT_SECRET'),
-  callbackUrl: 'http://localhost:3333/github/callback',
+  callbackUrl: `${env.get('APP_URL')}/oauth/github/callback`,
   scopes: ['user:email', 'read:user'],
 }),
 ```
 ```ts title="start/routes.ts"
-router.get('/github/redirect', ({ ally }) => {
+router.get('/oauth/github/redirect', ({ ally }) => {
   return ally.use('github').redirect((request) => {
     request.scopes(['user:email', 'read:user'])
   })
@@ -120,7 +133,7 @@ router.get('/github/redirect', ({ ally }) => {
 
 Some providers accept additional parameters. For example, Google's `prompt` parameter controls the consent screen behavior:
 ```ts title="start/routes.ts"
-router.get('/google/redirect', ({ ally }) => {
+router.get('/oauth/google/redirect', ({ ally }) => {
   return ally.use('google').redirect((request) => {
     request.param('prompt', 'select_account')
     request.param('access_type', 'offline')
@@ -130,7 +143,7 @@ router.get('/google/redirect', ({ ally }) => {
 
 To remove a parameter set in the config, use `clearParam`:
 ```ts title="start/routes.ts"
-router.get('/google/redirect', ({ ally }) => {
+router.get('/oauth/google/redirect', ({ ally }) => {
   return ally.use('google').redirect((request) => {
     request.clearParam('prompt')
   })
@@ -144,7 +157,7 @@ After the user authorizes (or denies) access, the provider redirects them to you
 ```ts title="start/routes.ts"
 import router from '@adonisjs/core/services/router'
 
-router.get('/github/callback', async ({ ally }) => {
+router.get('/oauth/github/callback', async ({ ally }) => {
   const github = ally.use('github')
   const githubUser = await github.user()
 
@@ -158,10 +171,16 @@ If something goes wrong during the callback (the user denied access, the state t
 - **JSON requests**: a JSON error response is returned with the appropriate status code.
 - **JSONAPI requests**: a JSONAPI-formatted error response is returned.
 
+When the [i18n package](../digging_deeper/i18n.md) is configured, the error messages are translated using the `errors.E_OAUTH_STATE_MISMATCH`, `errors.E_OAUTH_MISSING_CODE`, `errors.E_UNKNOWN_ALLY_PROVIDER`, and `errors.E_LOCAL_SIGNUP_DISALLOWED` keys. See the [exceptions reference](../../reference/exceptions.md#e_oauth_state_mismatch) for the full list of Ally errors.
+
+:::note
+Ally treats a missing state cookie as a state mismatch. If the callback is opened in a different browser, or the cookie has expired or was blocked, `stateMisMatch()` returns `true` and `user()` throws `E_OAUTH_STATE_MISMATCH`. This prevents attackers from completing an OAuth flow on behalf of your users by omitting the `state` parameter. Make sure your callback URL uses the same domain as the redirect route so the cookie is sent back.
+:::
+
 If you need to handle specific error cases yourself, you can still check for them before calling `user()`.
 
 ```ts title="start/routes.ts"
-router.get('/github/callback', async ({ ally, response }) => {
+router.get('/oauth/github/callback', async ({ ally, response }) => {
   const github = ally.use('github')
 
   if (github.accessDenied()) {
@@ -232,7 +251,7 @@ For server-rendered applications, create a session after social authentication. 
 import User from '#models/user'
 import router from '@adonisjs/core/services/router'
 
-router.get('/github/callback', async ({ ally, auth, response }) => {
+router.get('/oauth/github/callback', async ({ ally, auth, response }) => {
   const githubUser = await ally.use('github').user()
 
   /**
@@ -272,7 +291,7 @@ For APIs and mobile apps, issue an access token after social authentication.
 import User from '#models/user'
 import router from '@adonisjs/core/services/router'
 
-router.get('/github/callback', async ({ ally }) => {
+router.get('/oauth/github/callback', async ({ ally }) => {
   const github = ally.use('github')
 
   if (github.accessDenied()) {
@@ -319,17 +338,29 @@ export default defineConfig({
   github: services.github({
     clientId: env.get('GITHUB_CLIENT_ID'),
     clientSecret: env.get('GITHUB_CLIENT_SECRET'),
-    callbackUrl: 'http://localhost:3333/github/callback',
+    callbackUrl: `${env.get('APP_URL')}/oauth/github/callback`,
     disallowLocalSignup: true,
   }),
 })
 ```
 
-With `disallowLocalSignup` enabled, calling `ally.use(provider, { intent: 'signup' })` will throw an exception with status code `403`.
+With `disallowLocalSignup` enabled, calling `ally.use(provider, { intent: 'signup' })` will throw the `E_LOCAL_SIGNUP_DISALLOWED` exception with status code `403`. The `login` and `link` intents remain allowed.
 
 ```ts title="start/routes.ts"
-router.get('/github/signup/redirect', ({ ally }) => {
+router.get('/oauth/github/signup/redirect', ({ ally }) => {
   return ally.use('github', { intent: 'signup' }).redirect()
+})
+```
+
+Use `ally.allowsLocalSignup()` to check the policy of a provider before rendering a signup button or starting the flow.
+
+```ts title="start/routes.ts"
+router.get('/oauth/:provider/signup/redirect', ({ ally, params, response }) => {
+  if (!ally.has(params.provider) || !ally.allowsLocalSignup(params.provider)) {
+    return response.redirect().toPath('/signup')
+  }
+
+  return ally.use(params.provider, { intent: 'signup' }).redirect()
 })
 ```
 
@@ -337,11 +368,11 @@ router.get('/github/signup/redirect', ({ ally }) => {
 
 By default, Ally uses a CSRF token stored in a cookie to prevent cross-site request forgery. If your application cannot use cookies (for example, a mobile app using a webview), enable stateless mode:
 ```ts title="start/routes.ts"
-router.get('/github/redirect', ({ ally }) => {
+router.get('/oauth/github/redirect', ({ ally }) => {
   return ally.use('github').stateless().redirect()
 })
 
-router.get('/github/callback', async ({ ally }) => {
+router.get('/oauth/github/callback', async ({ ally }) => {
   const github = ally.use('github').stateless()
 
   // Handle callback...
@@ -371,10 +402,11 @@ const user = await ally.use('twitter').userFromTokenAndSecret(token, secret)
 
 ## Dynamic provider selection
 
-Handle multiple providers with a single route using route parameters:
+Handle multiple providers with a single route using route parameters. Use `ally.has()` to narrow the route parameter to a configured provider name. Calling `ally.use()` with an unknown provider throws the self-handled `E_UNKNOWN_ALLY_PROVIDER` exception with status code `404`.
+
 ```ts title="start/routes.ts"
 router
-  .get('/:provider/redirect', ({ ally, params }) => {
+  .get('/oauth/:provider/redirect', ({ ally, params }) => {
     if (!ally.has(params.provider)) {
       return 'Unknown provider'
     }
@@ -384,7 +416,7 @@ router
   .where('provider', /github|google|twitter/)
 
 router
-  .get('/:provider/callback', async ({ ally, params }) => {
+  .get('/oauth/:provider/callback', async ({ ally, params }) => {
     if (!ally.has(params.provider)) {
       return 'Unknown provider'
     }
@@ -456,7 +488,7 @@ twitter: services.twitter({
 
 :::disclosure{title="X"}
 ```ts
-twitterX: services.twitterX({
+x: services.twitterX({
   clientId: '',
   clientSecret: '',
   callbackUrl: '',
@@ -486,12 +518,25 @@ discord: services.discord({
 
 :::disclosure{title="LinkedIn (OpenID Connect)"}
 ```ts
-linkedinOpenidConnect: services.linkedinOpenidConnect({
+linkedin: services.linkedinOpenidConnect({
   clientId: '',
   clientSecret: '',
   callbackUrl: '',
   disallowLocalSignup: false,
   scopes: ['openid', 'profile', 'email'],
+})
+```
+
+:::
+
+:::disclosure{title="LinkedIn"}
+```ts
+linkedin: services.linkedin({
+  clientId: '',
+  clientSecret: '',
+  callbackUrl: '',
+  disallowLocalSignup: false,
+  scopes: ['r_emailaddress', 'r_liteprofile'],
 })
 ```
 

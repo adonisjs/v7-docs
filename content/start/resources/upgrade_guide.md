@@ -10,7 +10,7 @@ We have worked hard to keep the breaking changes surface area low. Yet, there ar
 
 - AdonisJS v7 requires Node.js 24
 - Works with TypeScript 5.9/6.0 and ESLint 10
-- And the Vite integration has been updated to work with Vite 7
+- And the Vite integration has been updated to work with Vite 8
 
 ## Helpful links
 
@@ -76,7 +76,7 @@ npm install @tuyau/core
 The following example shows a complete hooks configuration. Include only the hooks relevant to your stack.
 
 ```ts title="adonisrc.ts"
-import { indexEntities } from '@adonisjs/core'
+import { indexEntities } from '@adonisjs/core/generators'
 import { indexPages } from '@adonisjs/inertia'
 import { defineConfig } from '@adonisjs/core/app'
 import { indexPolicies } from '@adonisjs/bouncer'
@@ -85,17 +85,16 @@ import { generateRegistry } from '@tuyau/core/hooks'
 export default defineConfig({
   hooks: {
     init: [
-      // [!code highlight:2]
-      // Always needed
-      indexEntities(),
-
-      // [!code highlight:6]
-      // If using Inertia (adjust framework to match yours)
-      indexPages({ framework: 'react' }),
-      generateRegistry(),
+      // [!code highlight:5]
+      // Always needed. Without Inertia, call indexEntities() with no options
       indexEntities({
         transformers: { enabled: true, withSharedProps: true },
       }),
+
+      // [!code highlight:3]
+      // If using Inertia (adjust framework to match yours)
+      indexPages({ framework: 'react' }),
+      generateRegistry(),
 
       // [!code highlight:2]
       // If using Bouncer
@@ -108,6 +107,19 @@ export default defineConfig({
     ],
   },
 })
+```
+
+## Bouncer policies are indexed automatically
+Bouncer no longer reads policies from the `app/policies/main.ts` file. The `indexPolicies` hook scans the `app/policies` directory and generates the `.adonisjs/server/policies.ts` barrel file, which you import using the `#generated/policies` alias.
+
+Once you have registered the `indexPolicies` hook (see the previous section), delete the `app/policies/main.ts` file and update the import inside the `initialize_bouncer_middleware.ts` file.
+
+```ts title="app/middleware/initialize_bouncer_middleware.ts"
+import * as abilities from '#abilities/main'
+// [!code --]
+import { policies } from '#policies/main'
+// [!code ++]
+import { policies } from '#generated/policies'
 ```
 
 ## Assembler hooks have been renamed
@@ -358,12 +370,62 @@ export default defineConfig({
     // ...
   },
   // Replaced by inertia_middleware (see below)
+
+  ssr: {
+    enabled: false,
+    // [!code --]
+    entrypoint: 'inertia/app/ssr.tsx',
+    // [!code ++]
+    entrypoint: 'inertia/ssr.tsx',
+    // [!code --]
+    bundle: 'ssr/ssr.js',
+  },
 })
 ```
 
 - The `entrypoint` config option has been removed. This configuration option was not used anywhere.
 - The `history.encrypt` option has been renamed to `encryptHistory` as a top-level property.
 - The `sharedData` property has been removed in favor of the Inertia middleware (covered below).
+- The `ssr.bundle` option has been removed. The SSR bundle is now produced by `@adonisjs/vite` from the `ssr.entrypoint` file (covered below).
+
+### Inertia 3 and the Vite plugin
+The Inertia integration now targets Inertia 3. Upgrade the Inertia client package for your framework. Inertia 3 requires React 19 or Vue 3.5.
+
+```sh
+# React
+npm i @inertiajs/react@latest react@latest react-dom@latest
+
+# Vue
+npm i @inertiajs/vue3@latest vue@latest
+```
+
+Inertia 3 also ships client-side breaking changes, such as renamed router events and the removal of the bundled Axios client. Follow the [Inertia v3 upgrade guide](https://inertiajs.com/upgrade-guide) to update your frontend code.
+
+The Inertia Vite plugin has been removed. Remove it from `vite.config.ts` and declare the SSR entrypoint under the `serverEntryPoints` option of the AdonisJS Vite plugin instead. The `serverEntryPoints` entry is only needed when you use server-side rendering.
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import adonisjs from '@adonisjs/vite/client'
+// [!code --]
+import inertia from '@adonisjs/inertia/client'
+
+export default defineConfig({
+  plugins: [
+    react(),
+    // [!code --]
+    inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.tsx' } }),
+    adonisjs({
+      // [!code --]
+      entrypoints: ['inertia/app/app.tsx'],
+      // [!code ++:2]
+      entryPoints: ['inertia/app.tsx'],
+      serverEntryPoints: ['inertia/ssr.tsx'],
+      reload: ['resources/views/**/*.edge'],
+    }),
+  ],
+})
+```
 
 ### File structure changes
 The Inertia entrypoint and SSR files have been moved out of the `app` subdirectory and now live directly in the `inertia` root.
@@ -411,7 +473,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      * In that case, we must always assume that HttpContext is not fully hydrated
      * with all the properties.
      */
-    const { session, auth } = ctx as Partial<HttpContext>
+    const { auth } = ctx as Partial<HttpContext>
 
     /**
      * Data shared with all Inertia pages. Make sure you are using
@@ -419,11 +481,20 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      */
     return {
       errors: ctx.inertia.always(this.getValidationErrors(ctx)),
-      flash: ctx.inertia.always({
-        error: session?.flashMessages.get('error'),
-        success: session?.flashMessages.get('success'),
-      }),
       user: ctx.inertia.always(auth?.user ? UserTransformer.transform(auth.user) : undefined),
+    }
+  }
+
+  flash(ctx: HttpContext) {
+    /**
+     * Flash messages are sent in the dedicated `flash` field of the
+     * page object (read with `usePage().flash`) instead of props.
+     */
+    const { session } = ctx as Partial<HttpContext>
+
+    return {
+      error: session?.flashMessages.get('error') as string | undefined,
+      success: session?.flashMessages.get('success') as string | undefined,
     }
   }
 

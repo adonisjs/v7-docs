@@ -389,7 +389,7 @@ Register providers, commands, meta files, and command aliases in `adonisrc.ts`.
 ```ts
 await codemods.updateRcFile((rcFile) => {
   rcFile
-    .addProvider('@adonisjs/lucid/db_provider')
+    .addProvider('@adonisjs/lucid/database_provider')
     .addCommand('@adonisjs/lucid/commands')
     .setCommandAlias('migrate', 'migration:run')
 })
@@ -405,7 +405,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/commands')
   ],
   providers: [
-    () => import('@adonisjs/lucid/db_provider')
+    () => import('@adonisjs/lucid/database_provider')
   ],
   commandAliases: {
     migrate: 'migration:run'
@@ -480,7 +480,7 @@ await codemods.registerMiddleware('router', [
 await codemods.registerMiddleware('named', [
   {
     name: 'auth',
-    path: '@adonisjs/auth/auth_middleware'
+    path: '#middleware/auth_middleware'
   }
 ])
 ```
@@ -495,7 +495,7 @@ router.use([
 ])
 
 export const middleware = router.named({
-  auth: () => import('@adonisjs/auth/auth_middleware')
+  auth: () => import('#middleware/auth_middleware')
 })
 ```
 
@@ -581,6 +581,103 @@ export default defineConfig({
     vue({ jsx: true })
   ]
 })
+```
+
+### addValidator
+
+Create a validator file inside the `app/validators` directory. When the file already exists, the validator is appended to it, unless the file already declares a variable with the same `exportName`.
+
+```ts
+await codemods.addValidator({
+  validatorFileName: 'user.ts',
+  exportName: 'createUserValidator',
+  contents: `import vine from '@vinejs/vine'
+
+export const createUserValidator = vine.create({
+  email: vine.string().email(),
+})`,
+})
+```
+
+### addLimiter
+
+Create a rate limiter file inside the `start` directory. Like `addValidator`, the limiter is appended to an existing file and skipped when the `exportName` is already declared.
+
+```ts
+await codemods.addLimiter({
+  limiterFileName: 'limiter.ts',
+  exportName: 'apiThrottle',
+  contents: `import limiter from '@adonisjs/limiter/services/main'
+
+export const apiThrottle = limiter.define('api', () => {
+  return limiter.allowRequests(10).every('1 minute')
+})`,
+})
+```
+
+### addModelMixins
+
+Apply mixins to an existing model inside the `app/models` directory. The model's `extends` clause is wrapped in a `compose` call when needed, and mixins already present in the `compose` call are skipped.
+
+```ts
+await codemods.addModelMixins('user.ts', [
+  {
+    name: 'withManagedEmail',
+    importPath: '#mixins/managed_email',
+    importType: 'named',
+  },
+])
+```
+
+**Output:**
+
+```ts title="app/models/user.ts"
+import { compose } from '@adonisjs/core/helpers'
+import { UserSchema } from '#database/schema'
+import { withManagedEmail } from '#mixins/managed_email'
+
+export default class User extends compose(UserSchema, withManagedEmail()) {}
+```
+
+Use the `args` property to pass arguments to the mixin function. Each entry is inserted as raw source code.
+
+An optional third argument adds more imports to the model file, which is useful when the mixin arguments reference other modules. Imports from a module already imported by the file are merged into the existing declaration.
+
+```ts
+await codemods.addModelMixins(
+  'user.ts',
+  [{ name: 'withManagedEmail', importPath: '#mixins/managed_email', importType: 'named' }],
+  [{ source: '#services/hash', namedImports: ['hash'] }]
+)
+```
+
+### addControllerMethod
+
+Add a method to a controller inside the `app/controllers` directory. The controller file is created when it does not exist, and the `imports` are added to the top of the file.
+
+```ts
+await codemods.addControllerMethod({
+  controllerFileName: 'users_controller.ts',
+  className: 'UsersController',
+  name: 'destroy',
+  contents: `async destroy({ params }: HttpContext) {
+    const user = await User.findOrFail(params.id)
+    await user.delete()
+  }`,
+  imports: [
+    { source: '@adonisjs/core/http', namedImports: ['HttpContext'] },
+    { source: '#models/user', defaultImport: 'User' },
+  ],
+})
+```
+
+### getTsMorphProject
+
+Get the underlying [ts-morph](https://ts-morph.com/) `Project` instance for AST transformations the codemods API does not cover. The method returns `undefined` when `@adonisjs/assembler` is not installed.
+
+```ts
+const project = await codemods.getTsMorphProject()
+const file = project?.getSourceFile(command.app.makePath('start/routes.ts'))
 ```
 
 ### installPackages

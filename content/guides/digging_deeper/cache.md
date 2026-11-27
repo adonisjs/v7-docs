@@ -6,12 +6,13 @@ description: Learn how to use caching in AdonisJS applications to improve perfor
 
 This guide covers caching in AdonisJS applications. You will learn how to:
 
-- Configure cache stores with different drivers (Redis, Memory, Database, DynamoDB)
+- Configure cache stores with different drivers (Redis, Memory, Database, File, DynamoDB)
 - Store, retrieve, and invalidate cached data
 - Use multi-tier caching with L1 (memory) and L2 (distributed) layers
 - Organize cache entries with namespaces and tags
 - Improve resilience with grace periods, stampede protection, and timeouts
 - Use Ace commands to manage your cache
+- Observe cache operations with tracing channels
 
 ## Overview
 
@@ -32,7 +33,8 @@ node ace add @adonisjs/cache
 :::disclosure{title="See steps performed by the add command"}
 
 1. Installs the `@adonisjs/cache` package using the detected package manager.
-2. Registers the following service provider and command inside the `adonisrc.ts` file.
+2. Prompts you to select the driver you plan to use (`redis`, `file`, `database`, or `dynamodb`).
+3. Registers the following service provider and command inside the `adonisrc.ts` file.
 
     ```ts title="adonisrc.ts"
     {
@@ -47,8 +49,9 @@ node ace add @adonisjs/cache
     }
     ```
 
-3. Creates the `config/cache.ts` file.
-4. Defines the environment variables and their validations for the selected drivers.
+4. Creates the `config/cache.ts` file with a store for the selected driver.
+5. Creates a migration for the `cache` table when you select the `database` driver.
+6. Defines the `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, and `DYNAMODB_ENDPOINT` environment variables and their validations when you select the `dynamodb` driver.
 
 :::
 
@@ -97,11 +100,19 @@ const cacheConfig = defineConfig({
      * A database-backed store using your Lucid connection
      */
     database: store()
-      .useL2Layer(drivers.database({ connectionName: 'default' })),
+      .useL2Layer(drivers.database({ connectionName: 'postgres' })),
   },
 })
 
 export default cacheConfig
+
+/**
+ * Infer the store names from the config, so that
+ * cache.use('redis') is type-checked
+ */
+declare module '@adonisjs/cache/types' {
+  interface CacheStores extends InferStores<typeof cacheConfig> {}
+}
 ```
 
 ### Available drivers
@@ -145,20 +156,47 @@ Uses an in-memory LRU (Least Recently Used) cache. Best suited as an L1 layer in
 
 :::disclosure{title="Database"}
 
-Uses your database as a cache store. Requires `@adonisjs/lucid`. The cache table is created automatically by default.
+Uses your database as a cache store through a Lucid connection. Requires `@adonisjs/lucid`. The `connectionName` must be defined in `config/database.ts`, and the primary connection is used when you omit it.
+
+When you select the `database` driver during `node ace add`, the command creates a migration for the `cache` table and sets `autoCreateTable: false`, so the table is managed by your migrations like the rest of your schema. Run `node ace migration:run` before using the store.
 
 ```ts title="config/cache.ts"
 {
   stores: {
     database: store()
       .useL2Layer(drivers.database({
-        connectionName: 'default',
+        connectionName: 'postgres',
         tableName: 'cache',
-        autoCreateTable: true,
+        autoCreateTable: false,
       }))
   }
 }
 ```
+
+If you configure the driver by hand without a migration, set `autoCreateTable: true` (the default) and the driver will create the table on first use. Without a `tableName`, the driver uses a table named `bentocache`.
+
+The database does not expire rows on its own. Run [`cache:prune`](#cacheprune) periodically, or set the `pruneInterval` option to let the driver delete expired entries in the background.
+
+:::
+
+:::disclosure{title="File"}
+
+Stores each entry as a file on disk. Useful for single-server applications that need the cache to survive restarts without running Redis or a database.
+
+```ts title="config/cache.ts"
+import app from '@adonisjs/core/services/app'
+
+{
+  stores: {
+    file: store()
+      .useL2Layer(drivers.file({
+        directory: app.tmpPath('cache'),
+      }))
+  }
+}
+```
+
+Expired files are not removed automatically. Run [`cache:prune`](#cacheprune) periodically, or set the `pruneInterval` option to remove them in the background.
 
 :::
 
@@ -187,6 +225,8 @@ npm i @aws-sdk/client-dynamodb
 ```
 
 :::
+
+The `drivers` object also exposes `kysely` and `orchid` drivers for applications that use those query builders instead of Lucid. See the [Bentocache drivers documentation](https://bentocache.dev/docs/cache-drivers) for their options.
 
 ## Storing and retrieving data
 
@@ -250,7 +290,7 @@ await cache.setForever({
 ```
 
 :::warning
-Cached data must be serializable to JSON. If you are caching Lucid models, call `.toJSON()` or `.serialize()` before storing them, or use `getOrSet` which handles serialization automatically.
+Cached data must be serializable to JSON. Class instances, such as Lucid models, come back from the cache as plain objects. Call `.serialize()` on models (or return plain objects from your factory) so you get the same shape on cache hits and misses.
 :::
 
 ### Checking for existence
@@ -279,7 +319,7 @@ import cache from '@adonisjs/cache/services/main'
 /**
  * Get the token and remove it from cache in one operation
  */
-const token = await cache.pull({ key: `email-verify:${userId}` })
+const token = await cache.pull(`email-verify:${userId}`)
 ```
 
 ## Deleting data
@@ -635,6 +675,7 @@ const token = await cache.getOrSet({
 
 The context object also provides:
 
+- `ctx.setTtl(ttl)` as a shorthand for `ctx.setOptions({ ttl })`
 - `ctx.skip()` to prevent caching the returned value
 - `ctx.fail()` to prevent caching and throw an error
 - `ctx.setTags([...])` to dynamically set tags based on the cached value
@@ -654,7 +695,7 @@ The `@adonisjs/cache` package provides Ace commands for managing your cache from
 
 ### cache:clear
 
-Remove all entries from a store, namespace, or tag.
+Remove all entries from a store, namespace, or tag. You cannot combine `--namespace` and `--tags` in the same call.
 
 ```sh
 # Clear the default store
@@ -668,7 +709,12 @@ node ace cache:clear --namespace=users
 
 # Clear entries matching specific tags
 node ace cache:clear --tags=products --tags=users
+
+# Skip the confirmation prompt in production
+node ace cache:clear --force
 ```
+
+In production, `cache:clear`, `cache:delete`, and `cache:prune` ask for confirmation before touching the cache. Pass `--force` to `cache:clear` when running it from a deployment script or any other non-interactive environment, since the prompt cannot be answered there and the command would exit without clearing anything.
 
 ### cache:delete
 
@@ -684,7 +730,7 @@ node ace cache:delete posts:page:1 redis
 
 ### cache:prune
 
-Remove expired entries from drivers that do not support automatic TTL expiration (like the database and filesystem drivers). Redis handles expiration natively and does not need pruning.
+Remove expired entries from drivers that do not support automatic TTL expiration (like the database and file drivers). Redis handles expiration natively and does not need pruning.
 
 ```sh
 # Prune the default store
@@ -693,6 +739,33 @@ node ace cache:prune
 # Prune a specific store
 node ace cache:prune database
 ```
+
+## Tracing cache operations
+
+The package re-exports Bentocache's `tracingChannels`, built on Node.js [diagnostics channels](https://nodejs.org/api/diagnostics_channel.html#class-tracingchannel). APM and observability tools use them to time cache operations without wrapping every call. The `cacheOperation` channel traces `get`, `set`, `getOrSet`, `factory`, `delete`, `deleteMany`, `clear`, and `expire` call. Read results in the `asyncEnd` handler, since the operation has settled by then and the message carries its outcome.
+
+Subscribe from a [preload file](../../reference/adonisrc_file.md#preloads) so the subscriber is registered before your application starts caching.
+
+```ts title="start/cache_tracing.ts"
+import { tracingChannels } from '@adonisjs/cache'
+
+tracingChannels.cacheOperation.subscribe({
+  asyncEnd(message) {
+    /**
+     * For "get" operations, "hit" tells whether the key was found
+     * and "tier" tells which layer (l1 or l2) served it
+     */
+    console.log(message.operation, message.store, message.key, message.hit, message.tier)
+  },
+  error(message) {
+    console.error(message.operation, message.key, message.error)
+  },
+})
+```
+
+:::note
+Tracing channels are marked experimental in Bentocache, and the message shape may change in a future release.
+:::
 
 ## Method reference
 
@@ -714,6 +787,17 @@ await cache.getOrSet({
 ```
 :::
 
+:::option{name="getOrSetForever" dataType="Promise<T>"}
+Same as `getOrSet`, but the computed value never expires.
+
+```ts
+await cache.getOrSetForever({
+  key: 'app:countries',
+  factory: () => Country.all(),
+})
+```
+:::
+
 :::option{name="get" dataType="Promise<T | undefined>"}
 Retrieve a value from the cache. Returns `undefined` if the key does not exist.
 
@@ -722,7 +806,7 @@ const user = await cache.get({ key: 'users:1' })
 ```
 :::
 
-:::option{name="set" dataType="Promise<void>"}
+:::option{name="set" dataType="Promise<boolean>"}
 Store a value in the cache with an optional TTL.
 
 ```ts
@@ -730,7 +814,7 @@ await cache.set({ key: 'users:1', value: user, ttl: '10m' })
 ```
 :::
 
-:::option{name="setForever" dataType="Promise<void>"}
+:::option{name="setForever" dataType="Promise<boolean>"}
 Store a value in the cache that never expires.
 
 ```ts
@@ -754,23 +838,23 @@ const notCached = await cache.missing({ key: 'users:1' })
 ```
 :::
 
-:::option{name="pull" dataType="Promise<T | undefined>"}
+:::option{name="pull" dataType="Promise<T | null | undefined>"}
 Retrieve a value from the cache and delete it immediately.
 
 ```ts
-const token = await cache.pull({ key: 'verify:token:123' })
+const token = await cache.pull('verify:token:123')
 ```
 :::
 
-:::option{name="delete" dataType="Promise<void>"}
-Remove a single key from the cache.
+:::option{name="delete" dataType="Promise<boolean>"}
+Remove a single key from the cache. Returns `false` when the key did not exist.
 
 ```ts
 await cache.delete({ key: 'users:1' })
 ```
 :::
 
-:::option{name="deleteMany" dataType="Promise<void>"}
+:::option{name="deleteMany" dataType="Promise<boolean>"}
 Remove multiple keys from the cache.
 
 ```ts
@@ -778,11 +862,27 @@ await cache.deleteMany({ keys: ['users:1', 'users:2'] })
 ```
 :::
 
-:::option{name="deleteByTag" dataType="Promise<void>"}
+:::option{name="deleteByTag" dataType="Promise<boolean>"}
 Remove all entries associated with the given tags.
 
 ```ts
 await cache.deleteByTag({ tags: ['users'] })
+```
+:::
+
+:::option{name="expire" dataType="Promise<boolean>"}
+Mark a key as expired without deleting it. When grace periods are enabled, the stale value remains available during the grace window while the next `getOrSet` call refreshes it.
+
+```ts
+await cache.expire({ key: 'users:1' })
+```
+:::
+
+:::option{name="prune" dataType="Promise<void>"}
+Remove expired entries from drivers without native TTL support, like the database and file drivers. This is what the `cache:prune` command calls.
+
+```ts
+await cache.prune()
 ```
 :::
 

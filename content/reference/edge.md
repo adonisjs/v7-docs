@@ -239,16 +239,17 @@ The `@inputError` tag provides a better DX for reading validation error messages
 @end
 ```
 
-## @vite
-The `@vite` tag accepts an array of entry point paths and returns the `script` and the `link` tags for the same. The path you provide to the `@vite` tag should match exactly the path registered inside the `vite.config.js` file.
+To show an error for a field that did not come from a validation failure, flash it with the [`session.flashInputErrors()`](../guides/basics/session.md#flashing-field-errors) method.
 
-```ts
+## @vite
+The `@vite` tag accepts an array of entry point paths and returns the `script` and the `link` tags for the same. The path you provide to the `@vite` tag should match exactly the path registered inside the `vite.config.ts` file.
+
+```ts title="vite.config.ts"
 export default defineConfig({
   plugins: [
     adonisjs({
-      // highlight-start
-      entrypoints: ['resources/js/app.js'],
-      // highlight-end
+      // [!code highlight]
+      entryPoints: ['resources/js/app.js'],
     }),
   ]
 })

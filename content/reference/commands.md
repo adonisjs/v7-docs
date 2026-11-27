@@ -27,6 +27,10 @@ The `serve` command starts the development server (via the `bin/server.ts` file)
 node ace --no-warnings --inspect serve --hmr
 ```
 
+In both `--watch` and `--hmr` modes, the development server restarts when one of the environment files loaded by your application changes, such as `.env` or `.env.local`. Files loaded from a custom `ENV_PATH` directory are watched as well, so you do not have to restart the command manually after editing environment variables.
+
+When running in an interactive terminal, the development server also listens for keyboard shortcuts. Press `r` to restart the server, `c` to clear the console, `o` to open the application in your browser, and `h` to list the shortcuts.
+
 Following is the list of available options you can pass to the `serve` command. Alternatively, use the `--help` flag to view the command's help.
 
 ::::options
@@ -59,9 +63,7 @@ Clear the terminal after every file change and before displaying the new logs. U
 
 
 ## build
-The `build` command uses the [@adonisjs/assembler](https://github.com/adonisjs/assembler?tab=readme-ov-file#bundler) package to create the production build of your AdonisJS application. The following steps are performed to generate the build.
-
-See also: [Creating the production build](../start/deployment.md#creating-the-production-build).
+The `build` command uses the [@adonisjs/assembler](https://github.com/adonisjs/assembler?tab=readme-ov-file#bundler) package to create the production build of your AdonisJS application. See [Creating the production build](../start/deployment.md#creating-the-production-build) for the steps performed during the build.
 
 ```sh
 node ace build
@@ -82,6 +84,16 @@ The build command terminates the build process when your project has TypeScript 
 The build command copies the `package.json` file alongside the lock file of the package manager your application is using.
 
 We detect the package manager using the `@antfu/install-pkg` package. However, you can turn off detection by explicitly providing the package manager's name.
+
+:::
+
+:::option{name="--tsconfig"}
+
+Define the path to the `tsconfig` file used to compile the application. By default, the build uses the `tsconfig.json` file from the application root. The `outDir` of this file determines the build output directory.
+
+```sh
+node ace build --tsconfig=tsconfig.build.json
+```
 
 :::
 
@@ -131,55 +143,33 @@ If the package can be configured using flags, you can pass them directly to the 
 node ace add @adonisjs/lucid --db=sqlite
 ```
 
-<dl>
+::::options
 
-<dt>
-
---verbose
-
-</dt>
-
-<dd>
+:::option{name="--verbose"}
 
 Enable verbose mode to display the package installation and configuration logs.
 
-</dd>
+:::
 
-<dt>
-
---force
-
-</dt>
-
-<dd>
+:::option{name="--force"}
 
 Passed down to the `configure` command. Force overwrite files when configuring the package. See the `configure` command for more information.
 
-<dt>
+:::
 
---package-manager
-
-</dt>
-
-<dd>
+:::option{name="--package-manager"}
 
 Define the package manager to use for installing the package. The value must be `npm`, `pnpm`, `bun` or `yarn`.
 
-</dd>
+:::
 
-<dt>
-
---dev
-
-</dt>
-
-<dd>
+:::option{name="--dev"}
 
 Install the package as a development dependency.
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## configure
 Configure a package after it has been installed. The command accepts the package name as the first argument.
@@ -188,35 +178,23 @@ Configure a package after it has been installed. The command accepts the package
 node ace configure @adonisjs/lucid
 ```
 
-<dl>
+::::options
 
-<dt>
-
---verbose
-
-</dt>
-
-<dd>
+:::option{name="--verbose"}
 
 Enable verbose mode to display the package installation logs.
 
-</dd>
+:::
 
-<dt>
-
---force
-
-</dt>
-
-<dd>
+:::option{name="--force"}
 
 The stubs system of AdonisJS does not overwrite existing files. For example, if you configure the `@adonisjs/lucid` package and your application already has a `config/database.ts` file, the configure process will not overwrite the existing config file.
 
 However, you can force overwrite files using the `--force` flag.
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## eject
 
@@ -241,33 +219,49 @@ See also: [App key](../guides/security/encryption.md)
 node ace generate:key
 ```
 
-<dl>
+::::options
 
-<dt>
-
---show
-
-</dt>
-
-<dd>
+:::option{name="--show"}
 
 Display the key on the terminal instead of writing it to the `.env` file. By default, the key is written to the env file.
 
-</dd>
+:::
 
-<dt>
-
---force
-
-</dt>
-
-<dd>
+:::option{name="--force"}
 
 The `generate:key` command does not write the key to the `.env` file when running your application in production. However, you can use the `--force` flag to override this behavior.
 
-</dd>
+:::
 
-</dl>
+::::
+
+## make commands
+
+The `make:*` commands shipped with the framework core accept the following flags in addition to their command-specific flags.
+
+::::options
+
+:::option{name="--force | -f"}
+
+Overwrite the file when it already exists. Without this flag, the command skips existing files.
+
+```sh
+node ace make:controller users --force
+```
+
+:::
+
+:::option{name="--contents-from"}
+
+Replace the generated contents with the contents of the given file. The output is still written to the location defined by the command's stub. Relative paths are resolved from the application root.
+
+```sh
+node ace make:service invoice --contents-from=stubs/custom/invoice_service.ts
+```
+
+:::
+
+::::
 
 ## make\:controller
 
@@ -289,45 +283,27 @@ You also generate a controller with custom action names, as shown in the followi
 node ace make:controller users index show store
 ```
 
-<dl>
+::::options
 
-<dt>
-
---singular
-
-</dt>
-
-<dd>
+:::option{name="--singular"}
 
 Force the controller name to be in singular form.
 
-</dd>
+:::
 
-<dt>
-
---resource
-
-</dt>
-
-<dd>
+:::option{name="--resource"}
 
 Generate a controller with methods to perform CRUD operations on a resource.
 
-</dd>
+:::
 
-<dt>
-
---api
-
-</dt>
-
-<dd>
+:::option{name="--api"}
 
 The `--api` flag is similar to the `--resource` flag. However, it does not define the `create` and the `edit` methods since they are used to display forms.
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:middleware
 Create a new middleware for HTTP requests. Middleware are stored inside the `app/middleware` directory and uses the following naming conventions.
@@ -341,15 +317,9 @@ Create a new middleware for HTTP requests. Middleware are stored inside the `app
 node ace make:middleware bodyparser
 ```
 
-<dl>
+::::options
 
-<dt>
-
---stack
-
-</dt>
-
-<dd>
+:::option{name="--stack"}
 
 Skip the [middleware stack](../guides/basics/middleware.md#middleware-stacks) selection prompt by defining the stack explicitly. The value must be `server`, `named`, or `router`.
 
@@ -357,9 +327,9 @@ Skip the [middleware stack](../guides/basics/middleware.md#middleware-stacks) se
 node ace make:middleware bodyparser --stack=router
 ```
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:event
 Create a new event class. Events are stored inside the `app/events` directory and use the following naming conventions.
@@ -390,15 +360,9 @@ node ace make:validator user
 node ace make:validator post
 ```
 
-<dl>
+::::options
 
-<dt>
-
---resource
-
-</dt>
-
-<dd>
+:::option{name="--resource"}
 
 Create a validator file with pre-defined validators for `create` and `update` actions.
 
@@ -406,9 +370,9 @@ Create a validator file with pre-defined validators for `create` and `update` ac
 node ace make:validator post --resource
 ```
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:listener
 
@@ -424,15 +388,9 @@ Create a new event listener class. The listener classes are stored inside the `a
 node ace make:listener sendShipmentNotification
 ```
 
-<dl>
+::::options
 
-<dt>
-
---event
-
-</dt>
-
-<dd>
+:::option{name="--event"}
 
 Generate an event class alongside the event listener.
 
@@ -440,9 +398,9 @@ Generate an event class alongside the event listener.
 node ace make:listener sendShipmentNotification --event=shipment_received
 ```
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:service
 
@@ -476,6 +434,19 @@ Create a new [custom exception class](../guides/basics/exception_handling.md#cus
 node ace make:exception commandValidation
 ```
 
+## make\:transformer
+
+Create a new [transformer](../guides/frontend/transformers.md) class. Transformers are stored inside the `app/transformers` directory and use the following naming conventions.
+
+- Form: `singular`
+- Suffix: `transformer`
+- Class name example: `UserTransformer`
+- File name example: `user_transformer.ts`
+
+```sh
+node ace make:transformer user
+```
+
 ## make\:command
 
 Create a new Ace command. By default, the commands are stored inside the `commands` directory at the root of your application.
@@ -505,6 +476,49 @@ node ace make:view posts/create
 node ace make:view posts/list
 ```
 
+## make\:page
+Create a new Inertia page component inside the `inertia/pages` directory. The command is registered by the `@adonisjs/inertia` package. It detects the frontend framework from the existing pages and prompts you when it cannot decide.
+
+- Form: `NA`
+- Suffix: `NA`
+- File name example: `posts/index.tsx` or `posts/index.vue`
+
+```sh
+node ace make:page posts/index
+# ./inertia/pages/posts/index.tsx
+```
+
+::::options
+
+:::option{name="--react | --vue"}
+
+Skip framework detection and create a React or Vue component.
+
+```sh
+node ace make:page posts/index --vue
+# ./inertia/pages/posts/index.vue
+```
+
+:::
+
+:::option{name="--contents-from"}
+
+Use the contents of an existing file instead of the default stub. This is useful when scaffolding pages from your own templates.
+
+```sh
+node ace make:page posts/index --contents-from=stubs/page.tsx
+```
+
+:::
+
+:::option{name="--force | -f"}
+
+Overwrite the page component if it already exists.
+
+:::
+
+::::
+
 ## make\:provider
 
 Create a [service provider file](../guides/concepts/service_providers.md). Providers are stored inside the `providers` directory at the root of your application and use the following naming conventions.
@@ -519,15 +533,9 @@ node ace make:provider app
 ```
 
 
-<dl>
+::::options
 
-<dt>
-
---environments
-
-</dt>
-
-<dd>
+:::option{name="--environments"}
 
 Define environments in which the provider should get imported. [Learn more about app environments](./application.md#environment)
 
@@ -535,9 +543,9 @@ Define environments in which the provider should get imported. [Learn more about
 node ace make:provider app -e=web -e=console
 ```
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:preload
 
@@ -547,15 +555,9 @@ Create a new [preload file](./adonisrc_file.md#preloads). Preload files are stor
 node ace make:preload view
 ```
 
-<dl>
+::::options
 
-<dt>
-
---environments
-
-</dt>
-
-<dd>
+:::option{name="--environments"}
 
 Define environments in which the preload file should get imported. [Learn more about app environments](./application.md#environment)
 
@@ -563,9 +565,9 @@ Define environments in which the preload file should get imported. [Learn more a
 node ace make:preload view app -e=web -e=console
 ```
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:test
 Create a new test file inside the `tests/<suite>` directory.
@@ -578,21 +580,15 @@ Create a new test file inside the `tests/<suite>` directory.
 node ace make:test --suite=unit
 ```
 
-<dl>
+::::options
 
-<dt>
-
---suite
-
-</dt>
-
-<dd>
+:::option{name="--suite"}
 
 Define the suite for which you want to create the test file. Otherwise, the command will display a prompt for suite selection.
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## make\:mail
 
@@ -609,15 +605,9 @@ node ace make:mail shipment
 ```
 
 
-<dl>
+::::options
 
-<dt>
-
---intent
-
-</dt>
-
-<dd>
+:::option{name="--intent"}
 
 Define a custom intent for the mail.
 
@@ -629,9 +619,25 @@ node ace make:mail storage --intent=warning
 # ./app/mails/storage_warning.ts
 ```
 
-</dd>
+:::
 
-</dl>
+:::option{name="--contents-from"}
+
+Use the contents of the given file as the generated mail class instead of the default stub.
+
+```sh
+node ace make:mail shipment --contents-from=./stubs/shipment_mail.ts
+```
+
+:::
+
+:::option{name="--force | -f"}
+
+Overwrite the mail file if it already exists.
+
+:::
+
+::::
 
 ## make\:policy
 
@@ -644,6 +650,12 @@ Create a new Bouncer policy class. The policies are stored inside the `app/polic
 
 ```sh
 node ace make:policy post
+```
+
+Pass action names after the policy name to pre-define them as methods. The `--model` flag defines the model imported by the policy. It defaults to the policy name.
+
+```sh
+node ace make:policy post view edit delete --model=Article
 ```
 
 ## inspect\:rcfile
@@ -662,63 +674,51 @@ View list of routes registered by your application. This command will boot your 
 node ace list:routes
 ```
 
+You may pass a keyword to only display the routes whose name, pattern, or controller name matches it.
+
+```sh
+node ace list:routes users
+```
+
 Also, you can see the routes list from the VSCode activity bar if you are using our [official VSCode extension](https://marketplace.visualstudio.com/items?itemName=jripouteau.adonis-vscode-extension).
 
 :::media
 ![](../guides/basics/vscode_routes_list.png)
 :::
 
-<dl>
+::::options
 
-<dt>
-
---json
-
-</dt>
-
-<dd>
+:::option{name="--json"}
 
 View routes as a JSON string. The output will be an array of object.
 
-</dd>
+:::
 
-<dt>
+:::option{name="--jsonl"}
 
---table
+View routes as JSON Lines, with one JSON object per route. This format is compact and easy to stream, which makes it a good fit for AI agents and other CLI tools consuming the routes list.
 
-</dt>
+:::
 
-<dd>
+:::option{name="--table"}
 
 View routes inside a CLI table. By default, we display routes inside a compact, pretty list.
 
-</dd>
+:::
 
-<dt>
-
---middleware
-
-</dt>
-
-<dd>
+:::option{name="--middleware"}
 
 Filter routes list and include the ones using the mentioned middleware. You may use the `*` keyword to include routes using one or more middleware.
 
-</dd>
+:::
 
-<dt>
-
---ignore-middleware
-
-</dt>
-
-<dd>
+:::option{name="--ignore-middleware"}
 
 Filter routes list and include the ones NOT using the mentioned middleware. You may use the `*` keyword to include routes that do not use any middleware.
 
-</dd>
+:::
 
-</dl>
+::::
 
 ## env\:add
 
@@ -734,27 +734,15 @@ node ace env:add
 node ace env:add MY_VARIABLE value --type=string
 ```
 
-<dl>
+::::options
 
-<dt>
+:::option{name="--type"}
 
---type
+Define the type of the environment variable. The value must be one of the following: `string`, `secret`, `boolean`, `number`, `enum`.
 
-</dt>
+:::
 
-<dd>
-
-Define the type of the environment variable. The value must be one of the following: `string`, `boolean`, `number`, `enum`.
-
-</dd>
-
-<dt>
-
---enum-values
-
-</dt>
-
-<dd>
+:::option{name="--enum-values"}
 
 Define the allowed values for the environment variable when the type is `enum`. 
 
@@ -762,6 +750,6 @@ Define the allowed values for the environment variable when the type is `enum`.
 node ace env:add MY_VARIABLE foo --type=enum --enum-values=foo --enum-values=bar
 ```
 
-</dd>
+:::
 
-</dl>
+::::

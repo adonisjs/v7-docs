@@ -11,6 +11,7 @@ export const featuredSponsors = Collection.create({
       logo: vine.string().toAbsolutePath().toContents(),
       name: vine.string(),
       url: vine.string(),
+      tier: vine.enum(['gold', 'silver', 'bronze']),
     })
   ),
 })

@@ -58,15 +58,14 @@ node ace add @adonisjs/cors
 
 ## Configuration
 
-The CORS configuration lives in `config/cors.ts`. Here is the default configuration with all available options:
+The CORS configuration lives in `config/cors.ts`. Here is the configuration created by `node ace add @adonisjs/cors`, with all available options:
 
 ```ts title="config/cors.ts"
-import app from '@adonisjs/core/services/app'
 import { defineConfig } from '@adonisjs/cors'
 
 const corsConfig = defineConfig({
   enabled: true,
-  origin: app.inDev ? true : [],
+  origin: true,
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE'],
   headers: true,
   exposeHeaders: [],
@@ -77,7 +76,11 @@ const corsConfig = defineConfig({
 export default corsConfig
 ```
 
-In development, `origin` is set to `true` to allow all origins for easy local frontend/backend setup. In production, it defaults to an empty array `[]`, which blocks all cross-origin requests until you explicitly configure allowed origins.
+The default `origin: true` reflects every requesting origin, which keeps local frontend/backend setups working without extra configuration. Before deploying, you should replace it with the list of origins your API actually serves. Options you omit from `defineConfig` fall back to the values shown above.
+
+:::note
+The Inertia starter kits ship with `origin: []`, which blocks all cross-origin requests because the frontend is served from the same origin as the API.
+:::
 
 ### Enabling and disabling CORS
 
@@ -86,6 +89,17 @@ The `enabled` option turns the middleware on or off without removing it from the
 ```ts title="config/cors.ts"
 {
   enabled: process.env.NODE_ENV !== 'test'
+}
+```
+
+You can also pass a function to decide per request. The middleware calls it with the current `HttpContext` and skips CORS handling when it returns `false`.
+
+```ts title="config/cors.ts"
+{
+  /**
+   * Only apply CORS to the API routes
+   */
+  enabled: (ctx) => ctx.request.url().startsWith('/api')
 }
 ```
 
@@ -136,7 +150,9 @@ For dynamic origin validation, provide a callback function. This is useful when 
   origin: (requestOrigin, ctx) => {
     /**
      * requestOrigin is the value of the Origin header.
-     * Return true to allow, false to deny.
+     * Return true to allow, false to deny. You can also
+     * return any other value accepted by the origin option,
+     * like an array of allowed origins.
      */
     const allowedOrigins = ['https://app.example.com']
     return allowedOrigins.includes(requestOrigin)
@@ -218,7 +234,7 @@ The `maxAge` option specifies how long (in seconds) browsers should cache prefli
 }
 ```
 
-Setting `maxAge` to `null` omits the `Access-Control-Max-Age` header entirely. Setting it to `-1` sends the header but disables caching.
+Setting `maxAge` to `0` omits the `Access-Control-Max-Age` header entirely, so browsers apply their own default cache duration. Setting it to `-1` sends the header and disables caching.
 
 ## Common scenarios
 
